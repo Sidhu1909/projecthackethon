@@ -105,14 +105,34 @@
             color: var(--gold);
         }
 
+        /* Current Question Display */
+        .current-question {
+            margin: 30px auto;
+            max-width: 700px;
+            font-size: 1.25rem;
+            line-height: 1.5;
+            color: var(--gold);
+            font-style: italic;
+            min-height: 70px;
+            padding: 20px;
+            border-left: 5px solid var(--gold);
+            background: var(--glass);
+            border-radius: 8px;
+            text-align: left;
+        }
+
         /* Live Transcript Display */
         .transcript-container {
-            height: 80px;
+            height: 120px;
             margin: 20px 0;
             overflow-y: auto;
             font-style: italic;
-            opacity: 0.6;
-            font-size: 0.9rem;
+            opacity: 0.75;
+            font-size: 0.95rem;
+            background: var(--glass);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: left;
         }
 
         /* Buttons */
@@ -165,18 +185,19 @@
                     <span id="mic-icon">🎤</span>
                 </div>
             </div>
-            <p id="status-text">SYSTEM_READY</p>
+            <p id="status-text">MICROPHONE READY. SAY "START INTERVIEW" TO BEGIN</p>
+        </div>
+
+        <!-- Current Question Display -->
+        <div id="current-question" class="current-question">
+            Waiting for interview to start...
         </div>
 
         <div class="transcript-container" id="live-transcript">
-            </div>
+        </div>
 
         <div class="controls">
-            <button class="btn-outline" id="start-btn">Start Interview</button>
-            <button class="btn-outline" id="finish-btn" style="display:none; border-color: #fff; color: #fff;">Finish & Send</button>
-            
-            <input type="file" id="recruiter-file" hidden>
-            <button class="btn-outline" onclick="document.getElementById('recruiter-file').click()">Upload Specs</button>
+            <button class="btn-outline" id="finish-btn" style="display:none; border-color: #fff; color: #fff;">Finish Interview Early</button>
         </div>
     </div>
 
@@ -203,51 +224,98 @@
         const synthesis = window.speechSynthesis;
         recognition.continuous = true;
         recognition.interimResults = true;
+        recognition.lang = "en-US";
 
         let fullTranscript = "";
+        let interviewStarted = false;
+        let currentQuestionIndex = -1;
+        let silenceTimeout = null;
+        const SILENCE_THRESHOLD = 4000; // 4 seconds of silence → go to next question
+
         const statusEl = document.getElementById('status-text');
         const micEl = document.getElementById('mic-visualizer');
         const transcriptEl = document.getElementById('live-transcript');
+        const questionEl = document.getElementById('current-question');
 
-        // Logic: Start Interview
-        document.getElementById('start-btn').addEventListener('click', () => {
-            fullTranscript = "";
-            transcriptEl.innerText = "";
-            
-            speak("Welcome. Please introduce yourself and state your key skills.");
+        const questions = [
+            "Please introduce yourself and your professional background.",
+            "What are your key skills and technical expertise?",
+            "Why do you want to join our company?",
+            "Describe a significant challenge you faced at work and how you resolved it.",
+            "Where do you see your career in the next five years?",
+            "Do you have any questions for the interviewer?"
+        ];
+
+        // Reset silence timer every time candidate speaks
+        function resetSilenceTimer() {
+            if (silenceTimeout) clearTimeout(silenceTimeout);
+            silenceTimeout = setTimeout(() => {
+                if (interviewStarted) {
+                    nextQuestion();
+                }
+            }, SILENCE_THRESHOLD);
+        }
+
+        function speak(text) {
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.pitch = 0.85;
+            msg.rate = 0.95;
+            synthesis.speak(msg);
+        }
+
+        function startInterview() {
+            if (interviewStarted) return;
+            interviewStarted = true;
+            fullTranscript = "=== TALENTBRIDGE INTERVIEW STARTED ===\n\n";
+            transcriptEl.innerText = fullTranscript;
+            questionEl.innerText = "";
             
             micEl.classList.add('active');
-            statusEl.innerText = "SPEAKING_";
-            document.getElementById('start-btn').style.display = 'none';
+            statusEl.innerText = "INTERVIEW_IN_PROGRESS";
             document.getElementById('finish-btn').style.display = 'inline-block';
+
+            speak("Welcome to TalentBridge. We will now begin the voice interview.");
             
-            recognition.start();
-        });
+            // Slight delay then ask first question
+            setTimeout(() => {
+                currentQuestionIndex = -1;
+                nextQuestion();
+            }, 1800);
+        }
 
-        // Logic: Speech Recognition Result
-        recognition.onresult = (event) => {
-            let interimTranscript = "";
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    fullTranscript += event.results[i][0].transcript + " ";
-                } else {
-                    interimTranscript += event.results[i][0].transcript;
-                }
+        function nextQuestion() {
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex >= questions.length) {
+                finishInterview();
+                return;
             }
-            transcriptEl.innerText = fullTranscript + interimTranscript;
-        };
 
-        // Logic: Finish and Upload .txt to Firebase
-        document.getElementById('finish-btn').addEventListener('click', async () => {
+            const q = questions[currentQuestionIndex];
+            const displayText = `Question ${currentQuestionIndex + 1}: ${q}`;
+            
+            questionEl.innerText = displayText;
+            fullTranscript += `\n\n${displayText}\nCandidate Answer: `;
+            transcriptEl.innerText = fullTranscript;
+
+            speak(q);
+            statusEl.innerText = `ASKING_QUESTION_${currentQuestionIndex + 1}`;
+            
+            // Timer will start only when candidate begins speaking
+        }
+
+        async function finishInterview() {
+            if (silenceTimeout) clearTimeout(silenceTimeout);
             recognition.stop();
             micEl.classList.remove('active');
             statusEl.innerText = "TRANSMITTING_DATA...";
+            document.getElementById('finish-btn').style.display = 'none';
 
             const blob = new Blob([fullTranscript], { type: 'text/plain' });
             const fileName = `interview_${Date.now()}.txt`;
 
             try {
-                // Upload File
+                // Upload to Firebase Storage
                 const storageRef = ref(storage, `transcripts/${fileName}`);
                 const snapshot = await uploadBytes(storageRef, blob);
                 const fileUrl = await getDownloadURL(snapshot.ref);
@@ -259,35 +327,77 @@
                     timestamp: serverTimestamp()
                 });
 
-                speak("Data received. Thank you.");
-                statusEl.innerText = "COMPLETED_";
-                alert("Interview file sent to recruiter successfully.");
+                speak("Thank you. Your interview has been successfully recorded and sent to the recruiter.");
+                statusEl.innerText = "INTERVIEW_COMPLETED";
+                alert("Interview completed and sent successfully! Thank you.");
                 
-                // Reset UI
-                document.getElementById('start-btn').style.display = 'inline-block';
-                document.getElementById('finish-btn').style.display = 'none';
+                // Reset for next candidate (demo mode)
+                setTimeout(() => {
+                    location.reload();
+                }, 3000);
             } catch (err) {
                 console.error(err);
-                statusEl.innerText = "ERROR_RETRIEVING_DATA";
+                statusEl.innerText = "UPLOAD_ERROR";
+            }
+        }
+
+        // ====================== SPEECH RECOGNITION LOGIC ======================
+        recognition.onresult = (event) => {
+            let interimTranscript = "";
+            let finalAdded = false;
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    fullTranscript += event.results[i][0].transcript + " ";
+                    finalAdded = true;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+
+            transcriptEl.innerText = fullTranscript + interimTranscript;
+
+            // WAKE WORD DETECTION (before interview starts)
+            const allText = (fullTranscript + interimTranscript).toLowerCase();
+            if (!interviewStarted && allText.includes("start interview")) {
+                startInterview();
+                return;
+            }
+
+            // During interview: reset silence timer on every speech
+            if (interviewStarted) {
+                resetSilenceTimer();
+            }
+        };
+
+        recognition.onend = () => {
+            // Keep listening forever (wake word + full interview)
+            if (true) {
+                setTimeout(() => {
+                    recognition.start();
+                }, 300);
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error:", event.error);
+        };
+
+        // ====================== BUTTONS ======================
+        document.getElementById('finish-btn').addEventListener('click', () => {
+            finishInterview();
+        });
+
+        // ====================== AUTO START LISTENING ======================
+        // Microphone starts automatically on page load (browser may require one click anywhere first time)
+        window.addEventListener('load', () => {
+            statusEl.innerText = "MICROPHONE READY. SAY \"START INTERVIEW\" TO BEGIN";
+            try {
+                recognition.start();
+            } catch (e) {
+                console.log("Voice activation ready – speak after granting mic permission.");
             }
         });
-
-        // Recruiter: File Upload Logic
-        document.getElementById('recruiter-file').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const storageRef = ref(storage, `recruiter_specs/${file.name}`);
-            await uploadBytes(storageRef, file);
-            alert("Job specs uploaded to Cloud Storage.");
-        });
-
-        function speak(text) {
-            const msg = new SpeechSynthesisUtterance(text);
-            msg.pitch = 0.85; // Slight robotic baritone
-            msg.rate = 0.95;
-            synthesis.speak(msg);
-        }
     </script>
 </body>
 </html>
