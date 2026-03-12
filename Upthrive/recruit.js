@@ -20,7 +20,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
 // ──────────────────────────────────────────────────────────────
-// QUESTION MANAGEMENT
+// QUESTION MANAGEMENT (local firebase still available for saving, but fetching candidates uses backend)
 // ──────────────────────────────────────────────────────────────
 
 /**
@@ -66,23 +66,30 @@ export async function saveInterviewQuestions(questions) {
  * @returns {Promise<Array>} Array of candidates with their answer counts
  */
 export async function getCandidatesWithAnswers() {
+  // prefer backend API for candidate listing; fallback to firestore
+  try {
+    const res = await fetch('/api/candidates');
+    if (!res.ok) throw new Error('Network response was not ok');
+    const data = await res.json();
+    return data.candidates || [];
+  } catch (err) {
+    console.warn('backend fetch failed, falling back to firestore', err);
+  }
+
+  // firestore fallback
   try {
     const user = auth.currentUser;
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
+    if (!user) throw new Error('User not authenticated');
 
-    // Fetch all candidates from the candidates collection
     const candidatesRef = collection(db, 'candidates');
     const q = query(candidatesRef, where('interviewAnswers', '!=', null));
     const snapshot = await getDocs(q);
-
     const candidates = [];
-    snapshot.forEach(doc => {
-      const data = doc.data();
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
       if (data.interviewAnswers && data.interviewAnswers.length > 0) {
         candidates.push({
-          id: doc.id,
+          id: docSnap.id,
           email: data.email || 'Unknown',
           answers: data.interviewAnswers || [],
           answerCount: (data.interviewAnswers || []).length,
@@ -90,12 +97,9 @@ export async function getCandidatesWithAnswers() {
         });
       }
     });
-
     return candidates;
-
   } catch (err) {
-    console.error('Error fetching candidates with answers:', err);
-    // Return empty array if no candidates found
+    console.error('Error fetching candidates with answers (firestore):', err);
     return [];
   }
 }

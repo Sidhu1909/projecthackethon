@@ -569,7 +569,7 @@
       }
     }
 
-    // Load candidate answers from database
+    // Load candidate answers from backend or firestore
     async function loadCandidateAnswers(candidateId) {
       if (!candidateId) {
         document.getElementById('candidateAnswersDisplay').innerHTML = '';
@@ -580,11 +580,23 @@
 
       try {
         showStatus('answersStatus', 'Loading candidate answers...', '');
-        
-        if (window.getCandidateAnswersById) {
-          const candidateData = await window.getCandidateAnswersById(candidateId);
+        let candidateData = null;
+
+        // try backend first
+        try {
+          const res = await fetch(`/api/candidates/${candidateId}/answers`);
+          if (res.ok) candidateData = await res.json();
+        } catch (e) {
+          console.warn('backend load candidate answers failed', e);
+        }
+
+        if (!candidateData && window.getCandidateAnswersById) {
+          candidateData = await window.getCandidateAnswersById(candidateId);
+        }
+
+        if (candidateData) {
           uploadedAnswers = candidateData.answers || [];
-          
+
           // Display candidate answers
           const container = document.getElementById('candidateAnswersDisplay');
           container.innerHTML = '<h3 style="color: var(--blue); margin-bottom: 1rem;">📝 Candidate Answers:</h3>';
@@ -599,8 +611,10 @@
             container.appendChild(answerDiv);
           });
           
-          showStatus('answersStatus', `✓ Loaded ${uploadedAnswers.length} answers from ${candidateData.email}`, 'success');
+          showStatus('answersStatus', `✓ Loaded ${uploadedAnswers.length} answers from ${candidateData.email || 'database'}`, 'success');
           document.getElementById('evaluateBtn').style.display = 'block';
+        } else {
+          showStatus('answersStatus', 'No answers found for candidate', 'error');
         }
       } catch (err) {
         showStatus('answersStatus', 'Error loading candidate answers: ' + err.message, 'error');
@@ -624,7 +638,7 @@
     }
 
     // Evaluate answers against questions
-    function evaluateAnswers() {
+    async function evaluateAnswers() {
       if (uploadedQuestions.length === 0 || uploadedAnswers.length === 0) {
         showStatus('evaluationResults', 'Please load both questions and answers', 'error');
         return;
@@ -633,7 +647,23 @@
       const resultsContainer = document.getElementById('evaluationResults');
       resultsContainer.innerHTML = '<div class="loading" style="margin: 2rem auto;"></div>';
 
-      // Call Firebase function for evaluation
+      // Try backend evaluation first
+      try {
+        const res = await fetch('/api/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questions: uploadedQuestions, answers: uploadedAnswers })
+        });
+        if (res.ok) {
+          const result = await res.json();
+          displayEvaluationResults(result);
+          return;
+        }
+      } catch (e) {
+        console.warn('backend evaluation failed, falling back', e);
+      }
+
+      // Fallback to firebase/js evaluation
       if (window.evaluateCandidateAnswers) {
         window.evaluateCandidateAnswers(uploadedQuestions, uploadedAnswers).then(result => {
           displayEvaluationResults(result);
