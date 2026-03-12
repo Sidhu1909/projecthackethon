@@ -15,6 +15,12 @@ import {
   sendPasswordResetEmail,
   onAuthStateChanged,
   signOut,
+  updateEmail,
+  verifyBeforeUpdateEmail,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  updateProfile,
 } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
 import {
@@ -22,6 +28,8 @@ import {
   doc,
   setDoc,
   getDoc,
+  updateDoc,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
 // ─── 🔧 YOUR CONFIG — replace with values from Firebase Console ──────────────
@@ -49,11 +57,16 @@ function extractMessage(err) {
   return err?.code ?? err?.message ?? "unknown-error";
 }
 
+/** Returns the currently signed-in user, or null. */
+export function getCurrentUser() {
+  return auth.currentUser ?? null;
+}
+
 // ── Auth exports ─────────────────────────────────────────────────────────────
 
 /**
  * Create a new account with email + password.
- * @returns {{ user: import("firebase/auth").User|null, error: string|null }}
+ * @returns {{ user: User|null, error: string|null }}
  */
 export async function signUpWithEmail(email, password) {
   try {
@@ -66,7 +79,7 @@ export async function signUpWithEmail(email, password) {
 
 /**
  * Sign in with email + password.
- * @returns {{ user: import("firebase/auth").User|null, error: string|null }}
+ * @returns {{ user: User|null, error: string|null }}
  */
 export async function signInWithEmail(email, password) {
   try {
@@ -79,7 +92,7 @@ export async function signInWithEmail(email, password) {
 
 /**
  * Sign in (or sign up) via Google popup.
- * @returns {{ user: import("firebase/auth").User|null, error: string|null }}
+ * @returns {{ user: User|null, error: string|null }}
  */
 export async function signInWithGoogle() {
   try {
@@ -108,7 +121,7 @@ export async function resetPassword(email) {
  * Subscribe to auth-state changes.
  * The callback receives `{ isLoggedIn: boolean, user: User|null }`.
  * @param {(state: { isLoggedIn: boolean, user: any }) => void} callback
- * @returns {import("firebase/auth").Unsubscribe}
+ * @returns {Unsubscribe}
  */
 export function onAuthChange(callback) {
   return onAuthStateChanged(auth, (user) => {
@@ -128,6 +141,130 @@ export async function logout() {
   }
 }
 
+// ── Account Update exports ────────────────────────────────────────────────────
+
+/**
+ * Re-authenticate the current user with their current password.
+ * Required before sensitive operations (email/password change).
+ * @param {string} currentPassword
+ * @returns {{ error: string|null }}
+ */
+export async function reauthenticate(currentPassword) {
+  try {
+    const user = auth.currentUser;
+    if (!user || !user.email) return { error: "auth/no-current-user" };
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+    return { error: null };
+  } catch (err) {
+    return { error: extractMessage(err) };
+  }
+}
+
+/**
+ * Update the authenticated user's email address.
+ * Sends a verification email to the new address before applying the change.
+ * Also updates the email field in the Firestore recruiters document.
+ *
+ * @param {string} newEmail
+ * @param {string} currentPassword  — required for re-authentication
+ * @returns {{ error: string|null }}
+ */
+export async function updateUserEmail(newEmail, currentPassword) {
+  try {
+    const user = auth.currentUser;
+    if (!user) return { error: "auth/no-current-user" };
+
+    // Re-auth first (required by Firebase for sensitive operations)
+    const reauth = await reauthenticate(currentPassword);
+    if (reauth.error) return reauth;
+
+    // Send verification to new address; change applies after the user clicks the link
+    await verifyBeforeUpdateEmail(user, newEmail);
+
+    // Optimistically update Firestore so local state stays in sync
+    await updateDoc(doc(db, "recruiters", user.uid), {
+      pendingEmail: newEmail,
+      emailUpdateRequestedAt: serverTimestamp(),
+    });
+
+    return { error: null };
+  } catch (err) {
+    return { error: extractMessage(err) };
+  }
+}
+
+/**
+ * Update the authenticated user's password.
+ * Requires re-authentication with the current password first.
+ *
+ * @param {string} currentPassword
+ * @param {string} newPassword
+ * @returns {{ error: string|null }}
+ */
+export async function updateUserPassword(currentPassword, newPassword) {
+  try {
+    const user = auth.currentUser;
+    if (!user) return { error: "auth/no-current-user" };
+
+    const reauth = await reauthenticate(currentPassword);
+    if (reauth.error) return reauth;
+
+    await updatePassword(user, newPassword);
+
+    // Record the timestamp in Firestore for audit trail
+    await updateDoc(doc(db, "recruiters", user.uid), {
+      passwordChangedAt: serverTimestamp(),
+    });
+
+    return { error: null };
+  } catch (err) {
+    return { error: extractMessage(err) };
+  }
+}
+
+/**
+ * Update the Auth display name and any writable Firestore profile fields.
+ * Pass only the fields you want to change; everything else is left untouched.
+ *
+ * Supported fields: name, company, title, phone, location, bio, avatarUrl
+ *
+ * @param {object} updates  — e.g. { name: "Jane Doe", company: "Acme" }
+ * @returns {{ error: string|null }}
+ */
+export async function updateRecruiterProfile(updates) {
+  try {
+    const user = auth.currentUser;
+    if (!user) return { error: "auth/no-current-user" };
+
+    const allowedFields = ["name", "company", "title", "phone", "location", "bio", "avatarUrl"];
+    const firestoreData  = {};
+
+    for (const key of allowedFields) {
+      if (updates[key] !== undefined) firestoreData[key] = updates[key];
+    }
+
+    // Sync display name to Firebase Auth as well
+    if (updates.name) {
+      await updateProfile(user, { displayName: updates.name });
+    }
+
+    // Persist to Firestore
+    if (Object.keys(firestoreData).length > 0) {
+      firestoreData.updatedAt = serverTimestamp();
+      await updateDoc(doc(db, "recruiters", user.uid), firestoreData);
+
+      // Mirror changes to localStorage so other pages see them immediately
+      if (updates.name)    localStorage.setItem("titanName",    updates.name);
+      if (updates.company) localStorage.setItem("titanCompany", updates.company);
+    }
+
+    return { error: null };
+  } catch (err) {
+    return { error: extractMessage(err) };
+  }
+}
+
 // ── Firestore exports ─────────────────────────────────────────────────────────
 
 /**
@@ -138,7 +275,11 @@ export async function logout() {
  */
 export async function saveRecruiterProfile(uid, data) {
   try {
-    await setDoc(doc(db, "recruiters", uid), data, { merge: true });
+    await setDoc(doc(db, "recruiters", uid), {
+      ...data,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
     return { error: null };
   } catch (err) {
     console.error("saveRecruiterProfile:", err);
@@ -160,5 +301,12 @@ export async function getRecruiterProfile(uid) {
   }
 }
 
-// ── Named re-export so the login page can import `db` directly ────────────────
-// (already exported above as `export const db = getFirestore(app)`)
+/**
+ * Convenience: load the profile of whoever is currently signed in.
+ * @returns {{ data: object|null, error: string|null }}
+ */
+export async function getCurrentRecruiterProfile() {
+  const user = auth.currentUser;
+  if (!user) return { data: null, error: "auth/no-current-user" };
+  return getRecruiterProfile(user.uid);
+}

@@ -34,440 +34,101 @@
       overflow: hidden;
     }
 
-    /* ── STARFIELD ── */
-    .stars {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-    }
+    .stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
     .stars canvas { width: 100%; height: 100%; }
 
-    /* ── NOISE GRAIN ── */
     body::after {
       content: '';
-      position: fixed;
-      inset: 0;
+      position: fixed; inset: 0;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 999;
-      opacity: 0.5;
+      pointer-events: none; z-index: 999; opacity: 0.5;
     }
 
-    /* ── GOLDEN ORBS ── */
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(130px);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .orb-a {
-      width: 700px; height: 700px;
-      top: -250px; left: -200px;
-      background: radial-gradient(circle, rgba(201,168,76,0.055) 0%, transparent 65%);
-      animation: floatA 16s ease-in-out infinite;
-    }
-    .orb-b {
-      width: 450px; height: 450px;
-      bottom: -150px; right: -100px;
-      background: radial-gradient(circle, rgba(160,120,50,0.04) 0%, transparent 65%);
-      animation: floatB 20s ease-in-out infinite;
-    }
-    @keyframes floatA {
-      0%,100% { transform: translate(0,0); }
-      50%      { transform: translate(30px,50px); }
-    }
-    @keyframes floatB {
-      0%,100% { transform: translate(0,0); }
-      50%      { transform: translate(-20px,-30px); }
-    }
+    .orb { position: fixed; border-radius: 50%; filter: blur(130px); pointer-events: none; z-index: 0; }
+    .orb-a { width: 700px; height: 700px; top: -250px; left: -200px; background: radial-gradient(circle, rgba(201,168,76,0.055) 0%, transparent 65%); animation: floatA 16s ease-in-out infinite; }
+    .orb-b { width: 450px; height: 450px; bottom: -150px; right: -100px; background: radial-gradient(circle, rgba(160,120,50,0.04) 0%, transparent 65%); animation: floatB 20s ease-in-out infinite; }
+    @keyframes floatA { 0%,100% { transform: translate(0,0); } 50% { transform: translate(30px,50px); } }
+    @keyframes floatB { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-20px,-30px); } }
 
-    /* ── LAYOUT ── */
-    .layout {
-      position: relative;
-      z-index: 1;
-      display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
-      height: 100vh;
-    }
+    .layout { position: relative; z-index: 1; display: grid; grid-template-columns: 1.15fr 0.85fr; height: 100vh; }
 
-    /* ── LEFT PANEL ── */
     .left-panel {
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 56px 60px;
-      border-right: 1px solid var(--border);
-      position: relative;
-      overflow: hidden;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 56px 60px; border-right: 1px solid var(--border); position: relative; overflow: hidden;
     }
-
     .left-panel::after {
-      content: '';
-      position: absolute;
-      top: 0; right: 0;
-      width: 1px;
-      height: 100%;
-      background: linear-gradient(to bottom,
-        transparent 0%,
-        rgba(201,168,76,0.25) 25%,
-        rgba(201,168,76,0.5) 50%,
-        rgba(201,168,76,0.25) 75%,
-        transparent 100%
-      );
+      content: ''; position: absolute; top: 0; right: 0; width: 1px; height: 100%;
+      background: linear-gradient(to bottom, transparent 0%, rgba(201,168,76,0.25) 25%, rgba(201,168,76,0.5) 50%, rgba(201,168,76,0.25) 75%, transparent 100%);
     }
 
-    .brand {
-      animation: fadeUp 0.8s ease both;
-    }
-    .brand-name {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 28px;
-      font-weight: 300;
-      letter-spacing: 10px;
-      text-transform: uppercase;
-      color: var(--text);
-      display: flex;
-      align-items: baseline;
-      gap: 0;
-    }
+    .brand { animation: fadeUp 0.8s ease both; }
+    .brand-name { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; letter-spacing: 10px; text-transform: uppercase; color: var(--text); display: flex; align-items: baseline; }
     .brand-name .reg { color: var(--accent); font-weight: 400; }
     .brand-name .italic { font-style: italic; color: var(--text); font-weight: 300; }
-    .brand-tag {
-      font-size: 9px;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-top: 6px;
-      font-weight: 400;
-    }
+    .brand-tag { font-size: 9px; letter-spacing: 4px; text-transform: uppercase; color: var(--text-muted); margin-top: 6px; font-weight: 400; }
 
-    .hero {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      padding: 40px 0;
-    }
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 9px;
-      letter-spacing: 5px;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 28px;
-      animation: fadeUp 0.8s 0.1s ease both;
-      font-weight: 500;
-    }
-    .eyebrow::before, .eyebrow::after {
-      content: '';
-      width: 20px; height: 1px;
-      background: var(--accent);
-      opacity: 0.6;
-    }
-    .hero-title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(58px, 5.8vw, 90px);
-      line-height: 0.92;
-      letter-spacing: 6px;
-      color: var(--text);
-      margin-bottom: 32px;
-      animation: fadeUp 0.8s 0.15s ease both;
-      font-weight: 300;
-    }
+    .hero { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 0; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 12px; font-size: 9px; letter-spacing: 5px; text-transform: uppercase; color: var(--accent); margin-bottom: 28px; animation: fadeUp 0.8s 0.1s ease both; font-weight: 500; }
+    .eyebrow::before, .eyebrow::after { content: ''; width: 20px; height: 1px; background: var(--accent); opacity: 0.6; }
+    .hero-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(58px, 5.8vw, 90px); line-height: 0.92; letter-spacing: 6px; color: var(--text); margin-bottom: 32px; animation: fadeUp 0.8s 0.15s ease both; font-weight: 300; }
     .hero-title .word-regular { color: var(--accent); }
-    .hero-title .word-italic {
-      font-style: italic;
-      color: var(--text);
-      font-weight: 300;
-      letter-spacing: 4px;
-    }
-    .hero-sub {
-      font-size: 9px;
-      letter-spacing: 5px;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 48px;
-      animation: fadeUp 0.8s 0.2s ease both;
-      font-weight: 400;
-    }
+    .hero-title .word-italic { font-style: italic; color: var(--text); font-weight: 300; letter-spacing: 4px; }
+    .hero-sub { font-size: 9px; letter-spacing: 5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 48px; animation: fadeUp 0.8s 0.2s ease both; font-weight: 400; }
 
-    .features {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      animation: fadeUp 0.8s 0.25s ease both;
-      margin-bottom: 52px;
-    }
-    .feature-item {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .feature-line {
-      width: 18px; height: 1px;
-      background: var(--accent);
-      opacity: 0.5;
-      flex-shrink: 0;
-    }
-    .feature-text {
-      font-size: 12px;
-      color: var(--text-sub);
-      font-weight: 300;
-      letter-spacing: 0.5px;
-    }
-    .feature-text strong {
-      color: var(--text);
-      font-weight: 500;
-    }
+    .features { display: flex; flex-direction: column; gap: 14px; animation: fadeUp 0.8s 0.25s ease both; margin-bottom: 52px; }
+    .feature-item { display: flex; align-items: center; gap: 16px; }
+    .feature-line { width: 18px; height: 1px; background: var(--accent); opacity: 0.5; flex-shrink: 0; }
+    .feature-text { font-size: 12px; color: var(--text-sub); font-weight: 300; letter-spacing: 0.5px; }
+    .feature-text strong { color: var(--text); font-weight: 500; }
 
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-      animation: fadeUp 0.8s 0.3s ease both;
-    }
-    .stat {
-      padding: 22px 20px;
-      border-right: 1px solid var(--border);
-      position: relative;
-    }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; animation: fadeUp 0.8s 0.3s ease both; }
+    .stat { padding: 22px 20px; border-right: 1px solid var(--border); }
     .stat:last-child { border-right: none; }
-    .stat-n {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 36px;
-      font-weight: 400;
-      letter-spacing: 2px;
-      color: var(--accent);
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-    .stat-l {
-      font-size: 8px;
-      color: var(--text-muted);
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      font-weight: 500;
-    }
+    .stat-n { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 400; letter-spacing: 2px; color: var(--accent); line-height: 1; margin-bottom: 4px; }
+    .stat-l { font-size: 8px; color: var(--text-muted); letter-spacing: 3px; text-transform: uppercase; font-weight: 500; }
 
-    /* ── RIGHT PANEL ── */
-    .right-panel {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 40px;
-      overflow-y: auto;
-    }
+    .right-panel { display: flex; align-items: center; justify-content: center; padding: 40px; overflow-y: auto; }
+    .auth-card { width: 100%; max-width: 380px; animation: fadeUp 0.9s 0.1s ease both; }
 
-    .auth-card {
-      width: 100%;
-      max-width: 380px;
-      animation: fadeUp 0.9s 0.1s ease both;
-    }
+    .recruiter-badge { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); color: var(--accent); font-size: 9px; font-weight: 500; letter-spacing: 4px; text-transform: uppercase; padding: 6px 14px; margin-bottom: 32px; }
+    .recruiter-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: blink 2.5s ease infinite; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
 
-    .recruiter-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      border: 1px solid var(--border);
-      color: var(--accent);
-      font-size: 9px;
-      font-weight: 500;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      padding: 6px 14px;
-      margin-bottom: 32px;
-    }
-    .recruiter-badge .dot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      background: var(--accent);
-      animation: blink 2.5s ease infinite;
-    }
-    @keyframes blink {
-      0%,100% { opacity: 1; }
-      50%      { opacity: 0.2; }
-    }
-
-    .tab-switcher {
-      display: flex;
-      border: 1px solid var(--border);
-      margin-bottom: 36px;
-    }
-    .tab-btn {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      font-family: 'Jost', sans-serif;
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 4px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-transform: uppercase;
-      border-right: 1px solid var(--border);
-    }
+    .tab-switcher { display: flex; border: 1px solid var(--border); margin-bottom: 36px; }
+    .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: var(--text-muted); font-family: 'Jost', sans-serif; font-size: 9px; font-weight: 600; letter-spacing: 4px; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; border-right: 1px solid var(--border); }
     .tab-btn:last-child { border-right: none; }
-    .tab-btn.active {
-      background: var(--accent);
-      color: var(--bg);
-    }
+    .tab-btn.active { background: var(--accent); color: var(--bg); }
     .tab-btn:not(.active):hover { color: var(--accent); }
 
     .form-header { margin-bottom: 30px; }
-    .form-title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 42px;
-      font-weight: 300;
-      letter-spacing: 6px;
-      color: var(--text);
-      margin-bottom: 8px;
-      text-transform: uppercase;
-    }
-    .form-sub {
-      font-size: 11px;
-      color: var(--text-muted);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      font-weight: 400;
-    }
+    .form-title { font-family: 'Cormorant Garamond', serif; font-size: 42px; font-weight: 300; letter-spacing: 6px; color: var(--text); margin-bottom: 8px; text-transform: uppercase; }
+    .form-sub { font-size: 11px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; font-weight: 400; }
     .form-sub span { color: var(--accent); }
 
     .field { margin-bottom: 16px; position: relative; }
-    .field label {
-      display: block;
-      font-size: 9px;
-      font-weight: 500;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-      transition: color 0.2s;
-    }
+    .field label { display: block; font-size: 9px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; transition: color 0.2s; }
     .field:focus-within label { color: var(--accent); }
-
     .input-wrap { position: relative; }
-    .field input {
-      width: 100%;
-      padding: 13px 42px 13px 8px;
-      background: transparent;
-      border: none;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
-      font-family: 'Jost', sans-serif;
-      font-size: 14px;
-      font-weight: 300;
-      outline: none;
-      transition: all 0.3s ease;
-      letter-spacing: 0.5px;
-    }
-    .field input:focus {
-      border-bottom-color: var(--accent);
-    }
+    .field input { width: 100%; padding: 13px 42px 13px 8px; background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--text); font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 300; outline: none; transition: all 0.3s ease; letter-spacing: 0.5px; }
+    .field input:focus { border-bottom-color: var(--accent); }
     .field input::placeholder { color: var(--text-muted); font-weight: 300; }
     .field input.error { border-bottom-color: var(--error); }
-    .field-icon {
-      position: absolute;
-      right: 0; top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      font-size: 13px;
-      pointer-events: none;
-      transition: color 0.2s;
-    }
+    .field-icon { position: absolute; right: 0; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px; pointer-events: none; transition: color 0.2s; }
     .field:focus-within .field-icon { color: var(--accent); }
-
-    .pwd-toggle {
-      position: absolute;
-      right: 0; top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 13px;
-      padding: 0;
-      transition: color 0.2s;
-    }
+    .pwd-toggle { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 13px; padding: 0; transition: color 0.2s; }
     .pwd-toggle:hover { color: var(--accent); }
-
-    .field-error {
-      font-size: 10px;
-      color: var(--error);
-      margin-top: 5px;
-      display: none;
-      letter-spacing: 1px;
-    }
+    .field-error { font-size: 10px; color: var(--error); margin-top: 5px; display: none; letter-spacing: 1px; }
     .field-error.show { display: block; }
 
-    .field-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 28px;
-      margin-top: 6px;
-    }
-    .remember {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-    }
-    .remember input[type=checkbox] {
-      width: 12px; height: 12px;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-    .remember span {
-      font-size: 10px;
-      color: var(--text-muted);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
-    .forgot-link {
-      font-size: 10px;
-      color: var(--text-muted);
-      text-decoration: none;
-      cursor: pointer;
-      transition: color 0.2s;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
+    .field-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; margin-top: 6px; }
+    .remember { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .remember input[type=checkbox] { width: 12px; height: 12px; accent-color: var(--accent); cursor: pointer; }
+    .remember span { font-size: 10px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; }
+    .forgot-link { font-size: 10px; color: var(--text-muted); text-decoration: none; cursor: pointer; transition: color 0.2s; letter-spacing: 2px; text-transform: uppercase; }
     .forgot-link:hover { color: var(--accent); }
 
-    .submit-btn {
-      width: 100%;
-      padding: 15px;
-      background: transparent;
-      color: var(--accent);
-      border: 1px solid var(--accent);
-      font-family: 'Jost', sans-serif;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 5px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-bottom: 22px;
-      text-transform: uppercase;
-      position: relative;
-      overflow: hidden;
-    }
-    .submit-btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: var(--accent);
-      transform: translateX(-101%);
-      transition: transform 0.3s ease;
-      z-index: 0;
-    }
+    .submit-btn { width: 100%; padding: 15px; background: transparent; color: var(--accent); border: 1px solid var(--accent); font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 5px; cursor: pointer; transition: all 0.3s ease; margin-bottom: 22px; text-transform: uppercase; position: relative; overflow: hidden; }
+    .submit-btn::before { content: ''; position: absolute; inset: 0; background: var(--accent); transform: translateX(-101%); transition: transform 0.3s ease; z-index: 0; }
     .submit-btn span { position: relative; z-index: 1; }
     .submit-btn:hover::before { transform: translateX(0); }
     .submit-btn:hover { color: var(--bg); }
@@ -475,102 +136,39 @@
     .submit-btn:disabled::before { transform: translateX(-101%); }
     .submit-btn:disabled { color: var(--accent); }
 
-    .divider {
-      display: flex; align-items: center; gap: 14px;
-      margin-bottom: 16px;
-      color: var(--text-muted);
-      font-size: 9px;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-    }
-    .divider::before, .divider::after {
-      content: ''; flex: 1; height: 1px; background: var(--border);
-    }
+    .divider { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; color: var(--text-muted); font-size: 9px; letter-spacing: 3px; text-transform: uppercase; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-    .google-btn {
-      width: 100%; padding: 13px;
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text-sub);
-      font-family: 'Jost', sans-serif;
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      gap: 10px;
-      transition: all 0.25s ease;
-    }
-    .google-btn:hover {
-      border-color: rgba(201,168,76,0.3);
-      color: var(--text);
-    }
+    .google-btn { width: 100%; padding: 13px; background: transparent; border: 1px solid var(--border); color: var(--text-sub); font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.25s ease; }
+    .google-btn:hover { border-color: rgba(201,168,76,0.3); color: var(--text); }
     .google-icon { width: 16px; height: 16px; flex-shrink: 0; }
 
     .pwd-strength { margin-top: 8px; display: none; }
     .pwd-strength.show { display: block; }
     .strength-bars { display: flex; gap: 4px; margin-bottom: 4px; }
-    .strength-bar {
-      flex: 1; height: 1px;
-      background: var(--border);
-      transition: background 0.3s;
-    }
-    .strength-label {
-      font-size: 9px;
-      color: var(--text-muted);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
+    .strength-bar { flex: 1; height: 1px; background: var(--border); transition: background 0.3s; }
+    .strength-label { font-size: 9px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; }
+
+    /* ── Account Settings Panel ── */
+    #formSettings { display: none; }
+    .settings-section { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+    .settings-section:last-of-type { border-bottom: none; margin-bottom: 0; }
+    .settings-section-title { font-size: 9px; font-weight: 600; letter-spacing: 4px; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+    .settings-note { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; margin-top: -10px; margin-bottom: 14px; line-height: 1.5; }
 
     #formReset { display: none; }
-    .back-link {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 10px; color: var(--text-muted);
-      cursor: pointer; text-decoration: none;
-      margin-top: 14px; transition: color 0.2s;
-      background: none; border: none;
-      font-family: 'Jost', sans-serif;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
+    .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-muted); cursor: pointer; text-decoration: none; margin-top: 14px; transition: color 0.2s; background: none; border: none; font-family: 'Jost', sans-serif; letter-spacing: 2px; text-transform: uppercase; }
     .back-link:hover { color: var(--accent); }
 
-    .toast {
-      position: fixed; bottom: 28px; left: 50%;
-      transform: translateX(-50%) translateY(80px);
-      background: var(--card);
-      border: 1px solid var(--border);
-      padding: 12px 22px;
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      z-index: 1000;
-      transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
-      white-space: nowrap;
-      display: flex; align-items: center; gap: 10px;
-      pointer-events: none;
-    }
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--card); border: 1px solid var(--border); padding: 12px 22px; font-size: 11px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; z-index: 1000; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); white-space: nowrap; display: flex; align-items: center; gap: 10px; pointer-events: none; }
     .toast.show { transform: translateX(-50%) translateY(0); }
     .toast.success { border-color: rgba(112,201,168,0.4); color: var(--success); }
     .toast.error   { border-color: rgba(201,112,112,0.4); color: var(--error); }
     .toast.info    { border-color: rgba(201,168,76,0.3); color: var(--accent); }
 
-    .spinner {
-      width: 14px; height: 14px;
-      border: 1px solid transparent;
-      border-top-color: currentColor;
-      border-radius: 50%;
-      animation: spin 0.65s linear infinite;
-      display: inline-block; vertical-align: middle;
-    }
+    .spinner { width: 14px; height: 14px; border: 1px solid transparent; border-top-color: currentColor; border-radius: 50%; animation: spin 0.65s linear infinite; display: inline-block; vertical-align: middle; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .fade-in { animation: fadeUp 0.4s ease both; }
 
     @media (max-width: 860px) {
@@ -584,8 +182,6 @@
 
 <div class="orb orb-a"></div>
 <div class="orb orb-b"></div>
-
-<!-- Starfield -->
 <div class="stars"><canvas id="starCanvas"></canvas></div>
 
 <div class="layout">
@@ -598,7 +194,6 @@
       </div>
       <div class="brand-tag">Intelligent Hiring Platform</div>
     </div>
-
     <div class="hero">
       <div class="eyebrow">Talent Intelligence</div>
       <h1 class="hero-title">
@@ -607,7 +202,6 @@
         <span class="word-regular">Hire</span>
       </h1>
       <p class="hero-sub">Intelligent Hiring. Reimagined.</p>
-
       <div class="features">
         <div class="feature-item">
           <div class="feature-line"></div>
@@ -623,20 +217,10 @@
         </div>
       </div>
     </div>
-
     <div class="stats">
-      <div class="stat">
-        <div class="stat-n">48K+</div>
-        <div class="stat-l">Active Jobs</div>
-      </div>
-      <div class="stat">
-        <div class="stat-n">120K</div>
-        <div class="stat-l">Candidates</div>
-      </div>
-      <div class="stat">
-        <div class="stat-n">97%</div>
-        <div class="stat-l">Match Rate</div>
-      </div>
+      <div class="stat"><div class="stat-n">48K+</div><div class="stat-l">Active Jobs</div></div>
+      <div class="stat"><div class="stat-n">120K</div><div class="stat-l">Candidates</div></div>
+      <div class="stat"><div class="stat-n">97%</div><div class="stat-l">Match Rate</div></div>
     </div>
   </div>
 
@@ -650,48 +234,32 @@
       </div>
 
       <div class="tab-switcher" role="tablist">
-        <button class="tab-btn active" id="tabIn"
-          onclick="switchTab('signin')"
-          role="tab" aria-selected="true">Sign In</button>
-        <button class="tab-btn" id="tabUp"
-          onclick="switchTab('signup')"
-          role="tab" aria-selected="false">Sign Up</button>
+        <button class="tab-btn active" id="tabIn"  onclick="switchTab('signin')"  role="tab" aria-selected="true">Sign In</button>
+        <button class="tab-btn"        id="tabUp"  onclick="switchTab('signup')"  role="tab" aria-selected="false">Sign Up</button>
       </div>
 
-      <!-- SIGN IN -->
+      <!-- ── SIGN IN ── -->
       <div id="formSignIn">
         <div class="form-header">
           <div class="form-title">Welcome Back</div>
           <div class="form-sub">Sign in to your <span>Recruiter</span> account</div>
         </div>
-
         <div class="field">
           <label for="siEmail">Email Address</label>
           <div class="input-wrap">
-            <input type="email" id="siEmail"
-              placeholder="recruiter@company.com"
-              autocomplete="email"
-              oninput="clearFieldError('siEmailErr')"/>
+            <input type="email" id="siEmail" placeholder="recruiter@company.com" autocomplete="email" oninput="clearFieldError('siEmailErr')"/>
             <span class="field-icon">✉</span>
           </div>
           <div class="field-error" id="siEmailErr"></div>
         </div>
-
         <div class="field">
           <label for="siPwd">Password</label>
           <div class="input-wrap">
-            <input type="password" id="siPwd"
-              placeholder="••••••••"
-              autocomplete="current-password"
-              oninput="clearFieldError('siPwdErr')"
-              onkeydown="if(event.key==='Enter') handleSignIn()"/>
-            <button class="pwd-toggle" type="button"
-              onclick="togglePwd('siPwd', this)"
-              aria-label="Toggle password visibility">👁</button>
+            <input type="password" id="siPwd" placeholder="••••••••" autocomplete="current-password" oninput="clearFieldError('siPwdErr')" onkeydown="if(event.key==='Enter') handleSignIn()"/>
+            <button class="pwd-toggle" type="button" onclick="togglePwd('siPwd', this)" aria-label="Toggle password">👁</button>
           </div>
           <div class="field-error" id="siPwdErr"></div>
         </div>
-
         <div class="field-row">
           <label class="remember">
             <input type="checkbox" id="rememberMe"/>
@@ -699,9 +267,7 @@
           </label>
           <a class="forgot-link" onclick="switchToReset()" tabindex="0" role="button">Forgot password?</a>
         </div>
-
         <button class="submit-btn" id="signInBtn" onclick="handleSignIn()"><span>Sign In</span></button>
-
         <div class="divider">or continue with</div>
         <button class="google-btn" onclick="handleGoogle()">
           <svg class="google-icon" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
@@ -714,13 +280,12 @@
         </button>
       </div>
 
-      <!-- SIGN UP -->
+      <!-- ── SIGN UP ── -->
       <div id="formSignUp" style="display:none;" class="fade-in">
         <div class="form-header">
           <div class="form-title">Join Us</div>
           <div class="form-sub">Create your <span>Recruiter</span> account</div>
         </div>
-
         <div class="field">
           <label for="suName">Full Name</label>
           <div class="input-wrap">
@@ -729,7 +294,6 @@
           </div>
           <div class="field-error" id="suNameErr"></div>
         </div>
-
         <div class="field">
           <label for="suCompany">Company</label>
           <div class="input-wrap">
@@ -738,7 +302,6 @@
           </div>
           <div class="field-error" id="suCompanyErr"></div>
         </div>
-
         <div class="field">
           <label for="suEmail">Work Email</label>
           <div class="input-wrap">
@@ -747,12 +310,11 @@
           </div>
           <div class="field-error" id="suEmailErr"></div>
         </div>
-
         <div class="field">
           <label for="suPwd">Password</label>
           <div class="input-wrap">
             <input type="password" id="suPwd" placeholder="Min. 8 characters" autocomplete="new-password" oninput="onPwdInput(this)" onkeydown="if(event.key==='Enter') handleSignUp()"/>
-            <button class="pwd-toggle" type="button" onclick="togglePwd('suPwd', this)" aria-label="Toggle password visibility">👁</button>
+            <button class="pwd-toggle" type="button" onclick="togglePwd('suPwd', this)" aria-label="Toggle password">👁</button>
           </div>
           <div class="pwd-strength" id="pwdStrength">
             <div class="strength-bars">
@@ -765,9 +327,7 @@
           </div>
           <div class="field-error" id="suPwdErr"></div>
         </div>
-
         <button class="submit-btn" id="signUpBtn" onclick="handleSignUp()" style="margin-top:10px;"><span>Create Account</span></button>
-
         <div class="divider">or continue with</div>
         <button class="google-btn" onclick="handleGoogle()">
           <svg class="google-icon" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
@@ -780,13 +340,12 @@
         </button>
       </div>
 
-      <!-- RESET PASSWORD -->
+      <!-- ── RESET PASSWORD ── -->
       <div id="formReset" class="fade-in">
         <div class="form-header">
           <div class="form-title">Reset</div>
           <div class="form-sub">We'll send a reset link to your inbox.</div>
         </div>
-
         <div class="field">
           <label for="resetEmail">Email Address</label>
           <div class="input-wrap">
@@ -794,81 +353,147 @@
             <span class="field-icon">✉</span>
           </div>
         </div>
-
         <button class="submit-btn" id="resetBtn" onclick="handleReset()"><span>Send Reset Link</span></button>
         <div style="text-align:center;">
           <button class="back-link" onclick="switchTab('signin')">← Back to Sign In</button>
         </div>
       </div>
 
+      <!-- ── ACCOUNT SETTINGS (shown post-login if navigated here) ── -->
+      <div id="formSettings" class="fade-in">
+        <div class="form-header">
+          <div class="form-title">Settings</div>
+          <div class="form-sub">Manage your <span>Account</span></div>
+        </div>
+
+        <!-- Profile Info -->
+        <div class="settings-section">
+          <div class="settings-section-title">Profile</div>
+          <div class="field">
+            <label for="setName">Full Name</label>
+            <div class="input-wrap">
+              <input type="text" id="setName" placeholder="Your full name" oninput="clearFieldError('setNameErr')"/>
+              <span class="field-icon">◉</span>
+            </div>
+            <div class="field-error" id="setNameErr"></div>
+          </div>
+          <div class="field">
+            <label for="setCompany">Company</label>
+            <div class="input-wrap">
+              <input type="text" id="setCompany" placeholder="Your company" oninput="clearFieldError('setCompanyErr')"/>
+              <span class="field-icon">◈</span>
+            </div>
+            <div class="field-error" id="setCompanyErr"></div>
+          </div>
+          <button class="submit-btn" id="saveProfileBtn" onclick="handleSaveProfile()"><span>Save Profile</span></button>
+        </div>
+
+        <!-- Email Update -->
+        <div class="settings-section">
+          <div class="settings-section-title">Email Address</div>
+          <p class="settings-note">A verification link will be sent to the new address. The change takes effect after you click it.</p>
+          <div class="field">
+            <label for="setEmail">New Email</label>
+            <div class="input-wrap">
+              <input type="email" id="setEmail" placeholder="new@company.com" oninput="clearFieldError('setEmailErr')"/>
+              <span class="field-icon">✉</span>
+            </div>
+            <div class="field-error" id="setEmailErr"></div>
+          </div>
+          <div class="field">
+            <label for="setEmailPwd">Current Password</label>
+            <div class="input-wrap">
+              <input type="password" id="setEmailPwd" placeholder="••••••••" oninput="clearFieldError('setEmailPwdErr')"/>
+              <button class="pwd-toggle" type="button" onclick="togglePwd('setEmailPwd', this)" aria-label="Toggle password">👁</button>
+            </div>
+            <div class="field-error" id="setEmailPwdErr"></div>
+          </div>
+          <button class="submit-btn" id="updateEmailBtn" onclick="handleUpdateEmail()"><span>Update Email</span></button>
+        </div>
+
+        <!-- Password Update -->
+        <div class="settings-section">
+          <div class="settings-section-title">Change Password</div>
+          <div class="field">
+            <label for="setCurrPwd">Current Password</label>
+            <div class="input-wrap">
+              <input type="password" id="setCurrPwd" placeholder="••••••••" oninput="clearFieldError('setCurrPwdErr')"/>
+              <button class="pwd-toggle" type="button" onclick="togglePwd('setCurrPwd', this)" aria-label="Toggle password">👁</button>
+            </div>
+            <div class="field-error" id="setCurrPwdErr"></div>
+          </div>
+          <div class="field">
+            <label for="setNewPwd">New Password</label>
+            <div class="input-wrap">
+              <input type="password" id="setNewPwd" placeholder="Min. 8 characters" oninput="onNewPwdInput(this)" onkeydown="if(event.key==='Enter') handleUpdatePassword()"/>
+              <button class="pwd-toggle" type="button" onclick="togglePwd('setNewPwd', this)" aria-label="Toggle password">👁</button>
+            </div>
+            <div class="pwd-strength" id="newPwdStrength">
+              <div class="strength-bars">
+                <div class="strength-bar" id="nsb0"></div><div class="strength-bar" id="nsb1"></div>
+                <div class="strength-bar" id="nsb2"></div><div class="strength-bar" id="nsb3"></div>
+              </div>
+              <div class="strength-label" id="newStrengthLabel">Too short</div>
+            </div>
+            <div class="field-error" id="setNewPwdErr"></div>
+          </div>
+          <button class="submit-btn" id="updatePwdBtn" onclick="handleUpdatePassword()"><span>Change Password</span></button>
+        </div>
+
+        <div style="text-align:center; margin-top: 8px;">
+          <button class="back-link" onclick="switchTab('signin')">← Back to Sign In</button>
+        </div>
+      </div>
+
     </div>
   </div>
-
 </div>
 
 <div class="toast" id="toast" role="alert" aria-live="assertive"></div>
 
+<!-- ── CORE SCRIPT (non-module, runs sync) ── -->
 <script>
-/* ── STARFIELD ── */
+/* STARFIELD */
 (function() {
   const canvas = document.getElementById('starCanvas');
   const ctx = canvas.getContext('2d');
   let stars = [];
-
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
   function initStars() {
     stars = [];
     const count = Math.floor((canvas.width * canvas.height) / 4500);
     for (let i = 0; i < count; i++) {
-      stars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        r: Math.random() * 0.9 + 0.1,
-        opacity: Math.random() * 0.7 + 0.1,
-        twinkleSpeed: Math.random() * 0.01 + 0.003,
-        twinkleOffset: Math.random() * Math.PI * 2,
-      });
+      stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 0.9 + 0.1, opacity: Math.random() * 0.7 + 0.1, twinkleSpeed: Math.random() * 0.01 + 0.003, twinkleOffset: Math.random() * Math.PI * 2 });
     }
   }
-
   let frame = 0;
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     frame++;
     for (const s of stars) {
       const opacity = s.opacity * (0.5 + 0.5 * Math.sin(frame * s.twinkleSpeed + s.twinkleOffset));
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(201,168,76,${opacity})`;
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(201,168,76,${opacity})`; ctx.fill();
     }
     requestAnimationFrame(draw);
   }
-
   window.addEventListener('resize', () => { resize(); initStars(); });
-  resize();
-  initStars();
-  draw();
+  resize(); initStars(); draw();
 })();
 
-/* ── TAB MANAGEMENT ── */
+/* TAB MANAGEMENT */
 let activeTab = 'signin';
-
 function switchTab(tab) {
   activeTab = tab;
-  document.getElementById('tabIn').className  = 'tab-btn' + (tab === 'signin' ? ' active' : '');
-  document.getElementById('tabUp').className  = 'tab-btn' + (tab === 'signup' ? ' active' : '');
-  document.getElementById('formSignIn').style.display = tab === 'signin' ? '' : 'none';
-  document.getElementById('formSignUp').style.display = tab === 'signup' ? '' : 'none';
-  document.getElementById('formReset').style.display  = 'none';
+  document.getElementById('tabIn').className = 'tab-btn' + (tab === 'signin' ? ' active' : '');
+  document.getElementById('tabUp').className = 'tab-btn' + (tab === 'signup' ? ' active' : '');
+  document.getElementById('formSignIn').style.display  = tab === 'signin'   ? '' : 'none';
+  document.getElementById('formSignUp').style.display  = tab === 'signup'   ? '' : 'none';
+  document.getElementById('formReset').style.display   = 'none';
+  document.getElementById('formSettings').style.display = 'none';
   if (tab === 'signup') {
-    document.getElementById('formSignUp').classList.remove('fade-in');
-    void document.getElementById('formSignUp').offsetWidth;
-    document.getElementById('formSignUp').classList.add('fade-in');
+    const el = document.getElementById('formSignUp');
+    el.classList.remove('fade-in'); void el.offsetWidth; el.classList.add('fade-in');
     setTimeout(() => document.getElementById('suName').focus(), 50);
   } else {
     setTimeout(() => document.getElementById('siEmail').focus(), 50);
@@ -876,32 +501,37 @@ function switchTab(tab) {
 }
 
 function switchToReset() {
-  document.getElementById('formSignIn').style.display = 'none';
-  document.getElementById('formSignUp').style.display = 'none';
-  document.getElementById('formReset').style.display  = '';
-  document.getElementById('formReset').classList.remove('fade-in');
-  void document.getElementById('formReset').offsetWidth;
-  document.getElementById('formReset').classList.add('fade-in');
+  ['formSignIn','formSignUp','formSettings'].forEach(id => document.getElementById(id).style.display = 'none');
+  const el = document.getElementById('formReset');
+  el.style.display = ''; el.classList.remove('fade-in'); void el.offsetWidth; el.classList.add('fade-in');
   setTimeout(() => document.getElementById('resetEmail').focus(), 50);
 }
 
-/* ── TOAST ── */
+function switchToSettings() {
+  ['formSignIn','formSignUp','formReset'].forEach(id => document.getElementById(id).style.display = 'none');
+  const el = document.getElementById('formSettings');
+  el.style.display = ''; el.classList.remove('fade-in'); void el.offsetWidth; el.classList.add('fade-in');
+  // Pre-populate from localStorage
+  const name    = localStorage.getItem('titanName')    || '';
+  const company = localStorage.getItem('titanCompany') || '';
+  document.getElementById('setName').value    = name;
+  document.getElementById('setCompany').value = company;
+}
+
+/* TOAST */
 function showToast(msg, type = 'info') {
   const t = document.getElementById('toast');
   const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : '—';
-  t.className = `toast ${type}`;
-  t.innerHTML = `${icon} ${msg}`;
-  t.classList.add('show');
+  t.className = `toast ${type}`; t.innerHTML = `${icon} ${msg}`; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-/* ── FIELD HELPERS ── */
+/* FIELD HELPERS */
 function showFieldError(id, msg) {
   const el = document.getElementById(id);
-  el.textContent = msg;
-  el.classList.add('show');
+  el.textContent = msg; el.classList.add('show');
   const input = el.previousElementSibling?.querySelector('input') || el.previousElementSibling;
-  if (input && input.tagName === 'INPUT') input.classList.add('error');
+  if (input?.tagName === 'INPUT') input.classList.add('error');
 }
 function clearFieldError(id) {
   const el = document.getElementById(id);
@@ -909,36 +539,49 @@ function clearFieldError(id) {
   const input = el.previousElementSibling?.querySelector('input');
   if (input) input.classList.remove('error');
 }
-
 function togglePwd(inputId, btn) {
   const inp = document.getElementById(inputId);
   if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
   else { inp.type = 'password'; btn.textContent = '👁'; }
 }
 
-/* ── PASSWORD STRENGTH ── */
-function onPwdInput(input) {
-  const val = input.value;
-  const el = document.getElementById('pwdStrength');
-  clearFieldError('suPwdErr');
-  if (!val) { el.classList.remove('show'); return; }
-  el.classList.add('show');
+/* PASSWORD STRENGTH */
+function calcStrength(val) {
   let score = 0;
-  if (val.length >= 8)  score++;
-  if (/[A-Z]/.test(val)) score++;
-  if (/[0-9]/.test(val)) score++;
+  if (val.length >= 8)         score++;
+  if (/[A-Z]/.test(val))       score++;
+  if (/[0-9]/.test(val))       score++;
   if (/[^A-Za-z0-9]/.test(val)) score++;
+  return score;
+}
+function renderStrength(score, barPrefix, labelId) {
   const colors = ['#c97070','#c9a050','#c9c050','#70c9a8'];
   const labels = ['Weak','Fair','Good','Strong'];
   for (let i = 0; i < 4; i++) {
-    document.getElementById(`sb${i}`).style.background = i < score ? colors[score-1] : 'var(--border)';
-    document.getElementById(`sb${i}`).style.height = i < score ? '2px' : '1px';
+    const bar = document.getElementById(`${barPrefix}${i}`);
+    bar.style.background = i < score ? colors[score-1] : 'var(--border)';
+    bar.style.height     = i < score ? '2px' : '1px';
   }
-  document.getElementById('strengthLabel').textContent = labels[score-1] || 'Too short';
-  document.getElementById('strengthLabel').style.color = colors[score-1] || 'var(--text-muted)';
+  const lbl = document.getElementById(labelId);
+  lbl.textContent = labels[score-1] || 'Too short';
+  lbl.style.color = colors[score-1] || 'var(--text-muted)';
+}
+function onPwdInput(input) {
+  clearFieldError('suPwdErr');
+  const el = document.getElementById('pwdStrength');
+  if (!input.value) { el.classList.remove('show'); return; }
+  el.classList.add('show');
+  renderStrength(calcStrength(input.value), 'sb', 'strengthLabel');
+}
+function onNewPwdInput(input) {
+  clearFieldError('setNewPwdErr');
+  const el = document.getElementById('newPwdStrength');
+  if (!input.value) { el.classList.remove('show'); return; }
+  el.classList.add('show');
+  renderStrength(calcStrength(input.value), 'nsb', 'newStrengthLabel');
 }
 
-/* ── LOADING STATE ── */
+/* LOADING STATE */
 function setLoading(id, loading, label) {
   const btn = document.getElementById(id);
   btn.disabled = loading;
@@ -949,11 +592,10 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 const DASHBOARD_URL = './recruit.html';
 function redirectToDashboard() { window.location.href = DASHBOARD_URL; }
 
-/* ── SIGN IN ── */
+/* SIGN IN */
 async function handleSignIn() {
   const email = document.getElementById('siEmail').value.trim();
   const pwd   = document.getElementById('siPwd').value;
-
   let valid = true;
   if (!email) { showFieldError('siEmailErr', 'Email is required'); valid = false; }
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showFieldError('siEmailErr', 'Enter a valid email'); valid = false; }
@@ -970,22 +612,30 @@ async function handleSignIn() {
   }
   setLoading('signInBtn', false, 'Sign In');
   if (res.error) return showToast(formatError(res.error), 'error');
+
+  // Fetch profile from Firestore and update localStorage
+  if (window._firebase && res.user) {
+    const profile = await window._firebase.getCurrentRecruiterProfile();
+    if (profile.data) {
+      if (profile.data.name)    localStorage.setItem('titanName',    profile.data.name);
+      if (profile.data.company) localStorage.setItem('titanCompany', profile.data.company);
+    }
+  }
   localStorage.setItem('titanRole', 'recruiter');
   showToast('Signed in successfully', 'success');
   setTimeout(redirectToDashboard, 1400);
 }
 
-/* ── SIGN UP ── */
+/* SIGN UP */
 async function handleSignUp() {
   const name    = document.getElementById('suName').value.trim();
   const company = document.getElementById('suCompany').value.trim();
   const email   = document.getElementById('suEmail').value.trim();
   const pwd     = document.getElementById('suPwd').value;
-
   let valid = true;
-  if (!name) { showFieldError('suNameErr', 'Full name is required'); valid = false; }
+  if (!name)    { showFieldError('suNameErr',    'Full name is required'); valid = false; }
   if (!company) { showFieldError('suCompanyErr', 'Company name is required'); valid = false; }
-  if (!email) { showFieldError('suEmailErr', 'Email is required'); valid = false; }
+  if (!email)   { showFieldError('suEmailErr',   'Email is required'); valid = false; }
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showFieldError('suEmailErr', 'Enter a valid email'); valid = false; }
   if (!pwd || pwd.length < 8) { showFieldError('suPwdErr', 'Minimum 8 characters'); valid = false; }
   if (!valid) return;
@@ -996,7 +646,7 @@ async function handleSignUp() {
     res = await window._firebase.signUpWithEmail(email, pwd);
     if (res.user && !res.error) {
       await window._firebase.saveRecruiterProfile(res.user.uid, {
-        name, company, email, role: 'recruiter', createdAt: new Date().toISOString()
+        name, company, email, role: 'recruiter'
       });
     }
   } else {
@@ -1012,17 +662,24 @@ async function handleSignUp() {
   setTimeout(redirectToDashboard, 1400);
 }
 
-/* ── GOOGLE ── */
+/* GOOGLE */
 async function handleGoogle() {
   if (!window._firebase) return showToast('Google sign-in requires Firebase integration.', 'info');
   const res = await window._firebase.signInWithGoogle();
   if (res.error) return showToast(formatError(res.error), 'error');
+  if (res.user) {
+    const profile = await window._firebase.getCurrentRecruiterProfile();
+    if (profile.data) {
+      if (profile.data.name)    localStorage.setItem('titanName',    profile.data.name);
+      if (profile.data.company) localStorage.setItem('titanCompany', profile.data.company);
+    }
+  }
   localStorage.setItem('titanRole', 'recruiter');
   showToast('Signed in with Google', 'success');
   setTimeout(redirectToDashboard, 1400);
 }
 
-/* ── RESET PASSWORD ── */
+/* RESET PASSWORD */
 async function handleReset() {
   const email = document.getElementById('resetEmail').value.trim();
   if (!email) return showToast('Please enter your email address.', 'error');
@@ -1034,41 +691,121 @@ async function handleReset() {
   setTimeout(() => switchTab('signin'), 2200);
 }
 
-/* ── ERROR FORMATTER ── */
+/* ── ACCOUNT SETTINGS HANDLERS ── */
+
+/** Save profile (name + company) to Firestore */
+async function handleSaveProfile() {
+  const name    = document.getElementById('setName').value.trim();
+  const company = document.getElementById('setCompany').value.trim();
+  let valid = true;
+  if (!name)    { showFieldError('setNameErr',    'Name is required'); valid = false; }
+  if (!company) { showFieldError('setCompanyErr', 'Company is required'); valid = false; }
+  if (!valid) return;
+
+  setLoading('saveProfileBtn', true, 'Save Profile');
+  if (window._firebase) {
+    const res = await window._firebase.updateRecruiterProfile({ name, company });
+    setLoading('saveProfileBtn', false, 'Save Profile');
+    if (res.error) return showToast(formatError(res.error), 'error');
+  } else {
+    await sleep(800);
+    localStorage.setItem('titanName', name);
+    localStorage.setItem('titanCompany', company);
+    setLoading('saveProfileBtn', false, 'Save Profile');
+  }
+  showToast('Profile updated successfully', 'success');
+}
+
+/** Send email-change verification link via Firebase */
+async function handleUpdateEmail() {
+  const newEmail = document.getElementById('setEmail').value.trim();
+  const pwd      = document.getElementById('setEmailPwd').value;
+  let valid = true;
+  if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) { showFieldError('setEmailErr', 'Enter a valid email'); valid = false; }
+  if (!pwd) { showFieldError('setEmailPwdErr', 'Current password is required'); valid = false; }
+  if (!valid) return;
+
+  setLoading('updateEmailBtn', true, 'Update Email');
+  if (window._firebase) {
+    const res = await window._firebase.updateUserEmail(newEmail, pwd);
+    setLoading('updateEmailBtn', false, 'Update Email');
+    if (res.error) return showToast(formatError(res.error), 'error');
+    document.getElementById('setEmail').value    = '';
+    document.getElementById('setEmailPwd').value = '';
+    showToast('Verification sent — check your new inbox', 'success');
+  } else {
+    await sleep(800);
+    setLoading('updateEmailBtn', false, 'Update Email');
+    showToast('(Demo) Email update would be sent', 'info');
+  }
+}
+
+/** Change password via Firebase (re-auth + updatePassword) */
+async function handleUpdatePassword() {
+  const currPwd = document.getElementById('setCurrPwd').value;
+  const newPwd  = document.getElementById('setNewPwd').value;
+  let valid = true;
+  if (!currPwd) { showFieldError('setCurrPwdErr', 'Current password is required'); valid = false; }
+  if (!newPwd || newPwd.length < 8) { showFieldError('setNewPwdErr', 'Minimum 8 characters'); valid = false; }
+  if (!valid) return;
+
+  setLoading('updatePwdBtn', true, 'Change Password');
+  if (window._firebase) {
+    const res = await window._firebase.updateUserPassword(currPwd, newPwd);
+    setLoading('updatePwdBtn', false, 'Change Password');
+    if (res.error) return showToast(formatError(res.error), 'error');
+    document.getElementById('setCurrPwd').value = '';
+    document.getElementById('setNewPwd').value  = '';
+    document.getElementById('newPwdStrength').classList.remove('show');
+    showToast('Password changed successfully', 'success');
+  } else {
+    await sleep(800);
+    setLoading('updatePwdBtn', false, 'Change Password');
+    showToast('(Demo) Password change would apply', 'info');
+  }
+}
+
+/* ERROR FORMATTER */
 function formatError(msg) {
   if (!msg) return 'Something went wrong.';
-  if (msg.includes('email-already-in-use')) return 'This email is already registered.';
-  if (msg.includes('invalid-email')) return 'Please enter a valid email address.';
+  if (msg.includes('email-already-in-use'))   return 'This email is already registered.';
+  if (msg.includes('invalid-email'))           return 'Please enter a valid email address.';
   if (msg.includes('wrong-password') || msg.includes('invalid-credential')) return 'Incorrect email or password.';
-  if (msg.includes('user-not-found')) return 'No account found with this email.';
-  if (msg.includes('weak-password')) return 'Password is too weak.';
-  if (msg.includes('popup-closed')) return 'Google sign-in was cancelled.';
-  if (msg.includes('too-many-requests')) return 'Too many attempts. Please wait.';
+  if (msg.includes('user-not-found'))          return 'No account found with this email.';
+  if (msg.includes('weak-password'))           return 'Password is too weak.';
+  if (msg.includes('popup-closed'))            return 'Google sign-in was cancelled.';
+  if (msg.includes('too-many-requests'))       return 'Too many attempts. Please wait.';
+  if (msg.includes('requires-recent-login') || msg.includes('no-current-user')) return 'Please sign in again before making this change.';
+  if (msg.includes('email-change-needs-verification')) return 'Check your new inbox to confirm the change.';
   return 'Something went wrong. Please try again.';
 }
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    const reset = document.getElementById('formReset');
-    if (reset.style.display !== 'none') switchTab('signin');
+    if (document.getElementById('formReset').style.display !== 'none') switchTab('signin');
+    if (document.getElementById('formSettings').style.display !== 'none') switchTab('signin');
   }
 });
+window.addEventListener('load', () => { document.getElementById('siEmail').focus(); });
 
-window.addEventListener('load', () => {
-  document.getElementById('siEmail').focus();
-});
-
-window.switchTab = switchTab;
-window.switchToReset = switchToReset;
-window.handleSignIn = handleSignIn;
-window.handleSignUp = handleSignUp;
-window.handleGoogle = handleGoogle;
-window.handleReset = handleReset;
-window.togglePwd = togglePwd;
-window.onPwdInput = onPwdInput;
-window.clearFieldError = clearFieldError;
+/* Expose to global scope */
+window.switchTab        = switchTab;
+window.switchToReset    = switchToReset;
+window.switchToSettings = switchToSettings;
+window.handleSignIn     = handleSignIn;
+window.handleSignUp     = handleSignUp;
+window.handleGoogle     = handleGoogle;
+window.handleReset      = handleReset;
+window.handleSaveProfile    = handleSaveProfile;
+window.handleUpdateEmail    = handleUpdateEmail;
+window.handleUpdatePassword = handleUpdatePassword;
+window.togglePwd        = togglePwd;
+window.onPwdInput       = onPwdInput;
+window.onNewPwdInput    = onNewPwdInput;
+window.clearFieldError  = clearFieldError;
 </script>
 
+<!-- ── FIREBASE MODULE SCRIPT ── -->
 <script type="module">
   import {
     signUpWithEmail,
@@ -1076,31 +813,33 @@ window.clearFieldError = clearFieldError;
     signInWithGoogle,
     resetPassword,
     onAuthChange,
+    updateUserEmail,
+    updateUserPassword,
+    updateRecruiterProfile,
+    saveRecruiterProfile,
+    getCurrentRecruiterProfile,
     db,
   } from "./firebase.js";
 
-  import { setDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
-
-  async function saveRecruiterProfile(uid, data) {
-    try {
-      await setDoc(doc(db, "recruiters", uid), data, { merge: true });
-    } catch (e) {
-      console.error("Failed to save profile:", e);
-    }
-  }
-
+  // Expose all Firebase functions to the global (non-module) scope
   window._firebase = {
     signUpWithEmail,
     signInWithEmail,
     signInWithGoogle,
     resetPassword,
+    updateUserEmail,
+    updateUserPassword,
+    updateRecruiterProfile,
     saveRecruiterProfile,
+    getCurrentRecruiterProfile,
   };
 
-  onAuthChange((user) => {
-    if (user.isLoggedIn) {
+  // Redirect already-authenticated users straight to the dashboard
+  onAuthChange((state) => {
+    if (state.isLoggedIn) {
       localStorage.setItem("titanRole", "recruiter");
-      window.location.href = 'recruiter-dashboard.html';
+      if (state.user?.displayName) localStorage.setItem("titanName", state.user.displayName);
+      window.location.href = "recruiter-dashboard.html";
     }
   });
 </script>
