@@ -728,6 +728,7 @@ function listen(onResult, onError) {
   setBars('listening');
 
   let finalResult = '';
+  let resultFired = false; // guard so we never call onResult twice
 
   recognition.onresult = (e) => {
     let interim = '';
@@ -735,30 +736,37 @@ function listen(onResult, onError) {
       if (e.results[i].isFinal) finalResult += e.results[i][0].transcript;
       else interim += e.results[i][0].transcript;
     }
-    // FIX 4: only update display here — do NOT call speak() from setTranscript
     setTranscript('"' + (finalResult || interim) + '"');
+
+    // ── KEY FIX: fire as soon as we get a final result, don't wait for onend ──
+    // This eliminates the ~5-7 second browser silence-detection timeout
+    if (finalResult && !resultFired) {
+      resultFired = true;
+      recognition.stop(); // stop gracefully — triggers onend but we guard with resultFired
+      const text = finalResult.trim();
+      if (text.toLowerCase().includes('try again')) {
+        resetFlow();
+        return;
+      }
+      // Tiny rAF delay just to let recognition.stop() flush before speech starts
+      requestAnimationFrame(() => onResult(text));
+    }
   };
 
   recognition.onend = () => {
     setMicState(false);
-    // FIX 5: handle result in onend so we're sure recognition has fully stopped
-    // before we call speak() again — prevents overlap
-    if (finalResult) {
-      const out = finalResult.trim().toLowerCase();
-      if (out.includes('try again')) {
-        resetFlow();
-        return;
-      }
-      // Short delay to ensure recognition is fully torn down before speech starts
-      setTimeout(() => onResult(finalResult.trim()), 150);
+    // Only handle no-result case here (e.g. user said nothing and it timed out)
+    if (!resultFired && !finalResult) {
+      onError('No speech detected. Please try again.');
     }
   };
 
   recognition.onerror = (e) => {
     setMicState(false);
-    finalResult = '';
+    if (resultFired) return; // already handled
     if (e.error === 'no-speech') onError('No speech detected. Please try again.');
     else if (e.error === 'not-allowed') onError('Microphone access denied. Please allow mic access.');
+    else if (e.error === 'aborted') return; // intentional abort, ignore
     else onError('Error: ' + e.error);
   };
 
@@ -813,7 +821,7 @@ function captureIntentMode() {
     announce("Listening. Please say sign in or sign up.");
     setPill('', 'READY');
     setBars('idle');
-    setTimeout(() => listenForIntent(), 300);
+    listenForIntent();
   });
 }
 
@@ -842,7 +850,7 @@ function listenForIntent() {
         setPrompt("Sign in or sign up?");
         setTranscript('');
         setPill('', 'READY');
-        setTimeout(() => listenForIntent(), 300);
+        listenForIntent();
       });
     }
 
@@ -854,7 +862,7 @@ function listenForIntent() {
     setTimeout(() => {
       setPrompt("Sign in or sign up?");
       setPill('', 'READY');
-      setTimeout(() => listenForIntent(), 300);
+      listenForIntent();
     }, 2800);
   });
 }
@@ -874,7 +882,7 @@ function startSignInFlow() {
     announce("Listening for your email address.");
     setPill('', 'READY');
     setBars('idle');
-    setTimeout(() => captureEmailSignIn(), 300);
+    captureEmailSignIn();
   });
 }
 
@@ -894,7 +902,7 @@ function startSignUpFlow() {
     announce("Listening for your email address.");
     setPill('', 'READY');
     setBars('idle');
-    setTimeout(() => captureEmailSignUp(), 300);
+    captureEmailSignUp();
   });
 }
 
@@ -935,7 +943,7 @@ function captureEmailSignIn() {
       announce("Listening for your password.");
       setTranscript('');
       setPill('', 'READY');
-      setTimeout(() => capturePasswordSignIn(), 300);
+      capturePasswordSignIn();
     });
 
   }, (err) => {
@@ -965,9 +973,7 @@ function capturePasswordSignIn() {
     setBars('idle');
     setPill('', 'VERIFYING');
     updateSteps(3);
-
-    // FIX 9: short delay so DOM settles before verification kicks off
-    setTimeout(() => verifySignInCredentials(), 400);
+    verifySignInCredentials();
 
   }, (err) => {
     state = 'idle';
@@ -1022,7 +1028,7 @@ function captureEmailSignUp() {
       announce("Listening for your password.");
       setTranscript('');
       setPill('', 'READY');
-      setTimeout(() => capturePasswordSignUp(), 300);
+      capturePasswordSignUp();
     });
 
   }, (err) => {
@@ -1059,7 +1065,7 @@ function capturePasswordSignUp() {
       announce("Listening for password confirmation.");
       setTranscript('');
       setPill('', 'READY');
-      setTimeout(() => capturePasswordConfirmSignUp(), 300);
+      capturePasswordConfirmSignUp();
     });
 
   }, (err) => {
@@ -1087,8 +1093,7 @@ function capturePasswordConfirmSignUp() {
     setTranscript('"' + result + '"');
     setBars('idle');
     setPill('', 'VERIFYING');
-
-    setTimeout(() => verifySignUpCredentials(), 400);
+    verifySignUpCredentials();
 
   }, (err) => {
     state = 'idle';
