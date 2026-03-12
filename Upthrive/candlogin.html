@@ -831,10 +831,10 @@ function startSignInFlow() {
 
   speak("Welcome. This is the voice authentication system for TalentBridge. Please say your email address after the tone.", () => {
     setPrompt("Please say your email address.");
-    announce("Please say your email address. Tap the microphone or press Space to begin.");
+    announce("Listening for your email address.");
     setPill('', 'READY');
     setBars('idle');
-    enableMic(true);
+    setTimeout(() => captureEmailSignIn(), 500);  // Auto-start microphone
   });
 
   setPrompt("Welcome to TalentBridge voice sign-in.");
@@ -852,10 +852,10 @@ function startSignUpFlow() {
 
   speak("Welcome to TalentBridge. Let's create your voice account. First, please say your email address after the tone.", () => {
     setPrompt("Please say your email address.");
-    announce("Please say your email address. Tap the microphone or press Space to begin.");
+    announce("Listening for your email address.");
     setPill('', 'READY');
     setBars('idle');
-    enableMic(true);
+    setTimeout(() => captureEmailSignUp(), 500);  // Auto-start microphone
   });
 
   setPrompt("Let's create your TalentBridge voice account.");
