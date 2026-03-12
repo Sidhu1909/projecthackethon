@@ -194,6 +194,12 @@ export function speakText(text) {
   window.speechSynthesis.speak(utterance);
 }
 
+// ── Microphone Listen Wrapper ──
+// An alias that can be called to capture speech from the mic
+export async function listenMicrophone(language = 'en-US') {
+  return startVoiceListener(language);
+}
+
 // ── Helper: Voice Recognition (Speech-to-Text) ──
 export function startVoiceListener(language = 'en-US') {
   return new Promise((resolve, reject) => {
@@ -421,6 +427,7 @@ export {
   recordVoiceSample,
   speakText,
   startVoiceListener,
+  listenMicrophone,
   enrollCandidateVoice,
   authenticateWithVoice,
   stopVoiceListener,
