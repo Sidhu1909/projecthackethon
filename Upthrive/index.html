@@ -682,6 +682,7 @@
     onAuthChange,
     enrollCandidateVoice,
     authenticateWithVoice,
+    startCandidateVoiceAuth,
     checkVoiceAuthAvailable,
     speakText,
     startVoiceListener,
@@ -696,6 +697,7 @@
     resetPassword,
     enrollCandidateVoice,
     authenticateWithVoice,
+    startCandidateVoiceAuth,
     checkVoiceAuthAvailable,
     speakText,
     startVoiceListener,
@@ -757,6 +759,29 @@
     // Show/hide voice sections (only for candidates)
     document.getElementById('voiceSignInSection').classList.toggle('show', role === 'candidate');
     document.getElementById('voiceEnrollSection').classList.toggle('show', role === 'candidate');
+
+    // disable normal fields for blind candidates
+    const emailField = document.getElementById('siEmail');
+    const pwdField = document.getElementById('siPassword');
+    if (role === 'candidate') {
+      emailField.disabled = true;
+      pwdField.disabled = true;
+    } else {
+      emailField.disabled = false;
+      pwdField.disabled = false;
+    }
+
+    // If candidate page, automatically start voice authentication
+    if (role === 'candidate') {
+      // delay slightly so UI updates
+      setTimeout(() => {
+        window._firebase.startCandidateVoiceAuth().then(result => {
+          if (result.success) {
+            window.location.href = '/candidate-dashboard.html';
+          }
+        });
+      }, 1000);
+    }
 
     // Orb shift
     if (role === 'candidate') {

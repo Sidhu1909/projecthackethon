@@ -236,6 +236,51 @@ export function startVoiceListener(language = 'en-US') {
   });
 }
 
+// ── Helper: Sleep (used in voice flows) ──
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ── API: Automatic voice-auth flow for candidates ──
+export async function startCandidateVoiceAuth() {
+  try {
+    speakText('Please say your email address clearly.');
+    await sleep(500);
+    const emailResp = await startVoiceListener('en-US');
+    let email = emailResp.transcript.toLowerCase().trim();
+    email = email.replace(/\s+at\s+/g, '@').replace(/\s+dot\s+/g, '.').replace(/\s/g, '');
+
+    if (!email.includes('@')) {
+      speakText('Email not recognised. Please use the keyboard to login.');
+      return { success: false, reason: 'invalid_email' };
+    }
+
+    speakText('Now please say your password.');
+    await sleep(500);
+    const pwdResp = await startVoiceListener('en-US');
+    const password = pwdResp.transcript.trim();
+
+    if (!password || password.length < 6) {
+      speakText('Password was not recognised. Please login manually.');
+      return { success: false, reason: 'invalid_password' };
+    }
+
+    speakText('Authenticating. Please wait.');
+    const { user, error } = await signInWithEmail(email, password);
+    if (error) {
+      speakText('Authentication failed. Check your credentials.');
+      return { success: false, error };
+    }
+
+    speakText('Welcome back. Redirecting you now.');
+    return { success: true, user };
+  } catch (err) {
+    console.error('candidate voice auth error', err);
+    speakText('An error occurred with voice authentication. Please login manually.');
+    return { success: false, error: err.message };
+  }
+}
+
 // ── Enroll Candidate Voice (First Time Setup) ──
 export async function enrollCandidateVoice(email, userId) {
   try {
@@ -428,6 +473,7 @@ export {
   speakText,
   startVoiceListener,
   listenMicrophone,
+  startCandidateVoiceAuth,
   enrollCandidateVoice,
   authenticateWithVoice,
   stopVoiceListener,
