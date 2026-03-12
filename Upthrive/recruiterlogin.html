@@ -3,109 +3,101 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TITAN — Recruiter Login</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <title>TALENTBRIDGE — Recruiter Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #08080e;
-      --surface: #0f0f1a;
-      --card: #13131f;
-      --border: rgba(255,255,255,0.06);
-      --border-hover: rgba(232,255,71,0.25);
-      --accent: #e8ff47;
-      --accent-dim: rgba(232,255,71,0.12);
-      --accent-glow: rgba(232,255,71,0.2);
-      --text: #f0f0f8;
-      --text-muted: #5a5a72;
-      --text-sub: #9898b0;
-      --error: #ff4f6a;
-      --success: #47ffaa;
+      --bg: #04040a;
+      --surface: #080810;
+      --card: #0c0c18;
+      --border: rgba(201,168,76,0.12);
+      --border-hover: rgba(201,168,76,0.35);
+      --accent: #c9a84c;
+      --accent-bright: #e8c96a;
+      --accent-dim: rgba(201,168,76,0.08);
+      --accent-glow: rgba(201,168,76,0.18);
+      --text: #f0ede8;
+      --text-muted: #5a5550;
+      --text-sub: #8a8378;
+      --error: #c97070;
+      --success: #70c9a8;
     }
 
     html, body {
       height: 100%;
       background: var(--bg);
       color: var(--text);
-      font-family: 'Syne', sans-serif;
+      font-family: 'Jost', sans-serif;
       overflow: hidden;
     }
 
+    /* ── STARFIELD ── */
+    .stars {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .stars canvas { width: 100%; height: 100%; }
+
+    /* ── NOISE GRAIN ── */
     body::after {
       content: '';
       position: fixed;
       inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
       pointer-events: none;
       z-index: 999;
-      opacity: 0.4;
+      opacity: 0.5;
     }
 
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(232,255,71,0.018) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(232,255,71,0.018) 1px, transparent 1px);
-      background-size: 48px 48px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
+    /* ── GOLDEN ORBS ── */
     .orb {
       position: fixed;
       border-radius: 50%;
-      filter: blur(140px);
+      filter: blur(130px);
       pointer-events: none;
       z-index: 0;
     }
     .orb-a {
-      width: 800px; height: 800px;
-      top: -300px; left: -200px;
-      background: radial-gradient(circle, rgba(232,255,71,0.07) 0%, transparent 65%);
-      animation: floatA 14s ease-in-out infinite;
+      width: 700px; height: 700px;
+      top: -250px; left: -200px;
+      background: radial-gradient(circle, rgba(201,168,76,0.055) 0%, transparent 65%);
+      animation: floatA 16s ease-in-out infinite;
     }
     .orb-b {
-      width: 500px; height: 500px;
+      width: 450px; height: 450px;
       bottom: -150px; right: -100px;
-      background: radial-gradient(circle, rgba(100,80,255,0.06) 0%, transparent 65%);
-      animation: floatB 18s ease-in-out infinite;
-    }
-    .orb-c {
-      width: 300px; height: 300px;
-      top: 50%; right: 20%;
-      background: radial-gradient(circle, rgba(232,255,71,0.04) 0%, transparent 65%);
-      animation: floatC 10s ease-in-out infinite;
+      background: radial-gradient(circle, rgba(160,120,50,0.04) 0%, transparent 65%);
+      animation: floatB 20s ease-in-out infinite;
     }
     @keyframes floatA {
-      0%,100% { transform: translate(0,0) scale(1); }
-      50%      { transform: translate(40px,60px) scale(1.05); }
+      0%,100% { transform: translate(0,0); }
+      50%      { transform: translate(30px,50px); }
     }
     @keyframes floatB {
       0%,100% { transform: translate(0,0); }
-      50%      { transform: translate(-30px,-40px); }
-    }
-    @keyframes floatC {
-      0%,100% { transform: translateY(0); opacity: 0.5; }
-      50%      { transform: translateY(-30px); opacity: 1; }
+      50%      { transform: translate(-20px,-30px); }
     }
 
+    /* ── LAYOUT ── */
     .layout {
       position: relative;
       z-index: 1;
       display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
+      grid-template-columns: 1.15fr 0.85fr;
       height: 100vh;
     }
 
+    /* ── LEFT PANEL ── */
     .left-panel {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 52px;
+      padding: 56px 60px;
       border-right: 1px solid var(--border);
       position: relative;
       overflow: hidden;
@@ -119,40 +111,36 @@
       height: 100%;
       background: linear-gradient(to bottom,
         transparent 0%,
-        rgba(232,255,71,0.3) 30%,
-        rgba(232,255,71,0.5) 50%,
-        rgba(232,255,71,0.3) 70%,
+        rgba(201,168,76,0.25) 25%,
+        rgba(201,168,76,0.5) 50%,
+        rgba(201,168,76,0.25) 75%,
         transparent 100%
       );
     }
 
     .brand {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      animation: slideIn 0.6s ease both;
-    }
-    .brand-mark {
-      position: relative;
-      width: 42px; height: 42px;
-    }
-    .brand-mark svg {
-      width: 42px; height: 42px;
+      animation: fadeUp 0.8s ease both;
     }
     .brand-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 30px;
-      letter-spacing: 4px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      font-weight: 300;
+      letter-spacing: 10px;
+      text-transform: uppercase;
       color: var(--text);
+      display: flex;
+      align-items: baseline;
+      gap: 0;
     }
+    .brand-name .reg { color: var(--accent); font-weight: 400; }
+    .brand-name .italic { font-style: italic; color: var(--text); font-weight: 300; }
     .brand-tag {
-      font-size: 10px;
-      letter-spacing: 3px;
+      font-size: 9px;
+      letter-spacing: 4px;
       text-transform: uppercase;
       color: var(--text-muted);
-      border: 1px solid var(--border);
-      padding: 3px 8px;
-      border-radius: 4px;
+      margin-top: 6px;
+      font-weight: 400;
     }
 
     .hero {
@@ -160,109 +148,114 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
+      padding: 40px 0;
     }
     .eyebrow {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      font-size: 11px;
-      letter-spacing: 3px;
+      gap: 12px;
+      font-size: 9px;
+      letter-spacing: 5px;
       text-transform: uppercase;
       color: var(--accent);
-      margin-bottom: 24px;
-      animation: slideIn 0.6s 0.1s ease both;
+      margin-bottom: 28px;
+      animation: fadeUp 0.8s 0.1s ease both;
+      font-weight: 500;
     }
-    .eyebrow::before {
+    .eyebrow::before, .eyebrow::after {
       content: '';
-      width: 24px; height: 1px;
+      width: 20px; height: 1px;
       background: var(--accent);
+      opacity: 0.6;
     }
     .hero-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(64px, 6.5vw, 100px);
-      line-height: 0.9;
-      letter-spacing: 2px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(58px, 5.8vw, 90px);
+      line-height: 0.92;
+      letter-spacing: 6px;
       color: var(--text);
-      margin-bottom: 30px;
-      animation: slideIn 0.6s 0.15s ease both;
+      margin-bottom: 32px;
+      animation: fadeUp 0.8s 0.15s ease both;
+      font-weight: 300;
     }
-    .hero-title em {
-      font-style: normal;
-      -webkit-text-stroke: 1.5px rgba(232,255,71,0.4);
-      color: transparent;
+    .hero-title .word-regular { color: var(--accent); }
+    .hero-title .word-italic {
+      font-style: italic;
+      color: var(--text);
+      font-weight: 300;
+      letter-spacing: 4px;
     }
-    .hero-body {
-      font-size: 15px;
-      font-weight: 400;
-      color: var(--text-sub);
-      line-height: 1.8;
-      max-width: 380px;
+    .hero-sub {
+      font-size: 9px;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
       margin-bottom: 48px;
-      animation: slideIn 0.6s 0.2s ease both;
+      animation: fadeUp 0.8s 0.2s ease both;
+      font-weight: 400;
     }
 
     .features {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      animation: slideIn 0.6s 0.25s ease both;
+      gap: 14px;
+      animation: fadeUp 0.8s 0.25s ease both;
+      margin-bottom: 52px;
     }
     .feature-item {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
     }
-    .feature-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
+    .feature-line {
+      width: 18px; height: 1px;
       background: var(--accent);
+      opacity: 0.5;
       flex-shrink: 0;
     }
     .feature-text {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--text-sub);
+      font-weight: 300;
+      letter-spacing: 0.5px;
     }
-    .feature-text strong { color: var(--text); }
+    .feature-text strong {
+      color: var(--text);
+      font-weight: 500;
+    }
 
     .stats {
-      display: flex;
-      gap: 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 2px;
       overflow: hidden;
-      animation: slideIn 0.6s 0.3s ease both;
+      animation: fadeUp 0.8s 0.3s ease both;
     }
     .stat {
-      flex: 1;
-      padding: 20px 24px;
+      padding: 22px 20px;
       border-right: 1px solid var(--border);
       position: relative;
     }
     .stat:last-child { border-right: none; }
-    .stat::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--accent), transparent);
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    .stat:hover::before { opacity: 1; }
     .stat-n {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 32px;
-      letter-spacing: 1px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 36px;
+      font-weight: 400;
+      letter-spacing: 2px;
       color: var(--accent);
+      line-height: 1;
+      margin-bottom: 4px;
     }
     .stat-l {
-      font-size: 11px;
+      font-size: 8px;
       color: var(--text-muted);
-      letter-spacing: 1.5px;
+      letter-spacing: 3px;
       text-transform: uppercase;
-      margin-top: 2px;
+      font-weight: 500;
     }
 
+    /* ── RIGHT PANEL ── */
     .right-panel {
       display: flex;
       align-items: center;
@@ -273,86 +266,86 @@
 
     .auth-card {
       width: 100%;
-      max-width: 400px;
-      animation: slideIn 0.7s 0.1s ease both;
+      max-width: 380px;
+      animation: fadeUp 0.9s 0.1s ease both;
     }
-
-    .tab-switcher {
-      display: flex;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 5px;
-      margin-bottom: 32px;
-    }
-    .tab-btn {
-      flex: 1;
-      padding: 11px;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      font-family: 'Syne', sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 1px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.25s ease;
-      text-transform: uppercase;
-    }
-    .tab-btn.active {
-      background: var(--accent);
-      color: #08080e;
-    }
-    .tab-btn:not(.active):hover { color: var(--text); }
-
-    .form-header { margin-bottom: 28px; }
-    .form-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 38px;
-      letter-spacing: 2px;
-      color: var(--text);
-      margin-bottom: 6px;
-    }
-    .form-sub {
-      font-size: 13px;
-      color: var(--text-muted);
-      line-height: 1.6;
-    }
-    .form-sub span { color: var(--accent); }
 
     .recruiter-badge {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      background: var(--accent-dim);
-      border: 1px solid rgba(232,255,71,0.18);
+      gap: 8px;
+      border: 1px solid var(--border);
       color: var(--accent);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 2px;
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 4px;
       text-transform: uppercase;
-      padding: 5px 12px;
-      border-radius: 20px;
-      margin-bottom: 28px;
+      padding: 6px 14px;
+      margin-bottom: 32px;
     }
     .recruiter-badge .dot {
-      width: 6px; height: 6px;
+      width: 5px; height: 5px;
       border-radius: 50%;
       background: var(--accent);
-      animation: blink 2s ease infinite;
+      animation: blink 2.5s ease infinite;
     }
     @keyframes blink {
       0%,100% { opacity: 1; }
-      50%      { opacity: 0.3; }
+      50%      { opacity: 0.2; }
     }
+
+    .tab-switcher {
+      display: flex;
+      border: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: 'Jost', sans-serif;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 4px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      border-right: 1px solid var(--border);
+    }
+    .tab-btn:last-child { border-right: none; }
+    .tab-btn.active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .tab-btn:not(.active):hover { color: var(--accent); }
+
+    .form-header { margin-bottom: 30px; }
+    .form-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 42px;
+      font-weight: 300;
+      letter-spacing: 6px;
+      color: var(--text);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    .form-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+    .form-sub span { color: var(--accent); }
 
     .field { margin-bottom: 16px; position: relative; }
     .field label {
       display: block;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 2px;
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 3px;
       text-transform: uppercase;
       color: var(--text-muted);
       margin-bottom: 8px;
@@ -363,30 +356,29 @@
     .input-wrap { position: relative; }
     .field input {
       width: 100%;
-      padding: 13px 42px 13px 16px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
+      padding: 13px 42px 13px 0;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
       color: var(--text);
-      font-family: 'Syne', sans-serif;
+      font-family: 'Jost', sans-serif;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 300;
       outline: none;
-      transition: all 0.25s ease;
+      transition: all 0.3s ease;
+      letter-spacing: 0.5px;
     }
     .field input:focus {
-      border-color: rgba(232,255,71,0.35);
-      background: rgba(232,255,71,0.03);
-      box-shadow: 0 0 0 3px rgba(232,255,71,0.06);
+      border-bottom-color: var(--accent);
     }
-    .field input::placeholder { color: var(--text-muted); font-weight: 400; }
-    .field input.error { border-color: rgba(255,79,106,0.4); }
+    .field input::placeholder { color: var(--text-muted); font-weight: 300; }
+    .field input.error { border-bottom-color: var(--error); }
     .field-icon {
       position: absolute;
-      right: 14px; top: 50%;
+      right: 0; top: 50%;
       transform: translateY(-50%);
       color: var(--text-muted);
-      font-size: 15px;
+      font-size: 13px;
       pointer-events: none;
       transition: color 0.2s;
     }
@@ -394,24 +386,24 @@
 
     .pwd-toggle {
       position: absolute;
-      right: 14px; top: 50%;
+      right: 0; top: 50%;
       transform: translateY(-50%);
       background: none;
       border: none;
       color: var(--text-muted);
       cursor: pointer;
-      font-size: 15px;
+      font-size: 13px;
       padding: 0;
       transition: color 0.2s;
-      z-index: 2;
     }
     .pwd-toggle:hover { color: var(--accent); }
 
     .field-error {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--error);
       margin-top: 5px;
       display: none;
+      letter-spacing: 1px;
     }
     .field-error.show { display: block; }
 
@@ -419,7 +411,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 22px;
+      margin-bottom: 28px;
+      margin-top: 6px;
     }
     .remember {
       display: flex;
@@ -428,56 +421,67 @@
       cursor: pointer;
     }
     .remember input[type=checkbox] {
-      width: 15px; height: 15px;
+      width: 12px; height: 12px;
       accent-color: var(--accent);
       cursor: pointer;
     }
-    .remember span { font-size: 12px; color: var(--text-muted); }
+    .remember span {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
     .forgot-link {
-      font-size: 12px;
+      font-size: 10px;
       color: var(--text-muted);
       text-decoration: none;
       cursor: pointer;
       transition: color 0.2s;
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
     .forgot-link:hover { color: var(--accent); }
 
     .submit-btn {
       width: 100%;
       padding: 15px;
-      background: var(--accent);
-      color: #08080e;
-      border: none;
-      border-radius: 10px;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 18px;
-      letter-spacing: 2.5px;
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      font-family: 'Jost', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 5px;
       cursor: pointer;
-      transition: all 0.25s ease;
-      margin-bottom: 20px;
+      transition: all 0.3s ease;
+      margin-bottom: 22px;
+      text-transform: uppercase;
       position: relative;
       overflow: hidden;
     }
-    .submit-btn::after {
+    .submit-btn::before {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
-      opacity: 0;
-      transition: opacity 0.25s;
+      background: var(--accent);
+      transform: translateX(-101%);
+      transition: transform 0.3s ease;
+      z-index: 0;
     }
-    .submit-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 40px rgba(232,255,71,0.3);
-    }
-    .submit-btn:hover::after { opacity: 1; }
-    .submit-btn:active { transform: translateY(0); }
-    .submit-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+    .submit-btn span { position: relative; z-index: 1; }
+    .submit-btn:hover::before { transform: translateX(0); }
+    .submit-btn:hover { color: var(--bg); }
+    .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .submit-btn:disabled::before { transform: translateX(-101%); }
+    .submit-btn:disabled { color: var(--accent); }
 
     .divider {
       display: flex; align-items: center; gap: 14px;
-      margin-bottom: 18px; color: var(--text-muted); font-size: 11px;
-      letter-spacing: 1px; text-transform: uppercase;
+      margin-bottom: 16px;
+      color: var(--text-muted);
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
     }
     .divider::before, .divider::after {
       content: ''; flex: 1; height: 1px; background: var(--border);
@@ -487,53 +491,48 @@
       width: 100%; padding: 13px;
       background: transparent;
       border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
-      font-family: 'Syne', sans-serif;
-      font-size: 13px;
-      font-weight: 600;
+      color: var(--text-sub);
+      font-family: 'Jost', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 3px;
+      text-transform: uppercase;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       gap: 10px;
-      transition: all 0.2s ease;
+      transition: all 0.25s ease;
     }
     .google-btn:hover {
-      background: rgba(255,255,255,0.04);
-      border-color: rgba(255,255,255,0.14);
-      transform: translateY(-1px);
+      border-color: rgba(201,168,76,0.3);
+      color: var(--text);
     }
-    /* Inline SVG Google icon — no external image request */
-    .google-icon {
-      width: 18px; height: 18px;
-      flex-shrink: 0;
-    }
+    .google-icon { width: 16px; height: 16px; flex-shrink: 0; }
 
-    .pwd-strength {
-      margin-top: 8px; display: none;
-    }
+    .pwd-strength { margin-top: 8px; display: none; }
     .pwd-strength.show { display: block; }
-    .strength-bars {
-      display: flex; gap: 4px; margin-bottom: 4px;
-    }
+    .strength-bars { display: flex; gap: 4px; margin-bottom: 4px; }
     .strength-bar {
-      flex: 1; height: 3px;
-      border-radius: 2px;
+      flex: 1; height: 1px;
       background: var(--border);
       transition: background 0.3s;
     }
     .strength-label {
-      font-size: 11px;
+      font-size: 9px;
       color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
 
     #formReset { display: none; }
     .back-link {
       display: inline-flex; align-items: center; gap: 6px;
-      font-size: 12px; color: var(--text-muted);
+      font-size: 10px; color: var(--text-muted);
       cursor: pointer; text-decoration: none;
-      margin-top: 16px; transition: color 0.2s;
+      margin-top: 14px; transition: color 0.2s;
       background: none; border: none;
-      font-family: 'Syne', sans-serif;
+      font-family: 'Jost', sans-serif;
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
     .back-link:hover { color: var(--accent); }
 
@@ -542,45 +541,42 @@
       transform: translateX(-50%) translateY(80px);
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 12px; padding: 14px 22px;
-      font-size: 13px; font-weight: 600;
+      padding: 12px 22px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
       z-index: 1000;
       transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
       white-space: nowrap;
       display: flex; align-items: center; gap: 10px;
       pointer-events: none;
-      letter-spacing: 0.5px;
     }
     .toast.show { transform: translateX(-50%) translateY(0); }
-    .toast.success { border-color: rgba(71,255,170,0.3); color: var(--success); }
-    .toast.error   { border-color: rgba(255,79,106,0.3); color: var(--error); }
-    .toast.info    { border-color: rgba(232,255,71,0.3); color: var(--accent); }
+    .toast.success { border-color: rgba(112,201,168,0.4); color: var(--success); }
+    .toast.error   { border-color: rgba(201,112,112,0.4); color: var(--error); }
+    .toast.info    { border-color: rgba(201,168,76,0.3); color: var(--accent); }
 
     .spinner {
-      width: 17px; height: 17px;
-      border: 2px solid transparent;
-      border-top-color: #08080e;
+      width: 14px; height: 14px;
+      border: 1px solid transparent;
+      border-top-color: currentColor;
       border-radius: 50%;
       animation: spin 0.65s linear infinite;
       display: inline-block; vertical-align: middle;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(18px); }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .fade-in { animation: slideIn 0.35s ease both; }
+    .fade-in { animation: fadeUp 0.4s ease both; }
 
     @media (max-width: 860px) {
       .layout { grid-template-columns: 1fr; }
       .left-panel { display: none; }
-      .right-panel { padding: 28px 20px; }
-    }
-
-    button:focus-visible, input:focus-visible, a:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 3px;
+      .right-panel { padding: 32px 24px; }
     }
   </style>
 </head>
@@ -588,41 +584,41 @@
 
 <div class="orb orb-a"></div>
 <div class="orb orb-b"></div>
-<div class="orb orb-c"></div>
+
+<!-- Starfield -->
+<div class="stars"><canvas id="starCanvas"></canvas></div>
 
 <div class="layout">
 
+  <!-- LEFT PANEL -->
   <div class="left-panel">
     <div class="brand">
-      <div class="brand-mark">
-        <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="1" y="1" width="40" height="40" rx="9" stroke="#e8ff47" stroke-width="1.5"/>
-          <path d="M10 21 L21 8 L32 21" stroke="#e8ff47" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M15 21 L21 28 L27 21" stroke="#e8ff47" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="rgba(232,255,71,0.12)"/>
-        </svg>
+      <div class="brand-name">
+        <span class="reg">Talent</span><span class="italic">Bridge</span>
       </div>
-      <span class="brand-name">TITAN</span>
-      <span class="brand-tag">Recruiter</span>
+      <div class="brand-tag">Intelligent Hiring Platform</div>
     </div>
 
     <div class="hero">
-      <div class="eyebrow">Talent Intelligence Platform</div>
-      <h1 class="hero-title">FIND YOUR<br><em>NEXT</em><br>HIRE TODAY</h1>
-      <p class="hero-body">
-        Access 120,000+ vetted candidates. Post roles, schedule AI-powered interviews, and make data-driven hiring decisions — all in one place.
-      </p>
+      <div class="eyebrow">Talent Intelligence</div>
+      <h1 class="hero-title">
+        <span class="word-regular">Find</span><br>
+        <span class="word-italic">Your Next</span><br>
+        <span class="word-regular">Hire</span>
+      </h1>
+      <p class="hero-sub">Intelligent Hiring. Reimagined.</p>
 
       <div class="features">
         <div class="feature-item">
-          <div class="feature-dot"></div>
+          <div class="feature-line"></div>
           <div class="feature-text"><strong>AI Interview Analysis</strong> — real-time candidate scoring</div>
         </div>
         <div class="feature-item">
-          <div class="feature-dot"></div>
+          <div class="feature-line"></div>
           <div class="feature-text"><strong>Smart Matching</strong> — 97% role-fit accuracy</div>
         </div>
         <div class="feature-item">
-          <div class="feature-dot"></div>
+          <div class="feature-line"></div>
           <div class="feature-text"><strong>Pipeline Automation</strong> — zero manual scheduling</div>
         </div>
       </div>
@@ -644,6 +640,7 @@
     </div>
   </div>
 
+  <!-- RIGHT PANEL -->
   <div class="right-panel">
     <div class="auth-card">
 
@@ -664,7 +661,7 @@
       <!-- SIGN IN -->
       <div id="formSignIn">
         <div class="form-header">
-          <div class="form-title">WELCOME BACK</div>
+          <div class="form-title">Welcome Back</div>
           <div class="form-sub">Sign in to your <span>Recruiter</span> account</div>
         </div>
 
@@ -703,7 +700,7 @@
           <a class="forgot-link" onclick="switchToReset()" tabindex="0" role="button">Forgot password?</a>
         </div>
 
-        <button class="submit-btn" id="signInBtn" onclick="handleSignIn()">SIGN IN</button>
+        <button class="submit-btn" id="signInBtn" onclick="handleSignIn()"><span>Sign In</span></button>
 
         <div class="divider">or continue with</div>
         <button class="google-btn" onclick="handleGoogle()">
@@ -720,17 +717,14 @@
       <!-- SIGN UP -->
       <div id="formSignUp" style="display:none;" class="fade-in">
         <div class="form-header">
-          <div class="form-title">JOIN TITAN</div>
+          <div class="form-title">Join Us</div>
           <div class="form-sub">Create your <span>Recruiter</span> account</div>
         </div>
 
         <div class="field">
           <label for="suName">Full Name</label>
           <div class="input-wrap">
-            <input type="text" id="suName"
-              placeholder="Sarah Mitchell"
-              autocomplete="name"
-              oninput="clearFieldError('suNameErr')"/>
+            <input type="text" id="suName" placeholder="Sarah Mitchell" autocomplete="name" oninput="clearFieldError('suNameErr')"/>
             <span class="field-icon">◉</span>
           </div>
           <div class="field-error" id="suNameErr"></div>
@@ -739,11 +733,8 @@
         <div class="field">
           <label for="suCompany">Company</label>
           <div class="input-wrap">
-            <input type="text" id="suCompany"
-              placeholder="Acme Technologies"
-              autocomplete="organization"
-              oninput="clearFieldError('suCompanyErr')"/>
-            <span class="field-icon">🏢</span>
+            <input type="text" id="suCompany" placeholder="Acme Technologies" autocomplete="organization" oninput="clearFieldError('suCompanyErr')"/>
+            <span class="field-icon">◈</span>
           </div>
           <div class="field-error" id="suCompanyErr"></div>
         </div>
@@ -751,10 +742,7 @@
         <div class="field">
           <label for="suEmail">Work Email</label>
           <div class="input-wrap">
-            <input type="email" id="suEmail"
-              placeholder="you@company.com"
-              autocomplete="email"
-              oninput="clearFieldError('suEmailErr')"/>
+            <input type="email" id="suEmail" placeholder="you@company.com" autocomplete="email" oninput="clearFieldError('suEmailErr')"/>
             <span class="field-icon">✉</span>
           </div>
           <div class="field-error" id="suEmailErr"></div>
@@ -763,14 +751,8 @@
         <div class="field">
           <label for="suPwd">Password</label>
           <div class="input-wrap">
-            <input type="password" id="suPwd"
-              placeholder="Min. 8 characters"
-              autocomplete="new-password"
-              oninput="onPwdInput(this)"
-              onkeydown="if(event.key==='Enter') handleSignUp()"/>
-            <button class="pwd-toggle" type="button"
-              onclick="togglePwd('suPwd', this)"
-              aria-label="Toggle password visibility">👁</button>
+            <input type="password" id="suPwd" placeholder="Min. 8 characters" autocomplete="new-password" oninput="onPwdInput(this)" onkeydown="if(event.key==='Enter') handleSignUp()"/>
+            <button class="pwd-toggle" type="button" onclick="togglePwd('suPwd', this)" aria-label="Toggle password visibility">👁</button>
           </div>
           <div class="pwd-strength" id="pwdStrength">
             <div class="strength-bars">
@@ -784,7 +766,7 @@
           <div class="field-error" id="suPwdErr"></div>
         </div>
 
-        <button class="submit-btn" id="signUpBtn" onclick="handleSignUp()" style="margin-top:8px;">CREATE ACCOUNT</button>
+        <button class="submit-btn" id="signUpBtn" onclick="handleSignUp()" style="margin-top:10px;"><span>Create Account</span></button>
 
         <div class="divider">or continue with</div>
         <button class="google-btn" onclick="handleGoogle()">
@@ -801,21 +783,19 @@
       <!-- RESET PASSWORD -->
       <div id="formReset" class="fade-in">
         <div class="form-header">
-          <div class="form-title">RESET PASSWORD</div>
+          <div class="form-title">Reset</div>
           <div class="form-sub">We'll send a reset link to your inbox.</div>
         </div>
 
         <div class="field">
           <label for="resetEmail">Email Address</label>
           <div class="input-wrap">
-            <input type="email" id="resetEmail"
-              placeholder="you@company.com"
-              onkeydown="if(event.key==='Enter') handleReset()"/>
+            <input type="email" id="resetEmail" placeholder="you@company.com" onkeydown="if(event.key==='Enter') handleReset()"/>
             <span class="field-icon">✉</span>
           </div>
         </div>
 
-        <button class="submit-btn" id="resetBtn" onclick="handleReset()">SEND RESET LINK</button>
+        <button class="submit-btn" id="resetBtn" onclick="handleReset()"><span>Send Reset Link</span></button>
         <div style="text-align:center;">
           <button class="back-link" onclick="switchTab('signin')">← Back to Sign In</button>
         </div>
@@ -829,6 +809,52 @@
 <div class="toast" id="toast" role="alert" aria-live="assertive"></div>
 
 <script>
+/* ── STARFIELD ── */
+(function() {
+  const canvas = document.getElementById('starCanvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  function initStars() {
+    stars = [];
+    const count = Math.floor((canvas.width * canvas.height) / 4500);
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 0.9 + 0.1,
+        opacity: Math.random() * 0.7 + 0.1,
+        twinkleSpeed: Math.random() * 0.01 + 0.003,
+        twinkleOffset: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    frame++;
+    for (const s of stars) {
+      const opacity = s.opacity * (0.5 + 0.5 * Math.sin(frame * s.twinkleSpeed + s.twinkleOffset));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(201,168,76,${opacity})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); initStars(); });
+  resize();
+  initStars();
+  draw();
+})();
+
 /* ── TAB MANAGEMENT ── */
 let activeTab = 'signin';
 
@@ -862,7 +888,7 @@ function switchToReset() {
 /* ── TOAST ── */
 function showToast(msg, type = 'info') {
   const t = document.getElementById('toast');
-  const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+  const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : '—';
   t.className = `toast ${type}`;
   t.innerHTML = `${icon} ${msg}`;
   t.classList.add('show');
@@ -902,10 +928,11 @@ function onPwdInput(input) {
   if (/[A-Z]/.test(val)) score++;
   if (/[0-9]/.test(val)) score++;
   if (/[^A-Za-z0-9]/.test(val)) score++;
-  const colors = ['#ff4f6a','#ff9940','#ffe040','#47ffaa'];
-  const labels = ['Too weak','Weak','Good','Strong'];
+  const colors = ['#c97070','#c9a050','#c9c050','#70c9a8'];
+  const labels = ['Weak','Fair','Good','Strong'];
   for (let i = 0; i < 4; i++) {
     document.getElementById(`sb${i}`).style.background = i < score ? colors[score-1] : 'var(--border)';
+    document.getElementById(`sb${i}`).style.height = i < score ? '2px' : '1px';
   }
   document.getElementById('strengthLabel').textContent = labels[score-1] || 'Too short';
   document.getElementById('strengthLabel').style.color = colors[score-1] || 'var(--text-muted)';
@@ -915,19 +942,12 @@ function onPwdInput(input) {
 function setLoading(id, loading, label) {
   const btn = document.getElementById(id);
   btn.disabled = loading;
-  btn.innerHTML = loading ? '<span class="spinner"></span>' : label;
+  btn.innerHTML = loading ? '<span class="spinner"></span>' : `<span>${label}</span>`;
 }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-/* ── REDIRECT HELPER ──
-   Uses the DASHBOARD_URL constant so there's one place to update.
-   Falls back gracefully if the page doesn't exist yet (demo mode). */
-const DASHBOARD_URL = './recruit.html'; // ← update this to match your file path
-
-function redirectToDashboard() {
-  // If Firebase is integrated, let it handle navigation; otherwise use the constant
-  window.location.href = DASHBOARD_URL;
-}
+const DASHBOARD_URL = 'recruiter-dashboard.html';
+function redirectToDashboard() { window.location.href = DASHBOARD_URL; }
 
 /* ── SIGN IN ── */
 async function handleSignIn() {
@@ -940,8 +960,7 @@ async function handleSignIn() {
   if (!pwd) { showFieldError('siPwdErr', 'Password is required'); valid = false; }
   if (!valid) return;
 
-  setLoading('signInBtn', true, 'SIGN IN');
-
+  setLoading('signInBtn', true, 'Sign In');
   let res = { user: null, error: null };
   if (window._firebase) {
     res = await window._firebase.signInWithEmail(email, pwd);
@@ -949,12 +968,10 @@ async function handleSignIn() {
     await sleep(1100);
     res = { user: { uid: 'demo', email }, error: null };
   }
-
-  setLoading('signInBtn', false, 'SIGN IN');
-
+  setLoading('signInBtn', false, 'Sign In');
   if (res.error) return showToast(formatError(res.error), 'error');
   localStorage.setItem('titanRole', 'recruiter');
-  showToast('Signed in successfully!', 'success');
+  showToast('Signed in successfully', 'success');
   setTimeout(redirectToDashboard, 1400);
 }
 
@@ -973,12 +990,10 @@ async function handleSignUp() {
   if (!pwd || pwd.length < 8) { showFieldError('suPwdErr', 'Minimum 8 characters'); valid = false; }
   if (!valid) return;
 
-  setLoading('signUpBtn', true, 'CREATE ACCOUNT');
-
+  setLoading('signUpBtn', true, 'Create Account');
   let res = { user: null, error: null };
   if (window._firebase) {
     res = await window._firebase.signUpWithEmail(email, pwd);
-    // Save recruiter profile to Firestore after successful sign-up
     if (res.user && !res.error) {
       await window._firebase.saveRecruiterProfile(res.user.uid, {
         name, company, email, role: 'recruiter', createdAt: new Date().toISOString()
@@ -988,14 +1003,12 @@ async function handleSignUp() {
     await sleep(1200);
     res = { user: { uid: 'demo', email }, error: null };
   }
-
-  setLoading('signUpBtn', false, 'CREATE ACCOUNT');
-
+  setLoading('signUpBtn', false, 'Create Account');
   if (res.error) return showToast(formatError(res.error), 'error');
   localStorage.setItem('titanRole', 'recruiter');
   localStorage.setItem('titanName', name);
   localStorage.setItem('titanCompany', company);
-  showToast('Account created! Welcome to Titan.', 'success');
+  showToast('Account created. Welcome to TalentBridge.', 'success');
   setTimeout(redirectToDashboard, 1400);
 }
 
@@ -1005,7 +1018,7 @@ async function handleGoogle() {
   const res = await window._firebase.signInWithGoogle();
   if (res.error) return showToast(formatError(res.error), 'error');
   localStorage.setItem('titanRole', 'recruiter');
-  showToast('Signed in with Google!', 'success');
+  showToast('Signed in with Google', 'success');
   setTimeout(redirectToDashboard, 1400);
 }
 
@@ -1013,11 +1026,11 @@ async function handleGoogle() {
 async function handleReset() {
   const email = document.getElementById('resetEmail').value.trim();
   if (!email) return showToast('Please enter your email address.', 'error');
-  setLoading('resetBtn', true, 'SEND RESET LINK');
+  setLoading('resetBtn', true, 'Send Reset Link');
   if (window._firebase) await window._firebase.resetPassword(email);
   else await sleep(900);
-  setLoading('resetBtn', false, 'SEND RESET LINK');
-  showToast('Reset link sent! Check your inbox.', 'success');
+  setLoading('resetBtn', false, 'Send Reset Link');
+  showToast('Reset link sent. Check your inbox.', 'success');
   setTimeout(() => switchTab('signin'), 2200);
 }
 
@@ -1028,17 +1041,12 @@ function formatError(msg) {
   if (msg.includes('invalid-email')) return 'Please enter a valid email address.';
   if (msg.includes('wrong-password') || msg.includes('invalid-credential')) return 'Incorrect email or password.';
   if (msg.includes('user-not-found')) return 'No account found with this email.';
-  if (msg.includes('weak-password')) return 'Password is too weak. Try something stronger.';
+  if (msg.includes('weak-password')) return 'Password is too weak.';
   if (msg.includes('popup-closed')) return 'Google sign-in was cancelled.';
-  if (msg.includes('too-many-requests')) return 'Too many attempts. Please wait and try again.';
+  if (msg.includes('too-many-requests')) return 'Too many attempts. Please wait.';
   return 'Something went wrong. Please try again.';
 }
 
-/* ── FIREBASE ── (wired to firebase.js) */
-// Loaded via the <script type="module"> tag at the bottom of the body.
-// window._firebase is populated there once the module resolves.
-
-/* ── KEYBOARD SHORTCUTS ── */
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     const reset = document.getElementById('formReset');
@@ -1046,7 +1054,6 @@ document.addEventListener('keydown', e => {
   }
 });
 
-/* ── INIT ── */
 window.addEventListener('load', () => {
   document.getElementById('siEmail').focus();
 });
@@ -1062,7 +1069,6 @@ window.onPwdInput = onPwdInput;
 window.clearFieldError = clearFieldError;
 </script>
 
-<!-- ── Firebase module — imports from firebase.js in the same directory ── -->
 <script type="module">
   import {
     signUpWithEmail,
@@ -1075,7 +1081,6 @@ window.clearFieldError = clearFieldError;
 
   import { setDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
-  // Save recruiter profile to Firestore
   async function saveRecruiterProfile(uid, data) {
     try {
       await setDoc(doc(db, "recruiters", uid), data, { merge: true });
@@ -1084,7 +1089,6 @@ window.clearFieldError = clearFieldError;
     }
   }
 
-  // Expose to the non-module script above
   window._firebase = {
     signUpWithEmail,
     signInWithEmail,
@@ -1093,11 +1097,10 @@ window.clearFieldError = clearFieldError;
     saveRecruiterProfile,
   };
 
-  // If already logged in (e.g. page refresh), redirect immediately
   onAuthChange((user) => {
     if (user.isLoggedIn) {
       localStorage.setItem("titanRole", "recruiter");
-      window.location.href = DASHBOARD_URL;
+      window.location.href = 'recruiter-dashboard.html';
     }
   });
 </script>
