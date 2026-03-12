@@ -922,7 +922,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 /* ── REDIRECT HELPER ──
    Uses the DASHBOARD_URL constant so there's one place to update.
    Falls back gracefully if the page doesn't exist yet (demo mode). */
-const DASHBOARD_URL = 'recruiter-dashboard.html'; // ← update this to match your file path
+const DASHBOARD_URL = './recruit.html'; // ← update this to match your file path
 
 function redirectToDashboard() {
   // If Firebase is integrated, let it handle navigation; otherwise use the constant
