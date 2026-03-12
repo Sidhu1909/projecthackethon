@@ -410,15 +410,14 @@
       <!-- Evaluate Candidate Answers -->
       <div class="card">
         <h2>📊 Evaluate Answers</h2>
-        <p style="color: var(--muted); margin-bottom: 1rem;">Upload a text file with candidate's answers to evaluate</p>
+        <p style="color: var(--muted); margin-bottom: 1rem;">Select a candidate to view and evaluate their interview answers</p>
         
-        <div class="upload-area" id="answersUploadArea" onclick="document.getElementById('answersFile').click()">
-          <span class="upload-icon">📎</span>
-          <p><strong>Click to upload or drag & drop</strong></p>
-          <p style="font-size: 0.8rem; color: var(--muted); margin-top: 0.5rem;">Supported: .txt files</p>
-        </div>
-        <input type="file" id="answersFile" accept=".txt" onchange="handleAnswersUpload(event)"/>
+        <label style="display: block; margin-bottom: 0.5rem; color: var(--muted); font-size: 0.9rem;">📍 Select Candidate:</label>
+        <select id="candidateSelect" onchange="loadCandidateAnswers(this.value)" style="width: 100%; padding: 0.75rem; background: rgba(100, 149, 237, 0.05); border: 1px solid var(--border); color: var(--white); border-radius: 6px; font-family: var(--font-sans); margin-bottom: 1rem;">
+          <option value="">-- Choose a candidate --</option>
+        </select>
 
+        <div id="candidateAnswersDisplay" style="margin-top: 1.5rem;"></div>
         <div id="answersStatus"></div>
 
         <button class="btn" id="evaluateBtn" onclick="evaluateAnswers()" style="width: 100%; margin-top: 1rem; display: none;">
@@ -539,30 +538,72 @@
       }
     }
 
-    // Handle answers file upload
-    async function handleAnswersUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+    // Load candidates from Firebase database
+    async function loadCandidatesFromDatabase() {
+      try {
+        showStatus('answersStatus', 'Loading candidates...', '');
+        
+        if (window.getCandidatesWithAnswers) {
+          const candidates = await window.getCandidatesWithAnswers();
+          
+          const selectElement = document.getElementById('candidateSelect');
+          selectElement.innerHTML = '<option value="">-- Choose a candidate --</option>';
+          
+          if (candidates.length === 0) {
+            showStatus('answersStatus', '⚠️ No candidates with answers found in database', 'error');
+            return;
+          }
+          
+          candidates.forEach(candidate => {
+            const option = document.createElement('option');
+            option.value = candidate.id;
+            option.textContent = `${candidate.email} (${candidate.answerCount} answers)`;
+            option.dataset.candidateData = JSON.stringify(candidate);
+            selectElement.appendChild(option);
+          });
+          
+          showStatus('answersStatus', `✓ Found ${candidates.length} candidates`, 'success');
+        }
+      } catch (err) {
+        showStatus('answersStatus', 'Error loading candidates: ' + err.message, 'error');
+      }
+    }
 
-      if (!file.name.endsWith('.txt')) {
-        showStatus('answersStatus', 'Please upload a .txt file', 'error');
+    // Load candidate answers from database
+    async function loadCandidateAnswers(candidateId) {
+      if (!candidateId) {
+        document.getElementById('candidateAnswersDisplay').innerHTML = '';
+        document.getElementById('evaluateBtn').style.display = 'none';
+        uploadedAnswers = [];
         return;
       }
 
       try {
-        showStatus('answersStatus', 'Parsing file...', '');
-        uploadedAnswers = await parseTextFile(file);
-
-        showStatus('answersStatus', `✓ Loaded ${uploadedAnswers.length} answers`, 'success');
-
-        if (uploadedQuestions.length === 0) {
-          showStatus('answersStatus', '⚠️ No questions loaded. Please upload questions first.', 'error');
-          return;
+        showStatus('answersStatus', 'Loading candidate answers...', '');
+        
+        if (window.getCandidateAnswersById) {
+          const candidateData = await window.getCandidateAnswersById(candidateId);
+          uploadedAnswers = candidateData.answers || [];
+          
+          // Display candidate answers
+          const container = document.getElementById('candidateAnswersDisplay');
+          container.innerHTML = '<h3 style="color: var(--blue); margin-bottom: 1rem;">📝 Candidate Answers:</h3>';
+          
+          uploadedAnswers.forEach((answer, idx) => {
+            const answerDiv = document.createElement('div');
+            answerDiv.className = 'question';
+            answerDiv.innerHTML = `
+              <div class="question-number">Answer ${idx + 1}</div>
+              <div class="question-text">${answer}</div>
+            `;
+            container.appendChild(answerDiv);
+          });
+          
+          showStatus('answersStatus', `✓ Loaded ${uploadedAnswers.length} answers from ${candidateData.email}`, 'success');
+          document.getElementById('evaluateBtn').style.display = 'block';
         }
-
-        document.getElementById('evaluateBtn').style.display = 'block';
       } catch (err) {
-        showStatus('answersStatus', 'Error reading file: ' + err.message, 'error');
+        showStatus('answersStatus', 'Error loading candidate answers: ' + err.message, 'error');
       }
     }
 
@@ -693,6 +734,8 @@
       if (window.checkRecruiterAuth) {
         window.checkRecruiterAuth();
       }
+      // Load candidates from database
+      loadCandidatesFromDatabase();
     });
   </script>
 </body>

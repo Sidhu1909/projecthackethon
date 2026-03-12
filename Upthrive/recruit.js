@@ -14,6 +14,8 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
+  doc,
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
@@ -60,34 +62,68 @@ export async function saveInterviewQuestions(questions) {
 }
 
 /**
- * Fetch saved interview question sets for current recruiter
- * @returns {Promise<Array>} Array of question sets
+ * Get all candidates who have submitted interview answers
+ * @returns {Promise<Array>} Array of candidates with their answer counts
  */
-export async function getRecruiterQuestionSets() {
+export async function getCandidatesWithAnswers() {
   try {
     const user = auth.currentUser;
     if (!user) {
       throw new Error('User not authenticated');
     }
 
-    const q = query(
-      collection(db, 'recruiters', user.uid, 'interviewSets'),
-      where('status', '==', 'active')
-    );
-
+    // Fetch all candidates from the candidates collection
+    const candidatesRef = collection(db, 'candidates');
+    const q = query(candidatesRef, where('interviewAnswers', '!=', null));
     const snapshot = await getDocs(q);
-    const sets = [];
+
+    const candidates = [];
     snapshot.forEach(doc => {
-      sets.push({
-        id: doc.id,
-        ...doc.data(),
-      });
+      const data = doc.data();
+      if (data.interviewAnswers && data.interviewAnswers.length > 0) {
+        candidates.push({
+          id: doc.id,
+          email: data.email || 'Unknown',
+          answers: data.interviewAnswers || [],
+          answerCount: (data.interviewAnswers || []).length,
+          submittedAt: data.answersSubmittedAt || null,
+        });
+      }
     });
 
-    return sets;
+    return candidates;
 
   } catch (err) {
-    console.error('Error fetching question sets:', err);
+    console.error('Error fetching candidates with answers:', err);
+    // Return empty array if no candidates found
+    return [];
+  }
+}
+
+/**
+ * Get candidate's interview answers by ID
+ * @param {string} candidateId - Candidate document ID
+ * @returns {Promise<Object>} Candidate data with answers
+ */
+export async function getCandidateAnswersById(candidateId) {
+  try {
+    const docRef = doc(db, 'candidates', candidateId);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      throw new Error('Candidate not found');
+    }
+
+    const data = docSnap.data();
+    return {
+      id: candidateId,
+      email: data.email || 'Unknown',
+      answers: data.interviewAnswers || [],
+      submittedAt: data.answersSubmittedAt || null,
+    };
+
+  } catch (err) {
+    console.error('Error fetching candidate answers:', err);
     throw err;
   }
 }
@@ -354,6 +390,8 @@ window.evaluateCandidateAnswers = evaluateCandidateAnswers;
 window.checkRecruiterAuth = checkRecruiterAuth;
 window.logoutRecruiter = logoutRecruiter;
 window.getRecruiterQuestionSets = getRecruiterQuestionSets;
+window.getCandidatesWithAnswers = getCandidatesWithAnswers;
+window.getCandidateAnswersById = getCandidateAnswersById;
 
 // Initialize authentication check on page load
 checkRecruiterAuth();
