@@ -358,6 +358,29 @@
       50% { transform: scale(1.08); }
     }
 
+    /* ── Auth tabs ── */
+    .auth-tab {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      padding: 0.65rem 1.2rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .auth-tab:hover {
+      color: var(--blue);
+    }
+    .auth-tab.active {
+      color: var(--blue);
+      border-bottom-color: var(--blue);
+      text-shadow: 0 0 8px rgba(91,156,246,0.3);
+    }
+
     /* ── Hint text ── */
     .hint {
       text-align: center;
@@ -485,8 +508,28 @@
       <div class="logo-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5z"/><path d="M3 11a9 9 0 0 0 18 0"/><line x1="12" y1="20" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       </div>
-      <h1 class="card-title">Voice Sign In</h1>
-      <p class="card-subtitle">Speak to authenticate</p>
+      <h1 class="card-title" id="card-title">Voice Sign In</h1>
+      <p class="card-subtitle" id="card-subtitle">Speak to authenticate</p>
+    </div>
+
+    <!-- Auth tabs -->
+    <div style="display: flex; gap: 0.8rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); justify-content: center;">
+      <button 
+        id="tab-signin" 
+        class="auth-tab active" 
+        onclick="switchTab('signin')"
+        aria-selected="true"
+        aria-label="Sign in tab">
+        SIGN IN
+      </button>
+      <button 
+        id="tab-signup" 
+        class="auth-tab" 
+        onclick="switchTab('signup')"
+        aria-selected="false"
+        aria-label="Sign up tab">
+        SIGN UP
+      </button>
     </div>
 
     <!-- Steps -->
@@ -564,10 +607,12 @@ function normalize(str) {
 /* ════════════════════════════════════════
    STATE
 ════════════════════════════════════════ */
+let currentMode = 'signin';  // signin | signup
 let state = 'idle';   // idle | speaking | waiting | listening | done
-let authStep = 'email'; // email | password
+let authStep = 'email'; // email | password | password-confirm (for signup)
 let spokenEmail = '';
 let spokenPassword = '';
+let spokenPasswordConfirm = '';
 let recognition = null;
 let isSpeaking = false;
 
@@ -639,6 +684,8 @@ function enableMic(on) {
 
 function updateSteps(step) {
   // step: 1, 2, 3
+  // for signin: 1=email, 2=password, 3=result
+  // for signup: 1=email, 2=password, 3=confirm
   const s1 = document.getElementById('step1');
   const s2 = document.getElementById('step2');
   const s3 = document.getElementById('step3');
@@ -652,9 +699,15 @@ function updateSteps(step) {
   l1.className = 'step-line' + (step > 1 ? ' done' : '');
   l2.className = 'step-line' + (step > 2 ? ' done' : '');
 
-  if (step === 1) lbl.textContent = 'STEP 1 OF 2 — EMAIL';
-  if (step === 2) lbl.textContent = 'STEP 2 OF 2 — PASSWORD';
-  if (step === 3) lbl.textContent = 'VERIFYING…';
+  if (currentMode === 'signin') {
+    if (step === 1) lbl.textContent = 'STEP 1 OF 2 — EMAIL';
+    if (step === 2) lbl.textContent = 'STEP 2 OF 2 — PASSWORD';
+    if (step === 3) lbl.textContent = 'VERIFYING…';
+  } else {
+    if (step === 1) lbl.textContent = 'STEP 1 OF 3 — EMAIL';
+    if (step === 2) lbl.textContent = 'STEP 2 OF 3 — PASSWORD';
+    if (step === 3) lbl.textContent = 'STEP 3 OF 3 — CONFIRM PASSWORD';
+  }
 }
 
 /* ════════════════════════════════════════
@@ -735,7 +788,39 @@ function listen(onResult, onError) {
 /* ════════════════════════════════════════
    AUTH FLOW
 ════════════════════════════════════════ */
-function startFlow() {
+
+function switchTab(mode) {
+  speechSynthesis && speechSynthesis.cancel();
+  if (recognition) {
+    try { recognition.abort(); } catch(e) {}
+  }
+
+  currentMode = mode;
+  const tabSignin = document.getElementById('tab-signin');
+  const tabSignup = document.getElementById('tab-signup');
+  const cardTitle = document.getElementById('card-title');
+  const cardSubtitle = document.getElementById('card-subtitle');
+
+  if (mode === 'signin') {
+    tabSignin.classList.add('active');
+    tabSignup.classList.remove('active');
+    tabSignin.setAttribute('aria-selected', 'true');
+    tabSignup.setAttribute('aria-selected', 'false');
+    cardTitle.textContent = 'Voice Sign In';
+    cardSubtitle.textContent = 'Speak to authenticate';
+  } else {
+    tabSignup.classList.add('active');
+    tabSignin.classList.remove('active');
+    tabSignup.setAttribute('aria-selected', 'true');
+    tabSignin.setAttribute('aria-selected', 'false');
+    cardTitle.textContent = 'Voice Sign Up';
+    cardSubtitle.textContent = 'Create your account';
+  }
+
+  resetFlow();
+}
+
+function startSignInFlow() {
   authStep = 'email';
   spokenEmail = '';
   spokenPassword = '';
@@ -755,13 +840,41 @@ function startFlow() {
   setPrompt("Welcome to TalentBridge voice sign-in.");
 }
 
-function handleMicClick() {
-  if (state === 'listening') return;
-  if (authStep === 'email') captureEmail();
-  else if (authStep === 'password') capturePassword();
+function startSignUpFlow() {
+  authStep = 'email';
+  spokenEmail = '';
+  spokenPassword = '';
+  spokenPasswordConfirm = '';
+  updateSteps(1);
+  setTranscript('');
+  enableMic(false);
+  setPill('speaking', 'SPEAKING');
+
+  speak("Welcome to TalentBridge. Let's create your voice account. First, please say your email address after the tone.", () => {
+    setPrompt("Please say your email address.");
+    announce("Please say your email address. Tap the microphone or press Space to begin.");
+    setPill('', 'READY');
+    setBars('idle');
+    enableMic(true);
+  });
+
+  setPrompt("Let's create your TalentBridge voice account.");
 }
 
-function captureEmail() {
+function handleMicClick() {
+  if (state === 'listening') return;
+  
+  if (currentMode === 'signin') {
+    if (authStep === 'email') captureEmailSignIn();
+    else if (authStep === 'password') capturePasswordSignIn();
+  } else {
+    if (authStep === 'email') captureEmailSignUp();
+    else if (authStep === 'password') capturePasswordSignUp();
+    else if (authStep === 'password-confirm') capturePasswordConfirmSignUp();
+  }
+}
+
+function captureEmailSignIn() {
   state = 'listening';
   enableMic(false);
   setPrompt("Listening for your email…");
@@ -800,7 +913,7 @@ function captureEmail() {
   });
 }
 
-function capturePassword() {
+function capturePasswordSignIn() {
   state = 'listening';
   enableMic(false);
   setPrompt("Listening for your password…");
@@ -814,7 +927,7 @@ function capturePassword() {
     setPill('', 'VERIFYING');
     updateSteps(3);
 
-    setTimeout(() => verifyCredentials(), 600);
+    setTimeout(() => verifySignInCredentials(), 600);
 
   }, (err) => {
     state = 'idle';
@@ -830,25 +943,168 @@ function capturePassword() {
   });
 }
 
-function verifyCredentials() {
+function verifySignInCredentials() {
   // use firebase instead of dummy credentials
   if (window.attemptFirebaseSignIn) {
     window.attemptFirebaseSignIn(spokenEmail, spokenPassword).then(result => {
-      handleFirebaseResult(result);
+      handleAuthResult(result);
     }).catch(err => {
       console.error('firebase attempt failed:', err);
-      handleFirebaseResult({ success: false, error: 'Sign-in error' });
+      handleAuthResult({ success: false, error: 'Sign-in error' });
     });
   } else {
     // fallback to demo mode if firebase not loaded
     const emailOk    = spokenEmail    === normalize(CREDENTIALS.email);
     const passwordOk = spokenPassword === normalize(CREDENTIALS.password);
     const granted    = emailOk && passwordOk;
-    handleFirebaseResult({ success: granted, error: granted ? null : 'Credentials do not match' });
+    handleAuthResult({ success: granted, error: granted ? null : 'Credentials do not match' });
   }
 }
 
-function handleFirebaseResult(result) {
+function captureEmailSignUp() {
+  state = 'listening';
+  enableMic(false);
+  setPrompt("Listening for your email…");
+  announce("Listening. Please say your email address now.");
+
+  listen((result) => {
+    state = 'processing';
+    spokenEmail = normalize(result);
+    setTranscript('"' + result + '"');
+    setBars('idle');
+    setPill('', 'RECEIVED');
+
+    // Confirm and move to password
+    speak('Got it. Now please say your password.', () => {
+      authStep = 'password';
+      updateSteps(2);
+      setPrompt("Please say your password.");
+      announce("Please say your password. Tap the microphone or press Space.");
+      setTranscript('');
+      setPill('', 'READY');
+      enableMic(true);
+      state = 'waiting';
+    });
+
+  }, (err) => {
+    state = 'idle';
+    setBars('idle');
+    setPill('error', 'ERROR');
+    setPrompt(err);
+    announce(err + " Please try again.");
+    setTimeout(() => {
+      setPrompt("Please say your email address.");
+      setPill('', 'READY');
+      enableMic(true);
+    }, 2800);
+  });
+}
+
+function capturePasswordSignUp() {
+  state = 'listening';
+  enableMic(false);
+  setPrompt("Listening for your password…");
+  announce("Listening. Please say your password now.");
+
+  listen((result) => {
+    state = 'processing';
+    spokenPassword = normalize(result);
+    setTranscript('"' + result + '"');
+    setBars('idle');
+    setPill('', 'RECEIVED');
+
+    // Confirm password step
+    speak('Got it. Now please confirm your password.', () => {
+      authStep = 'password-confirm';
+      updateSteps(3);
+      setPrompt("Please confirm your password.");
+      announce("Please confirm your password. Tap the microphone or press Space.");
+      setTranscript('');
+      setPill('', 'READY');
+      enableMic(true);
+      state = 'waiting';
+    });
+
+  }, (err) => {
+    state = 'idle';
+    setBars('idle');
+    setPill('error', 'ERROR');
+    setPrompt(err);
+    announce(err + " Please try again.");
+    setTimeout(() => {
+      setPrompt("Please say your password.");
+      setPill('', 'READY');
+      enableMic(true);
+    }, 2800);
+  });
+}
+
+function capturePasswordConfirmSignUp() {
+  state = 'listening';
+  enableMic(false);
+  setPrompt("Listening for password confirmation…");
+  announce("Listening. Please confirm your password now.");
+
+  listen((result) => {
+    state = 'verifying';
+    spokenPasswordConfirm = normalize(result);
+    setTranscript('"' + result + '"');
+    setBars('idle');
+    setPill('', 'VERIFYING');
+
+    setTimeout(() => verifySignUpCredentials(), 600);
+
+  }, (err) => {
+    state = 'idle';
+    setBars('idle');
+    setPill('error', 'ERROR');
+    setPrompt(err);
+    announce(err + " Please try again.");
+    setTimeout(() => {
+      setPrompt("Please confirm your password.");
+      setPill('', 'READY');
+      enableMic(true);
+    }, 2800);
+  });
+}
+
+function verifySignUpCredentials() {
+  // Check if passwords match
+  if (spokenPassword !== spokenPasswordConfirm) {
+    handleAuthResult({
+      success: false,
+      error: 'Passwords do not match'
+    });
+    return;
+  }
+
+  // Convert spoken form back to email format (e.g., "john at example dot com" → "john@example.com")
+  let email = spokenEmail
+    .replace(/\s+at\s+/gi, '@')
+    .replace(/\s+dot\s+/gi, '.')
+    .trim();
+
+  // Use Firebase sign-up
+  if (window.signUpWithEmail) {
+    window.signUpWithEmail(email, spokenPassword).then(result => {
+      handleAuthResult(result);
+    }).catch(err => {
+      console.error('firebase signup failed:', err);
+      handleAuthResult({ 
+        success: false, 
+        error: err.message || 'Sign-up failed. Account may already exist.'
+      });
+    });
+  } else {
+    // Fallback if firebase not loaded
+    handleAuthResult({
+      success: false,
+      error: 'Sign-up service not available'
+    });
+  }
+}
+
+function handleAuthResult(result) {
   const authSection  = document.getElementById('auth-section');
   const resultScreen = document.getElementById('result-screen');
 
@@ -858,31 +1114,42 @@ function handleFirebaseResult(result) {
   if (result.success) {
     setBars('success');
     setPill('success', 'GRANTED');
+    
+    const isSignUp = currentMode === 'signup';
+    const titleText = isSignUp ? 'Account Created' : 'Access Granted';
+    const subtitleText = isSignUp ? 'Welcome to TalentBridge' : 'Identity verified — welcome back';
+    
     resultScreen.innerHTML = `
       <div class="result-icon success" aria-hidden="true">
         <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
-      <div class="result-title success">Access Granted</div>
-      <div class="result-sub">Identity verified — welcome back</div>
-      <button class="retry-btn" onclick="resetFlow()" aria-label="Sign out and return to login">Sign Out</button>
+      <div class="result-title success">${titleText}</div>
+      <div class="result-sub">${subtitleText}</div>
+      <button class="retry-btn" onclick="resetFlow()" aria-label="Continue">Continue</button>
     `;
-    announce("Access granted. Identity verified. Welcome back.");
-    speak("Access granted. Welcome back. You are now signed in.");
+    
+    const msg = isSignUp 
+      ? "Account created successfully. Welcome to TalentBridge."
+      : "Access granted. Identity verified. Welcome back.";
+    announce(msg);
+    speak(msg);
   } else {
     setBars('error');
     setPill('error', 'DENIED');
 
-    const reason = result.error || 'credentials did not match';
+    const reason = result.error || (currentMode === 'signup' 
+      ? 'Sign-up failed. Please try again.' 
+      : 'Credentials did not match');
     resultScreen.innerHTML = `
       <div class="result-icon error" aria-hidden="true">
         <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </div>
-      <div class="result-title error">Access Denied</div>
+      <div class="result-title error">Registration Denied</div>
       <div class="result-sub">${reason}</div>
       <button class="retry-btn" onclick="resetFlow()" aria-label="Try again">Try Again</button>
     `;
-    announce("Access not granted. " + reason + ". Please try again.");
-    speak("Access not granted. " + reason + ". Please try again.");
+    announce("Registration not granted. " + reason + ". Please try again.");
+    speak("Registration not granted. " + reason + ". Please try again.");
   }
 }
 
@@ -903,7 +1170,13 @@ function resetFlow() {
   updateSteps(1);
   enableMic(false);
 
-  setTimeout(startFlow, 300);
+  setTimeout(() => {
+    if (currentMode === 'signin') {
+      startSignInFlow();
+    } else {
+      startSignUpFlow();
+    }
+  }, 300);
 }
 
 /* ════════════════════════════════════════
@@ -922,13 +1195,20 @@ document.addEventListener('keydown', (e) => {
 // Voices load async
 function boot() {
   if (speechSynthesis && speechSynthesis.getVoices().length === 0) {
-    speechSynthesis.onvoiceschanged = startFlow;
+    speechSynthesis.onvoiceschanged = startSignInFlow;
   } else {
-    setTimeout(startFlow, 1000);
+    setTimeout(startSignInFlow, 1000);
   }
 }
 
 window.addEventListener('load', boot);
 </script>
+
+<!-- Load Firebase helpers for sign-in and sign-up -->
+<script type="module">
+  import { attemptFirebaseSignIn, attemptFirebaseSignUp } from './candlogin.js';
+  // Functions are exposed to window in candlogin.js
+</script>
+
 </body>
 </html>

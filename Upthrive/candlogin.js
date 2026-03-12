@@ -40,6 +40,36 @@ export async function attemptFirebaseSignIn(spokenEmail, spokenPassword) {
   }
 }
 
+// handle candidate voice-based sign-up
+export async function attemptFirebaseSignUp(spokenEmail, spokenPassword) {
+  try {
+    // normalize inputs (remove spaces, handle common speech errors)
+    const email = spokenEmail.toLowerCase().replace(/\s+/g, '').replace(/at/g, '@').replace(/dot/g, '.');
+    const password = spokenPassword.trim();
+
+    // basic validation
+    if (!email.includes('@') || password.length < 6) {
+      return { success: false, error: 'Invalid email or password format' };
+    }
+
+    // attempt firebase sign-up
+    const result = await signUpWithEmail(email, password);
+
+    if (result.error) {
+      return { success: false, error: result.error };
+    }
+
+    // success: persist role and candidate identifier
+    localStorage.setItem('titanRole', 'candidate');
+    localStorage.setItem('candidateEmail', email);
+    return { success: true, user: result.user };
+
+  } catch (err) {
+    console.error('firebase sign-up error:', err);
+    return { success: false, error: err.message || 'Sign-up failed' };
+  }
+}
+
 // monitor auth state and redirect logged-in candidates to their dashboard
 export function setupCandidateAuthRedirect() {
   onAuthChange(user => {
@@ -68,5 +98,6 @@ export async function handleGoogleSignIn() {
 
 // expose to global scope for HTML access
 window.attemptFirebaseSignIn = attemptFirebaseSignIn;
+window.signUpWithEmail = attemptFirebaseSignUp;  // alias for HTML use
 window.handleGoogleSignIn = handleGoogleSignIn;
 setupCandidateAuthRedirect();

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TalentBridge | Intelligent Hiring</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --gold: #c5a059;
+            --dark-bg: #050505;
+            --text-white: #e0e0e0;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--dark-bg);
+            color: var(--text-white);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Animated Stars Background */
+        .stars {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+            z-index: -1;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 800px;
+            width: 90%;
+            z-index: 1;
+        }
+
+        .logo {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            letter-spacing: 12px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .logo span { font-weight: 300; }
+
+        .tagline {
+            font-size: 0.7rem;
+            letter-spacing: 5px;
+            color: var(--gold);
+            margin-bottom: 50px;
+            opacity: 0.8;
+        }
+
+        /* Microphone Interface */
+        .voice-interface {
+            margin: 40px 0;
+        }
+
+        .mic-outer-circle {
+            width: 160px;
+            height: 160px;
+            border: 1px solid rgba(197, 160, 89, 0.2);
+            border-radius: 50%;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .mic-outer-circle.active {
+            border-color: var(--gold);
+            box-shadow: 0 0 50px rgba(197, 160, 89, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .mic-inner-circle {
+            width: 60px;
+            height: 60px;
+            background: var(--glass);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gold);
+            font-size: 1.5rem;
+        }
+
+        #status-text {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            color: var(--gold);
+        }
+
+        /* Live Transcript Display */
+        .transcript-container {
+            height: 80px;
+            margin: 20px 0;
+            overflow-y: auto;
+            font-style: italic;
+            opacity: 0.6;
+            font-size: 0.9rem;
+        }
+
+        /* Buttons */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            padding: 14px 28px;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 2px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: 0.4s;
+            text-transform: uppercase;
+        }
+
+        .btn-outline:hover {
+            background: var(--gold);
+            color: black;
+            box-shadow: 0 0 20px rgba(197, 160, 89, 0.4);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stars"></div>
+    
+    <div class="container">
+        <header>
+            <h1 class="logo">TALENT<span>BRIDGE</span></h1>
+            <p class="tagline">INTELLIGENT HIRING. REIMAGINED.</p>
+        </header>
+
+        <div class="voice-interface">
+            <div class="mic-outer-circle" id="mic-visualizer">
+                <div class="mic-inner-circle">
+                    <span id="mic-icon">🎤</span>
+                </div>
+            </div>
+            <p id="status-text">SYSTEM_READY</p>
+        </div>
+
+        <div class="transcript-container" id="live-transcript">
+            </div>
+
+        <div class="controls">
+            <button class="btn-outline" id="start-btn">Start Interview</button>
+            <button class="btn-outline" id="finish-btn" style="display:none; border-color: #fff; color: #fff;">Finish & Send</button>
+            
+            <input type="file" id="recruiter-file" hidden>
+            <button class="btn-outline" onclick="document.getElementById('recruiter-file').click()">Upload Specs</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // REPLACE WITH YOUR ACTUAL FIREBASE CONFIG
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const storage = getStorage(app);
+        const db = getFirestore(app);
+
+        // Voice Engine Setup
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        const synthesis = window.speechSynthesis;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        let fullTranscript = "";
+        const statusEl = document.getElementById('status-text');
+        const micEl = document.getElementById('mic-visualizer');
+        const transcriptEl = document.getElementById('live-transcript');
+
+        // Logic: Start Interview
+        document.getElementById('start-btn').addEventListener('click', () => {
+            fullTranscript = "";
+            transcriptEl.innerText = "";
+            
+            speak("Welcome. Please introduce yourself and state your key skills.");
+            
+            micEl.classList.add('active');
+            statusEl.innerText = "SPEAKING_";
+            document.getElementById('start-btn').style.display = 'none';
+            document.getElementById('finish-btn').style.display = 'inline-block';
+            
+            recognition.start();
+        });
+
+        // Logic: Speech Recognition Result
+        recognition.onresult = (event) => {
+            let interimTranscript = "";
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    fullTranscript += event.results[i][0].transcript + " ";
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+            transcriptEl.innerText = fullTranscript + interimTranscript;
+        };
+
+        // Logic: Finish and Upload .txt to Firebase
+        document.getElementById('finish-btn').addEventListener('click', async () => {
+            recognition.stop();
+            micEl.classList.remove('active');
+            statusEl.innerText = "TRANSMITTING_DATA...";
+
+            const blob = new Blob([fullTranscript], { type: 'text/plain' });
+            const fileName = `interview_${Date.now()}.txt`;
+
+            try {
+                // Upload File
+                const storageRef = ref(storage, `transcripts/${fileName}`);
+                const snapshot = await uploadBytes(storageRef, blob);
+                const fileUrl = await getDownloadURL(snapshot.ref);
+
+                // Log to Firestore
+                await addDoc(collection(db, "submissions"), {
+                    transcriptUrl: fileUrl,
+                    content: fullTranscript,
+                    timestamp: serverTimestamp()
+                });
+
+                speak("Data received. Thank you.");
+                statusEl.innerText = "COMPLETED_";
+                alert("Interview file sent to recruiter successfully.");
+                
+                // Reset UI
+                document.getElementById('start-btn').style.display = 'inline-block';
+                document.getElementById('finish-btn').style.display = 'none';
+            } catch (err) {
+                console.error(err);
+                statusEl.innerText = "ERROR_RETRIEVING_DATA";
+            }
+        });
+
+        // Recruiter: File Upload Logic
+        document.getElementById('recruiter-file').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const storageRef = ref(storage, `recruiter_specs/${file.name}`);
+            await uploadBytes(storageRef, file);
+            alert("Job specs uploaded to Cloud Storage.");
+        });
+
+        function speak(text) {
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.pitch = 0.85; // Slight robotic baritone
+            msg.rate = 0.95;
+            synthesis.speak(msg);
+        }
+    </script>
+</body>
+</html>
