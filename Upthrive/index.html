@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Interview Authentication Page</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --panel: #111118;
+      --border: rgba(255,255,255,0.07);
+      --accent: #e8ff47;
+      --accent2: #47c8ff;
+      --text: #f0f0f5;
+      --muted: #6b6b80;
+      --error: #ff5a5a;
+      --recruiter: #e8ff47;
+      --candidate: #47c8ff;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      overflow: hidden;
+    }
+
+    /* ── Background Grid ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(232,255,71,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232,255,71,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Glow Orbs ── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+      transition: background 0.8s ease, opacity 0.8s ease;
+    }
+    .orb1 {
+      width: 600px; height: 600px;
+      top: -200px; left: -200px;
+      background: radial-gradient(circle, rgba(232,255,71,0.12) 0%, transparent 70%);
+    }
+    .orb2 {
+      width: 500px; height: 500px;
+      bottom: -150px; right: -150px;
+      background: radial-gradient(circle, rgba(71,200,255,0.10) 0%, transparent 70%);
+    }
+
+    /* ── Layout ── */
+    .layout {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 100vh;
+    }
+
+    /* ── Left Panel ── */
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 48px;
+      border-right: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-icon {
+      width: 38px; height: 38px;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .brand-icon svg { width: 20px; height: 20px; fill: var(--accent); }
+    .brand-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 3px;
+      color: var(--text);
+    }
+
+    .hero-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px 0;
+    }
+    .hero-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .hero-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(60px, 7vw, 96px);
+      line-height: 0.92;
+      letter-spacing: 2px;
+      color: var(--text);
+      margin-bottom: 28px;
+    }
+    .hero-title span {
+      -webkit-text-stroke: 1.5px rgba(232,255,71,0.5);
+      color: transparent;
+    }
+    .hero-desc {
+      font-size: 15px;
+      font-weight: 300;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 360px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 40px;
+    }
+    .stat-item {}
+    .stat-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      letter-spacing: 1px;
+      color: var(--accent);
+    }
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    /* ── Right Panel ── */
+    .right-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+      overflow-y: auto;
+    }
+
+    .auth-box {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    /* ── Role Selector ── */
+    .role-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .role-btn {
+      padding: 14px 16px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .role-btn .role-icon {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      background: rgba(255,255,255,0.05);
+      transition: background 0.25s ease;
+      flex-shrink: 0;
+    }
+    .role-btn.active-recruiter {
+      border-color: var(--recruiter);
+      color: var(--recruiter);
+      background: rgba(232,255,71,0.05);
+    }
+    .role-btn.active-recruiter .role-icon {
+      background: rgba(232,255,71,0.15);
+    }
+    .role-btn.active-candidate {
+      border-color: var(--candidate);
+      color: var(--candidate);
+      background: rgba(71,200,255,0.05);
+    }
+    .role-btn.active-candidate .role-icon {
+      background: rgba(71,200,255,0.15);
+    }
+
+    /* ── Tab Toggle ── */
+    .tab-row {
+      display: flex;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 28px;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .tab.active {
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+    }
+
+    /* ── Form ── */
+    .form-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 2px;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .form-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+    .form-sub span {
+      color: var(--accent);
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+    .field input {
+      width: 100%;
+      padding: 13px 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    .field input:focus {
+      border-color: rgba(232,255,71,0.4);
+    }
+    .field input::placeholder { color: var(--muted); }
+
+    .forgot {
+      text-align: right;
+      margin-bottom: 20px;
+    }
+    .forgot a {
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .forgot a:hover { color: var(--accent); }
+
+    .submit-btn {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .submit-btn.recruiter-btn {
+      background: var(--recruiter);
+      color: #0a0a0f;
+    }
+    .submit-btn.candidate-btn {
+      background: var(--candidate);
+      color: #0a0a0f;
+    }
+    .submit-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 32px rgba(232,255,71,0.25);
+    }
+    .submit-btn.candidate-btn:hover {
+      box-shadow: 0 8px 32px rgba(71,200,255,0.25);
+    }
+    .submit-btn:active { transform: translateY(0); }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── Divider ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Google Btn ── */
+    .google-btn {
+      width: 100%;
+      padding: 13px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s ease;
+    }
+    .google-btn:hover {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.15);
+    }
+    .google-btn img { width: 18px; height: 18px; }
+
+    /* ── Toast / Error ── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 22px;
+      font-size: 14px;
+      z-index: 100;
+      transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: rgba(232,255,71,0.3); color: var(--accent); }
+    .toast.error { border-color: rgba(255,90,90,0.3); color: var(--error); }
+
+    /* ── Loader ── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Forgot password view ── */
+    .reset-view { display: none; }
+
+    /* ── Responsive ── */
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+      .left-panel { display: none; }
+      .right-panel { padding: 32px 24px; }
+    }
+
+    /* ── Entrance Animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .auth-box { animation: fadeUp 0.6s ease both; }
+    .left-panel > * { animation: fadeUp 0.6s ease both; }
+    .left-panel > *:nth-child(2) { animation-delay: 0.1s; }
+    .left-panel > *:nth-child(3) { animation-delay: 0.2s; }
+  </style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="layout">
+
+  <!-- ── LEFT PANEL ── -->
+  <div class="left-panel">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <span class="brand-name">TITAN</span>
+    </div>
+
+    <div class="hero-text">
+      <div class="hero-label">Talent Intelligence Platform</div>
+      <h1 class="hero-title">BUILD YOUR<br><span>DREAM</span><br>TEAM</h1>
+      <p class="hero-desc">Connect exceptional talent with forward-thinking companies. The hiring platform built for speed, precision, and results.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat-item">
+        <div class="stat-num">48K+</div>
+        <div class="stat-label">Active Jobs</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">120K+</div>
+        <div class="stat-label">Candidates</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">97%</div>
+        <div class="stat-label">Match Rate</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT PANEL ── -->
+  <div class="right-panel">
+    <div class="auth-box">
+
+      <!-- Role Selector -->
+      <div class="role-selector">
+        <button class="role-btn active-recruiter" id="btnRecruiter" onclick="selectRole('recruiter')">
+          <span class="role-icon">🏢</span>
+          <span>Recruiter</span>
+        </button>
+        <button class="role-btn" id="btnCandidate" onclick="selectRole('candidate')">
+          <span class="role-icon">👤</span>
+          <span>Candidate</span>
+        </button>
+      </div>
+
+      <!-- Tab Toggle -->
+      <div class="tab-row">
+        <button class="tab active" id="tabSignIn" onclick="switchTab('signin')">Sign In</button>
+        <button class="tab" id="tabSignUp" onclick="switchTab('signup')">Sign Up</button>
+      </div>
+
+      <!-- ── SIGN IN FORM ── -->
+      <div id="formSignIn">
+        <div class="form-title">WELCOME BACK</div>
+        <div class="form-sub" id="signinSub">Signing in as <span id="signinRoleLabel">Recruiter</span></div>
+
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="siEmail" placeholder="you@company.com"/>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="siPassword" placeholder="••••••••"/>
+        </div>
+        <div class="forgot"><a onclick="showReset()">Forgot password?</a></div>
+
+        <button class="submit-btn recruiter-btn" id="signinBtn" onclick="handleSignIn()">SIGN IN</button>
+
+        <div class="divider">or continue with</div>
+        <button class="google-btn" onclick="handleGoogle()">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G"/>
+          Continue with Google
+        </button>
+      </div>
+
+      <!-- ── SIGN UP FORM ── -->
+      <div id="formSignUp" style="display:none;">
+        <div class="form-title">JOIN TITAN</div>
+        <div class="form-sub">Creating account as <span id="signupRoleLabel" style="color:var(--accent)">Recruiter</span></div>
+
+        <div class="field">
+          <label>Full Name</label>
+          <input type="text" id="suName" placeholder="Alex Johnson"/>
+        </div>
+        <div class="field" id="companyField">
+          <label>Company</label>
+          <input type="text" id="suCompany" placeholder="Acme Corp"/>
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="suEmail" placeholder="you@company.com"/>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="suPassword" placeholder="Min. 8 characters"/>
+        </div>
+
+        <button class="submit-btn recruiter-btn" id="signupBtn" onclick="handleSignUp()">CREATE ACCOUNT</button>
+
+        <div class="divider">or continue with</div>
+        <button class="google-btn" onclick="handleGoogle()">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G"/>
+          Continue with Google
+        </button>
+      </div>
+
+      <!-- ── RESET PASSWORD ── -->
+      <div id="formReset" class="reset-view">
+        <div class="form-title">RESET PASSWORD</div>
+        <div class="form-sub">We'll send a reset link to your email.</div>
+
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="resetEmail" placeholder="you@company.com"/>
+        </div>
+
+        <button class="submit-btn recruiter-btn" id="resetBtn" onclick="handleReset()">SEND RESET LINK</button>
+        <div style="text-align:center; margin-top:14px;">
+          <a onclick="backToSignIn()" style="font-size:13px; color:var(--muted); cursor:pointer; text-decoration:none;">← Back to Sign In</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import {
+    signUpWithEmail,
+    signInWithEmail,
+    signInWithGoogle,
+    resetPassword,
+    onAuthChange
+  } from "./index.js";
+
+  // Expose to global scope for onclick handlers
+  window._firebase = { signUpWithEmail, signInWithEmail, signInWithGoogle, resetPassword };
+
+  // Auth state listener
+  onAuthChange((user) => {
+    if (user.isLoggedIn) {
+      const role = localStorage.getItem('titanRole') || 'candidate';
+      showToast(`Welcome back! Redirecting as ${role}…`, 'success');
+      setTimeout(() => {
+        window.location.href = role === 'recruiter' ? '/recruiter-dashboard.html' : '/candidate-dashboard.html';
+      }, 1500);
+    }
+  });
+</script>
+
+<script>
+  let currentRole = 'recruiter';
+  let currentTab = 'signin';
+
+  // ── Role Selection ──
+  function selectRole(role) {
+    currentRole = role;
+    localStorage.setItem('titanRole', role);
+
+    const rBtn = document.getElementById('btnRecruiter');
+    const cBtn = document.getElementById('btnCandidate');
+    const orb1 = document.querySelector('.orb1');
+    const orb2 = document.querySelector('.orb2');
+
+    rBtn.className = 'role-btn' + (role === 'recruiter' ? ' active-recruiter' : '');
+    cBtn.className = 'role-btn' + (role === 'candidate' ? ' active-candidate' : '');
+
+    const color = role === 'recruiter' ? 'var(--recruiter)' : 'var(--candidate)';
+    const colorHex = role === 'recruiter' ? '#e8ff47' : '#47c8ff';
+
+    // Update accents
+    document.documentElement.style.setProperty('--accent', colorHex);
+
+    // Update button styles
+    const signinBtn = document.getElementById('signinBtn');
+    const signupBtn = document.getElementById('signupBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const cls = role === 'recruiter' ? 'recruiter-btn' : 'candidate-btn';
+    signinBtn.className = `submit-btn ${cls}`;
+    signupBtn.className = `submit-btn ${cls}`;
+    resetBtn.className = `submit-btn ${cls}`;
+
+    // Update labels
+    const label = role === 'recruiter' ? 'Recruiter' : 'Candidate';
+    document.getElementById('signinRoleLabel').textContent = label;
+    document.getElementById('signupRoleLabel').textContent = label;
+
+    // Show/hide company field
+    document.getElementById('companyField').style.display = role === 'recruiter' ? '' : 'none';
+
+    // Orb shift
+    if (role === 'candidate') {
+      orb1.style.background = 'radial-gradient(circle, rgba(71,200,255,0.12) 0%, transparent 70%)';
+      orb2.style.background = 'radial-gradient(circle, rgba(71,200,255,0.08) 0%, transparent 70%)';
+    } else {
+      orb1.style.background = 'radial-gradient(circle, rgba(232,255,71,0.12) 0%, transparent 70%)';
+      orb2.style.background = 'radial-gradient(circle, rgba(71,200,255,0.10) 0%, transparent 70%)';
+    }
+  }
+
+  // ── Tab Switch ──
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tabSignIn').className = 'tab' + (tab === 'signin' ? ' active' : '');
+    document.getElementById('tabSignUp').className = 'tab' + (tab === 'signup' ? ' active' : '');
+    document.getElementById('formSignIn').style.display = tab === 'signin' ? '' : 'none';
+    document.getElementById('formSignUp').style.display = tab === 'signup' ? '' : 'none';
+    document.getElementById('formReset').style.display = 'none';
+  }
+
+  // ── Forgot / Back ──
+  function showReset() {
+    document.getElementById('formSignIn').style.display = 'none';
+    document.getElementById('formSignUp').style.display = 'none';
+    document.getElementById('formReset').style.display = '';
+    document.querySelector('.tab-row').style.opacity = '0.3';
+    document.querySelector('.tab-row').style.pointerEvents = 'none';
+  }
+  function backToSignIn() {
+    switchTab('signin');
+    document.querySelector('.tab-row').style.opacity = '';
+    document.querySelector('.tab-row').style.pointerEvents = '';
+  }
+
+  // ── Toast ──
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.className = `toast ${type}`;
+    t.innerHTML = (type === 'success' ? '✓ ' : '✕ ') + msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  // ── Loading State ──
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    if (loading) {
+      btn.disabled = true;
+      btn.dataset.orig = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner"></span>';
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = btn.dataset.orig;
+    }
+  }
+
+  // ── Sign In ──
+  async function handleSignIn() {
+    const email = document.getElementById('siEmail').value.trim();
+    const password = document.getElementById('siPassword').value;
+    if (!email || !password) return showToast('Please fill in all fields.', 'error');
+    setLoading('signinBtn', true);
+    const { user, error } = await window._firebase.signInWithEmail(email, password);
+    setLoading('signinBtn', false);
+    if (error) return showToast(formatError(error), 'error');
+    localStorage.setItem('titanRole', currentRole);
+    showToast('Signed in successfully!', 'success');
+  }
+
+  // ── Sign Up ──
+  async function handleSignUp() {
+    const name = document.getElementById('suName').value.trim();
+    const email = document.getElementById('suEmail').value.trim();
+    const password = document.getElementById('suPassword').value;
+    if (!name || !email || !password) return showToast('Please fill in all fields.', 'error');
+    if (password.length < 8) return showToast('Password must be at least 8 characters.', 'error');
+    setLoading('signupBtn', true);
+    const { user, error } = await window._firebase.signUpWithEmail(email, password);
+    setLoading('signupBtn', false);
+    if (error) return showToast(formatError(error), 'error');
+    localStorage.setItem('titanRole', currentRole);
+    showToast('Account created! Welcome to Titan.', 'success');
+  }
+
+  // ── Google ──
+  async function handleGoogle() {
+    const { user, error } = await window._firebase.signInWithGoogle();
+    if (error) return showToast(formatError(error), 'error');
+    localStorage.setItem('titanRole', currentRole);
+    showToast('Signed in with Google!', 'success');
+  }
+
+  // ── Reset ──
+  async function handleReset() {
+    const email = document.getElementById('resetEmail').value.trim();
+    if (!email) return showToast('Please enter your email.', 'error');
+    setLoading('resetBtn', true);
+    const { error } = await window._firebase.resetPassword(email);
+    setLoading('resetBtn', false);
+    if (error) return showToast(formatError(error), 'error');
+    showToast('Reset link sent! Check your inbox.', 'success');
+    setTimeout(backToSignIn, 2000);
+  }
+
+  // ── Error Formatter ──
+  function formatError(msg) {
+    if (msg.includes('email-already-in-use')) return 'This email is already registered.';
+    if (msg.includes('invalid-email')) return 'Please enter a valid email.';
+    if (msg.includes('wrong-password') || msg.includes('invalid-credential')) return 'Incorrect email or password.';
+    if (msg.includes('user-not-found')) return 'No account found with this email.';
+    if (msg.includes('weak-password')) return 'Password is too weak.';
+    if (msg.includes('popup-closed')) return 'Google sign-in was cancelled.';
+    if (msg.includes('too-many-requests')) return 'Too many attempts. Please try again later.';
+    return 'Something went wrong. Please try again.';
+  }
+
+  // Expose functions
+  window.selectRole = selectRole;
+  window.switchTab = switchTab;
+  window.showReset = showReset;
+  window.backToSignIn = backToSignIn;
+  window.handleSignIn = handleSignIn;
+  window.handleSignUp = handleSignUp;
+  window.handleGoogle = handleGoogle;
+  window.handleReset = handleReset;
+
+  // Init
+  selectRole('recruiter');
+</script>
+
+</body>
+</html>
