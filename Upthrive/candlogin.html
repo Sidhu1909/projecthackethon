@@ -892,11 +892,10 @@ function captureEmailSignIn() {
       authStep = 'password';
       updateSteps(2);
       setPrompt("Please say your password.");
-      announce("Please say your password. Tap the microphone or press Space.");
+      announce("Listening for your password.");
       setTranscript('');
       setPill('', 'READY');
-      enableMic(true);
-      state = 'waiting';
+      setTimeout(() => capturePasswordSignIn(), 500);  // Auto-start microphone
     });
 
   }, (err) => {
@@ -979,11 +978,10 @@ function captureEmailSignUp() {
       authStep = 'password';
       updateSteps(2);
       setPrompt("Please say your password.");
-      announce("Please say your password. Tap the microphone or press Space.");
+      announce("Listening for your password.");
       setTranscript('');
       setPill('', 'READY');
-      enableMic(true);
-      state = 'waiting';
+      setTimeout(() => capturePasswordSignUp(), 500);  // Auto-start microphone
     });
 
   }, (err) => {
@@ -1018,11 +1016,10 @@ function capturePasswordSignUp() {
       authStep = 'password-confirm';
       updateSteps(3);
       setPrompt("Please confirm your password.");
-      announce("Please confirm your password. Tap the microphone or press Space.");
+      announce("Listening for password confirmation.");
       setTranscript('');
       setPill('', 'READY');
-      enableMic(true);
-      state = 'waiting';
+      setTimeout(() => capturePasswordConfirmSignUp(), 500);  // Auto-start microphone
     });
 
   }, (err) => {
