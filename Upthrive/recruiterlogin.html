@@ -998,7 +998,7 @@ async function handleSignIn() {
   if (res.error) return showToast(formatError(res.error), 'error');
   localStorage.setItem('titanRole', 'recruiter');
   showToast('Signed in successfully!', 'success');
-  setTimeout(() => { window.location.href = '/recruiter-dashboard.html'; }, 1400);
+  setTimeout(() => { window.location.href = './recruiter-dashboard.html'; }, 1400);
 }
 
 /* ──────────────────────────────────────────────────
@@ -1045,7 +1045,7 @@ async function handleGoogle() {
   if (res.error) return showToast(formatError(res.error), 'error');
   localStorage.setItem('titanRole', 'recruiter');
   showToast('Signed in with Google!', 'success');
-  setTimeout(() => { window.location.href = '/recruiter-dashboard.html'; }, 1400);
+  setTimeout(() => { window.location.href = './recruiter-dashboard.html'; }, 1400);
 }
 
 /* ──────────────────────────────────────────────────
@@ -1090,7 +1090,7 @@ try {
     onAuthChange(u => {
       if (u.isLoggedIn) {
         localStorage.setItem('titanRole','recruiter');
-        window.location.href = '/recruiter-dashboard.html';
+        window.location.href = './recruiter-dashboard.html';
       }
     });
   `;

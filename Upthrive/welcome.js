@@ -15,9 +15,11 @@ export function setupFirebaseRedirect() {
     if (!user || !user.isLoggedIn) return;
     const role = localStorage.getItem('titanRole');
     if (role === 'recruiter') {
-      window.location.href = '/recruiter-dashboard.html';
+      // if already logged in and landing on welcome, send to login page which
+      // itself will forward to dashboard when the auth listener fires there.
+      window.location.href = './recruiterlogin.html';
     } else if (role === 'candidate') {
-      window.location.href = '/candidate-dashboard.html';
+      // nothing; candidate stays on entry page
     }
   });
 }
@@ -39,12 +41,12 @@ export async function openPortal(type) {
       console.warn('firebase error on recruiter open', err);
     }
 
-    window.location.href = '/recruiterlogin.html';
+    window.location.href = './recruiterlogin.html';
     return;
   }
 
-  // candidates may go directly to their dashboard or another page
-  window.location.href = '/candidate-dashboard.html';
+  // candidates are handled by welcome.html itself; do not navigate away here
+  // (could redirect to a real dashboard if added later)
 }
 
 // expose smaller helpers for debugging or manual use
