@@ -9,7 +9,16 @@ import {
   signUpWithEmail,
   resetPassword,
 } from './index.js';
-
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyD3c6gMQt00siR70-B93qBjVqYQAjrM3W4",
+  authDomain: "titan-fde30.firebaseapp.com",
+  projectId: "titan-fde30",
+  storageBucket: "titan-fde30.firebasestorage.app",
+  messagingSenderId: "545954155049",
+  appId: "1:545954155049:web:59e785904b07cda5a4ea38",
+  measurementId: "G-4MDFGCVS5H"
+};
 // expose a function that the HTML can call to attempt firebase sign-in
 // with the spoken credentials. this replaces the dummy credential check.
 export async function attemptFirebaseSignIn(spokenEmail, spokenPassword) {
