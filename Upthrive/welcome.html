@@ -433,7 +433,12 @@
   let ttsReady = false;
 
   function speakIntro() {
-    if (!window.speechSynthesis) return;
+    if (!window.speechSynthesis) {
+      // No TTS — auto-start mic after a short delay instead
+      setTimeout(startListening, 1800);
+      return;
+    }
+
     const orb = document.getElementById('orb');
     const status = document.getElementById('status');
     orb.classList.add('speaking');
@@ -441,7 +446,7 @@
     status.className = '';
 
     const msg = new SpeechSynthesisUtterance(
-      "Welcome to TalentBridge. Are you a recruiter, or a candidate? Please tap the orb and tell me."
+      "Welcome to TalentBridge. Are you a recruiter, or a candidate? Please tell me."
     );
     msg.rate = 0.95;
     msg.pitch = 1.05;
@@ -455,8 +460,17 @@
 
     msg.onend = () => {
       orb.classList.remove('speaking');
-      status.textContent = 'Tap the orb and speak';
+      status.textContent = 'Listening…';
       ttsReady = true;
+      // ── AUTO-START MIC after intro finishes ──
+      startListening();
+    };
+
+    // Safety net: if onend never fires (some browsers are buggy), start anyway
+    msg.onerror = () => {
+      orb.classList.remove('speaking');
+      ttsReady = true;
+      startListening();
     };
 
     window.speechSynthesis.speak(msg);
@@ -468,6 +482,9 @@
     } else {
       speechSynthesis.onvoiceschanged = () => setTimeout(speakIntro, 600);
     }
+  } else {
+    // No TTS support at all — auto-start mic after a brief delay
+    setTimeout(startListening, 1800);
   }
 
   /* ─── Speech Recognition ─── */
@@ -565,6 +582,7 @@
         const retry = new SpeechSynthesisUtterance(
           "Sorry, I didn't quite get that. Please say — I'm a recruiter — or — I'm a candidate."
         );
+        retry.onend = () => startListening(); // auto-restart mic after retry prompt
         speechSynthesis.speak(retry);
       }
     }
@@ -619,10 +637,8 @@
 
     setTimeout(() => {
       if (type === 'recruiter') {
-        // portal helper already redirected; nothing else to do
         return;
       }
-
       if (type === 'candidate') {
         window.location.href = './candlogin.html';
         return;

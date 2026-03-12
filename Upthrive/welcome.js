@@ -25,18 +25,18 @@ export function setupFirebaseRedirect() {
 }
 
 // when the voice flow decides which portal to open we persist the choice
-// and (optionally) trigger a firebase sign‑in flow if desired. the page can
-// call this helper instead of the built‑in redirectTo().
+// and (optionally) trigger a firebase sign-in flow if desired. the page can
+// call this helper instead of the built-in redirectTo().
 export async function openPortal(type) {
   // remember what role the user selected
   localStorage.setItem('titanRole', type);
 
   // recruiters should always go through the login screen first
   if (type === 'recruiter') {
-    // optionally pre-trigger a Google sign‑in attempt in the background
+    // optionally pre-trigger a Google sign-in attempt in the background
     try {
       const res = await signInWithGoogle();
-      if (res.error) console.warn('google sign‑in failed:', res.error);
+      if (res.error) console.warn('google sign-in failed:', res.error);
     } catch (err) {
       console.warn('firebase error on recruiter open', err);
     }
