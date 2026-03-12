@@ -1,5 +1,5 @@
-// recruit.js — Firebase integration for recruiter interview management
-// handles saving interview questions, evaluating candidate answers, and auth checks
+// recruit.js — Firebase/backend integration for recruiter interview management
+// Provides question storage, candidate retrieval, evaluation, and auth helpers
 
 import {
   db,
@@ -20,313 +20,216 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
 // ──────────────────────────────────────────────────────────────
-// QUESTION MANAGEMENT (local firebase still available for saving, but fetching candidates uses backend)
+// QUESTION MANAGEMENT
 // ──────────────────────────────────────────────────────────────
 
 /**
- * Save interview questions to Firebase Firestore
- * @param {string[]} questions - Array of question strings
- * @returns {Promise<string>} Document ID if successful
+ * Save interview questions to Firestore
+ * @param {string[]} questions
+ * @returns {Promise<string>} document id
  */
 export async function saveInterviewQuestions(questions) {
-  try {
-    const user = auth.currentUser;
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    // Validate input
-    if (!Array.isArray(questions) || questions.length === 0) {
-      throw new Error('Questions must be a non-empty array');
-    }
-
-    // Save as a single document with questions array
-    const questionSetRef = await addDoc(
-      collection(db, 'recruiters', user.uid, 'interviewSets'),
-      {
-        questions: questions,
-        count: questions.length,
-        createdAt: serverTimestamp(),
-        createdBy: user.email,
-        status: 'active',
-      }
-    );
-
-    console.log('Questions saved with ID:', questionSetRef.id);
-    return questionSetRef.id;
-
-  } catch (err) {
-    console.error('Error saving questions to Firebase:', err);
-    throw err;
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+  if (!Array.isArray(questions) || questions.length === 0) {
+    throw new Error('Questions must be a non-empty array');
   }
+
+  const ref = await addDoc(
+    collection(db, 'recruiters', user.uid, 'interviewSets'),
+    {
+      questions,
+      count: questions.length,
+      createdAt: serverTimestamp(),
+      createdBy: user.email,
+      status: 'active',
+    }
+  );
+  return ref.id;
 }
 
 /**
- * Get all candidates who have submitted interview answers
- * @returns {Promise<Array>} Array of candidates with their answer counts
+ * Retrieve active question sets for current recruiter
+ */
+export async function getRecruiterQuestionSets() {
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+
+  const q = query(
+    collection(db, 'recruiters', user.uid, 'interviewSets'),
+    where('status', '==', 'active')
+  );
+  const snapshot = await getDocs(q);
+  const sets = [];
+  snapshot.forEach(d => sets.push({ id: d.id, ...d.data() }));
+  return sets;
+}
+
+/**
+ * Fetch candidates who have submitted answers (prefer backend)
  */
 export async function getCandidatesWithAnswers() {
-  // prefer backend API for candidate listing; fallback to firestore
   try {
     const res = await fetch('/api/candidates');
-    if (!res.ok) throw new Error('Network response was not ok');
-    const data = await res.json();
-    return data.candidates || [];
+    if (res.ok) {
+      const data = await res.json();
+      return data.candidates || [];
+    }
   } catch (err) {
-    console.warn('backend fetch failed, falling back to firestore', err);
+    console.warn('backend fetch failed', err);
   }
 
-  // firestore fallback
-  try {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User not authenticated');
-
-    const candidatesRef = collection(db, 'candidates');
-    const q = query(candidatesRef, where('interviewAnswers', '!=', null));
-    const snapshot = await getDocs(q);
-    const candidates = [];
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      if (data.interviewAnswers && data.interviewAnswers.length > 0) {
-        candidates.push({
-          id: docSnap.id,
-          email: data.email || 'Unknown',
-          answers: data.interviewAnswers || [],
-          answerCount: (data.interviewAnswers || []).length,
-          submittedAt: data.answersSubmittedAt || null,
-        });
-      }
-    });
-    return candidates;
-  } catch (err) {
-    console.error('Error fetching candidates with answers (firestore):', err);
-    return [];
-  }
+  // fallback to Firestore
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+  const candidatesRef = collection(db, 'candidates');
+  const q = query(candidatesRef, where('interviewAnswers', '!=', null));
+  const snapshot = await getDocs(q);
+  const list = [];
+  snapshot.forEach(docSnap => {
+    const d = docSnap.data();
+    if (d.interviewAnswers && d.interviewAnswers.length > 0) {
+      list.push({
+        id: docSnap.id,
+        email: d.email || 'Unknown',
+        answers: d.interviewAnswers,
+        answerCount: d.interviewAnswers.length,
+        submittedAt: d.answersSubmittedAt || null,
+      });
+    }
+  });
+  return list;
 }
 
 /**
- * Get candidate's interview answers by ID
- * @param {string} candidateId - Candidate document ID
- * @returns {Promise<Object>} Candidate data with answers
+ * Get a single candidate's answers by document ID
  */
 export async function getCandidateAnswersById(candidateId) {
   try {
-    const docRef = doc(db, 'candidates', candidateId);
-    const docSnap = await getDoc(docRef);
-
-    if (!docSnap.exists()) {
-      throw new Error('Candidate not found');
-    }
-
-    const data = docSnap.data();
-    return {
-      id: candidateId,
-      email: data.email || 'Unknown',
-      answers: data.interviewAnswers || [],
-      submittedAt: data.answersSubmittedAt || null,
-    };
-
-  } catch (err) {
-    console.error('Error fetching candidate answers:', err);
-    throw err;
+    const res = await fetch(`/api/candidates/${candidateId}/answers`);
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.warn('backend load candidate answers failed', e);
   }
+
+  const docRef = doc(db, 'candidates', candidateId);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) throw new Error('Candidate not found');
+  const d = snap.data();
+  return {
+    id: candidateId,
+    email: d.email || 'Unknown',
+    answers: d.interviewAnswers || [],
+    submittedAt: d.answersSubmittedAt || null,
+  };
 }
 
 // ──────────────────────────────────────────────────────────────
 // ANSWER EVALUATION
 // ──────────────────────────────────────────────────────────────
 
-/**
- * Evaluate candidate answers against interview questions
- * Uses basic NLP-like scoring: word count, keyword presence, answer completeness
- * @param {string[]} questions - Array of interview questions
- * @param {string[]} answers - Array of candidate answers
- * @returns {Promise<Object>} Evaluation result with scores and feedback
- */
 export async function evaluateCandidateAnswers(questions, answers) {
+  // try backend evaluation
   try {
-    // Validate inputs
-    if (!Array.isArray(questions) || !Array.isArray(answers)) {
-      throw new Error('Questions and answers must be arrays');
+    const resp = await fetch('/api/evaluate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questions, answers }),
+    });
+    if (resp.ok) {
+      return await resp.json();
     }
-
-    if (questions.length === 0) {
-      throw new Error('No questions provided');
-    }
-
-    const results = {
-      totalQuestions: questions.length,
-      totalAnswers: answers.length,
-      scores: [],
-      overallScore: 0,
-      feedback: '',
-      timestamp: new Date().toLocaleDateString(),
-    };
-
-    // Score each answer
-    for (let i = 0; i < Math.max(questions.length, answers.length); i++) {
-      const question = questions[i] || 'N/A';
-      const answer = answers[i] || '';
-
-      const scoreObj = scoreSingleAnswer(question, answer, i + 1);
-      results.scores.push(scoreObj);
-    }
-
-    // Calculate overall score (average of all answer scores)
-    if (results.scores.length > 0) {
-      results.overallScore = Math.round(
-        results.scores.reduce((sum, s) => sum + s.score, 0) / results.scores.length
-      );
-    }
-
-    // Generate feedback
-    results.feedback = generateFeedback(results);
-
-    // Save to Firebase
-    await saveEvaluationToFirebase(questions, answers, results);
-
-    return results;
-
-  } catch (err) {
-    console.error('Error evaluating answers:', err);
-    throw err;
+  } catch (e) {
+    console.warn('backend evaluation failed', e);
   }
-}
 
-/**
- * Score a single answer based on question and response quality
- * @param {string} question - Interview question
- * @param {string} answer - Candidate's answer
- * @param {number} questionNum - Question number
- * @returns {Object} Score object with details
- */
-function scoreSingleAnswer(question, answer, questionNum) {
-  const score = {
-    questionNumber: questionNum,
-    question: question,
-    answer: answer,
-    score: 0,
-    details: [],
+  // fallback to client-side algorithm
+  const results = {
+    totalQuestions: questions.length,
+    totalAnswers: answers.length,
+    scores: [],
+    overallScore: 0,
+    feedback: '',
+    timestamp: new Date().toLocaleDateString(),
   };
 
-  // Check if answer exists
-  if (!answer || answer.trim().length === 0) {
-    score.score = 0;
+  for (let i = 0; i < Math.max(questions.length, answers.length); i++) {
+    const q = questions[i] || 'N/A';
+    const a = answers[i] || '';
+    const scoreObj = scoreSingleAnswer(q, a, i + 1);
+    results.scores.push(scoreObj);
+  }
+
+  if (results.scores.length)
+    results.overallScore = Math.round(
+      results.scores.reduce((sum, s) => sum + s.score, 0) / results.scores.length
+    );
+
+  results.feedback = generateFeedback(results);
+  await saveEvaluationToFirebase(questions, answers, results);
+  return results;
+}
+
+function scoreSingleAnswer(question, answer, num) {
+  const score = { questionNumber: num, question, answer, score: 0, details: [] };
+  if (!answer.trim()) {
     score.details.push('No answer provided');
     return score;
   }
-
-  // Score based on answer length (minimum expected ~30 words for meaningful answer)
   const wordCount = answer.trim().split(/\s+/).length;
   const lengthScore = Math.min(100, (wordCount / 50) * 100);
-
   score.details.push(`Word count: ${wordCount} (${lengthScore.toFixed(0)}%)`);
 
-  // Score based on answer completeness (presence of action words, details)
-  const completenessScore = calculateCompleteness(answer, question);
-  score.details.push(`Completeness: ${completenessScore}%`);
+  const completeness = calculateCompleteness(answer, question);
+  score.details.push(`Completeness: ${completeness}%`);
 
-  // Score based on relevance keywords
-  const relevanceScore = calculateRelevance(answer, question);
-  score.details.push(`Relevance: ${relevanceScore}%`);
+  const relevance = calculateRelevance(answer, question);
+  score.details.push(`Relevance: ${relevance}%`);
 
-  // Average the three scores
-  score.score = Math.round((lengthScore + completenessScore + relevanceScore) / 3);
-
+  score.score = Math.round((lengthScore + completeness + relevance) / 3);
   return score;
 }
 
-/**
- * Calculate answer completeness score
- * Looks for detailed descriptions, examples, or explanations
- */
 function calculateCompleteness(answer, question) {
-  const detailIndicators = [
-    'because', 'therefore', 'for example', 'for instance',
-    'specifically', 'particularly', 'such as', 'including',
-    'i', 'we', 'my', 'our', 'experience', 'experienced',
-    'project', 'developed', 'created', 'implemented',
+  const indicators = [
+    'because','therefore','for example','for instance','specifically',
+    'particularly','such as','including','i','we','my','our','experience',
+    'project','developed','created','implemented',
   ];
-
-  const lowerAnswer = answer.toLowerCase();
-  const matchCount = detailIndicators.filter(indicator =>
-    lowerAnswer.includes(indicator)
-  ).length;
-
-  // More detail indicators = higher completeness score
-  return Math.min(100, (matchCount / detailIndicators.length) * 100);
+  const lower = answer.toLowerCase();
+  const matches = indicators.filter(i => lower.includes(i)).length;
+  return Math.min(100,(matches/indicators.length)*100);
 }
 
-/**
- * Calculate answer relevance to the question
- * Uses simple keyword matching and sentence structure analysis
- */
 function calculateRelevance(answer, question) {
-  const questionWords = question
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(w => w.length > 4); // Ignore short words
-
-  if (questionWords.length === 0) {
-    return 50; // Default relevance if can't parse question
-  }
-
-  const answerLower = answer.toLowerCase();
-  const matchedWords = questionWords.filter(word =>
-    answerLower.includes(word)
-  ).length;
-
-  // Calculate relevance based on keyword match percentage
-  return (matchedWords / questionWords.length) * 100;
+  const qwords = question.toLowerCase().split(/\s+/).filter(w => w.length>4);
+  if (!qwords.length) return 50;
+  const alower = answer.toLowerCase();
+  const matched = qwords.filter(w => alower.includes(w)).length;
+  return (matched / qwords.length) * 100;
 }
 
-/**
- * Generate human-readable feedback based on evaluation results
- */
 function generateFeedback(results) {
   const { overallScore, totalQuestions, totalAnswers } = results;
-
-  let feedback = '';
-
-  // Check for missing answers
+  let fb = '';
   if (totalAnswers < totalQuestions) {
-    feedback += `⚠️ Missing ${totalQuestions - totalAnswers} answer(s). `;
+    fb += `⚠️ Missing ${totalQuestions - totalAnswers} answer(s). `;
   }
-
-  // Overall assessment
-  if (overallScore >= 80) {
-    feedback += `Excellent responses with strong detail and relevance. Score: ${overallScore}/100`;
-  } else if (overallScore >= 60) {
-    feedback += `Good responses overall. Score: ${overallScore}/100. `;
-    feedback += 'Consider asking for more specific examples.';
-  } else if (overallScore >= 40) {
-    feedback += `Average responses. Score: ${overallScore}/100. `;
-    feedback += 'Candidate may need additional support or clarification.';
-  } else {
-    feedback += `Score: ${overallScore}/100. `;
-    feedback += 'Responses lack sufficient detail. Further discussion recommended.';
-  }
-
-  return feedback;
+  if (overallScore >= 80) fb += `Excellent responses with strong detail and relevance. Score: ${overallScore}/100`;
+  else if (overallScore >= 60) fb += `Good responses overall. Score: ${overallScore}/100. Consider more specific examples.`;
+  else if (overallScore >= 40) fb += `Average responses. Score: ${overallScore}/100. Candidate may need additional support or clarification.`;
+  else fb += `Score: ${overallScore}/100. Responses lack sufficient detail. Further discussion recommended.`;
+  return fb;
 }
 
-/**
- * Save evaluation results to Firebase for record-keeping
- */
 async function saveEvaluationToFirebase(questions, answers, results) {
   try {
     const user = auth.currentUser;
-    if (!user) {
-      console.warn('User not authenticated, skipping Firebase save');
-      return;
-    }
-
-    // Save evaluation record
+    if (!user) return;
     await addDoc(
       collection(db, 'recruiters', user.uid, 'evaluations'),
       {
-        questions: questions,
-        answers: answers,
+        questions, answers,
         overallScore: results.overallScore,
         scores: results.scores,
         feedback: results.feedback,
@@ -334,45 +237,29 @@ async function saveEvaluationToFirebase(questions, answers, results) {
         evaluatorEmail: user.email,
       }
     );
-
-    console.log('Evaluation saved to Firebase');
-
   } catch (err) {
-    console.error('Error saving evaluation to Firebase:', err);
-    // Don't throw - evaluation still succeeded, just not saved to DB
+    console.error('Error saving evaluation:', err);
   }
 }
 
 // ──────────────────────────────────────────────────────────────
-// AUTHENTICATION & PAGE MANAGEMENT
+// AUTH & PAGE HELPERS
 // ──────────────────────────────────────────────────────────────
 
-/**
- * Check if user is authenticated as recruiter
- * If not, redirect to login
- */
 export function checkRecruiterAuth() {
   onAuthChange(user => {
     if (!user) {
-      console.log('No user authenticated, redirecting to login');
       window.location.href = './recruiterlogin.html';
       return;
     }
-
     const role = localStorage.getItem('talentBridgeRole');
     if (role !== 'recruiter') {
-      console.log('User is not a recruiter, redirecting');
       window.location.href = './welcome.html';
       return;
     }
-
-    console.log('Recruiter authenticated:', user.email);
   });
 }
 
-/**
- * Logout the current recruiter user
- */
 export async function logoutRecruiter() {
   try {
     await signOutUser();
@@ -385,19 +272,16 @@ export async function logoutRecruiter() {
   }
 }
 
-// ──────────────────────────────────────────────────────────────
-// EXPOSE TO GLOBAL SCOPE FOR HTML ACCESS
-// ──────────────────────────────────────────────────────────────
-
+// expose globals for HTML
 window.saveInterviewQuestions = saveInterviewQuestions;
 window.evaluateCandidateAnswers = evaluateCandidateAnswers;
-window.checkRecruiterAuth = checkRecruiterAuth;
-window.logoutRecruiter = logoutRecruiter;
 window.getRecruiterQuestionSets = getRecruiterQuestionSets;
 window.getCandidatesWithAnswers = getCandidatesWithAnswers;
 window.getCandidateAnswersById = getCandidateAnswersById;
+window.checkRecruiterAuth = checkRecruiterAuth;
+window.logoutRecruiter = logoutRecruiter;
 
-// Initialize authentication check on page load
+// run boot logic
 checkRecruiterAuth();
 
-console.log('📋 Recruit module loaded - interview management ready');
+console.log('📋 Recruit module loaded');
