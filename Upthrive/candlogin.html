@@ -820,6 +820,78 @@ function switchTab(mode) {
   resetFlow();
 }
 
+function captureIntentMode() {
+  // Ask user if they want to sign in or sign up
+  state = 'idle';
+  authStep = 'intent';
+  enableMic(false);
+  setPill('speaking', 'SPEAKING');
+  
+  // Update card title/subtitle for intent selection
+  const cardTitle = document.getElementById('card-title');
+  const cardSubtitle = document.getElementById('card-subtitle');
+  cardTitle.textContent = 'Welcome to TalentBridge';
+  cardSubtitle.textContent = 'What would you like to do?';
+
+  speak("Welcome to TalentBridge. Would you like to sign in or sign up?", () => {
+    setPrompt("Sign in or sign up?");
+    announce("Listening. Please say 'sign in' or 'sign up'.");
+    setPill('', 'READY');
+    setBars('idle');
+    setTimeout(() => listenForIntent(), 500);  // Auto-start microphone
+  });
+}
+
+function listenForIntent() {
+  state = 'listening';
+  enableMic(false);
+  setPrompt("Listening for your choice…");
+  announce("Listening. Please say sign in or sign up.");
+
+  listen((result) => {
+    state = 'processing';
+    const spokenIntent = normalize(result);
+    setTranscript('"' + result + '"');
+    setBars('idle');
+    setPill('', 'RECEIVED');
+
+    // Check if user said "sign in" or "sign up"
+    const wantsSignIn = spokenIntent.includes('signin') || spokenIntent.includes('sign in') || spokenIntent.includes('signin');
+    const wantsSignUp = spokenIntent.includes('signup') || spokenIntent.includes('sign up') || spokenIntent.includes('signup');
+
+    if (wantsSignIn) {
+      speak("Taking you to sign in.", () => {
+        switchTab('signin');
+      });
+    } else if (wantsSignUp) {
+      speak("Taking you to sign up.", () => {
+        switchTab('signup');
+      });
+    } else {
+      // If didn't understand, ask again
+      speak("Sorry, I didn't catch that. Please say sign in or sign up.", () => {
+        setPrompt("Sign in or sign up?");
+        announce("Please try again. Say sign in or sign up.");
+        setTranscript('');
+        setPill('', 'READY');
+        setTimeout(() => listenForIntent(), 500);
+      });
+    }
+
+  }, (err) => {
+    state = 'idle';
+    setBars('idle');
+    setPill('error', 'ERROR');
+    setPrompt(err);
+    announce(err + " Please try again.");
+    setTimeout(() => {
+      setPrompt("Sign in or sign up?");
+      setPill('', 'READY');
+      setTimeout(() => listenForIntent(), 500);
+    }, 2800);
+  });
+}
+
 function startSignInFlow() {
   authStep = 'email';
   spokenEmail = '';
@@ -1168,11 +1240,7 @@ function resetFlow() {
   enableMic(false);
 
   setTimeout(() => {
-    if (currentMode === 'signin') {
-      startSignInFlow();
-    } else {
-      startSignUpFlow();
-    }
+    captureIntentMode();
   }, 300);
 }
 
@@ -1192,9 +1260,9 @@ document.addEventListener('keydown', (e) => {
 // Voices load async
 function boot() {
   if (speechSynthesis && speechSynthesis.getVoices().length === 0) {
-    speechSynthesis.onvoiceschanged = startSignInFlow;
+    speechSynthesis.onvoiceschanged = captureIntentMode;
   } else {
-    setTimeout(startSignInFlow, 1000);
+    setTimeout(captureIntentMode, 1000);
   }
 }
 
