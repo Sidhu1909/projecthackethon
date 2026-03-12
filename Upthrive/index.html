@@ -415,6 +415,93 @@
       .right-panel { padding: 32px 24px; }
     }
 
+    /* ── Voice Auth Styles ── */
+    .voice-section {
+      background: rgba(71,200,255,0.08);
+      border: 1px solid rgba(71,200,255,0.3);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 18px;
+      display: none;
+    }
+    .voice-section.show { display: block; }
+    .voice-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--candidate);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .voice-btn {
+      width: 100%;
+      padding: 12px;
+      background: rgba(71,200,255,0.15);
+      border: 1px solid var(--candidate);
+      color: var(--candidate);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .voice-btn:hover {
+      background: rgba(71,200,255,0.25);
+      box-shadow: 0 4px 16px rgba(71,200,255,0.2);
+    }
+    .voice-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .voice-status {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 8px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.03);
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .voice-status.recording {
+      color: var(--candidate);
+      background: rgba(71,200,255,0.1);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .voice-status.enrolled {
+      color: var(--accent);
+      background: rgba(232,255,71,0.1);
+    }
+    .voice-divider {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      margin: 12px 0;
+    }
+    .mic-icon {
+      display: inline-block;
+      animation: none;
+    }
+    .mic-icon.animated {
+      animation: micPulse 0.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    @keyframes micPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+
     /* ── Entrance Animation ── */
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(20px); }
@@ -491,6 +578,20 @@
         <div class="form-title">WELCOME BACK</div>
         <div class="form-sub" id="signinSub">Signing in as <span id="signinRoleLabel">Recruiter</span></div>
 
+        <!-- Voice Authentication (Candidate Only) -->
+        <div class="voice-section" id="voiceSignInSection">
+          <div class="voice-label"><span class="mic-icon">🎤</span> Voice Authentication</div>
+          <div class="voice-status" id="voiceSignInStatus">Ready to authenticate with voice</div>
+          <div class="field">
+            <label>Email (for voice auth)</label>
+            <input type="email" id="voiceEmail" placeholder="you@company.com"/>
+          </div>
+          <button class="voice-btn" id="voiceSignInBtn" onclick="handleVoiceSignIn()">
+            <span class="mic-icon">🎤</span> Authenticate with Voice
+          </button>
+          <div class="voice-divider">or use email</div>
+        </div>
+
         <div class="field">
           <label>Email</label>
           <input type="email" id="siEmail" placeholder="you@company.com"/>
@@ -532,6 +633,18 @@
           <input type="password" id="suPassword" placeholder="Min. 8 characters"/>
         </div>
 
+        <!-- Voice Enrollment (Candidate Only) -->
+        <div class="voice-section" id="voiceEnrollSection">
+          <div class="voice-label"><span class="mic-icon">🎤</span> Voice Enrollment</div>
+          <div style="font-size:12px; color:var(--muted); margin-bottom:12px;">
+            Enable voice authentication for faster login. You'll record 3 voice samples.
+          </div>
+          <div class="voice-status" id="voiceEnrollStatus">Ready to enroll voice</div>
+          <button class="voice-btn" id="enrollVoiceBtn" onclick="handleVoiceEnroll()">
+            <span class="mic-icon">🎤</span> Enroll Voice Now
+          </button>
+        </div>
+
         <button class="submit-btn recruiter-btn" id="signupBtn" onclick="handleSignUp()">CREATE ACCOUNT</button>
 
         <div class="divider">or continue with</div>
@@ -570,11 +683,26 @@
     signInWithEmail,
     signInWithGoogle,
     resetPassword,
-    onAuthChange
+    onAuthChange,
+    enrollCandidateVoice,
+    authenticateWithVoice,
+    checkVoiceAuthAvailable,
+    speakText,
+    stopVoiceListener
   } from "./index.js";
 
   // Expose to global scope for onclick handlers
-  window._firebase = { signUpWithEmail, signInWithEmail, signInWithGoogle, resetPassword };
+  window._firebase = { 
+    signUpWithEmail, 
+    signInWithEmail, 
+    signInWithGoogle, 
+    resetPassword,
+    enrollCandidateVoice,
+    authenticateWithVoice,
+    checkVoiceAuthAvailable,
+    speakText,
+    stopVoiceListener
+  };
 
   // Auth state listener
   onAuthChange((user) => {
@@ -627,6 +755,10 @@
 
     // Show/hide company field
     document.getElementById('companyField').style.display = role === 'recruiter' ? '' : 'none';
+
+    // Show/hide voice sections (only for candidates)
+    document.getElementById('voiceSignInSection').classList.toggle('show', role === 'candidate');
+    document.getElementById('voiceEnrollSection').classList.toggle('show', role === 'candidate');
 
     // Orb shift
     if (role === 'candidate') {
@@ -732,6 +864,120 @@
     setTimeout(backToSignIn, 2000);
   }
 
+  // ── VOICE ENROLLMENT ──
+  async function handleVoiceEnroll() {
+    const name = document.getElementById('suName').value.trim();
+    const email = document.getElementById('suEmail').value.trim();
+    const password = document.getElementById('suPassword').value;
+
+    if (!name || !email || !password) {
+      return showToast('Please fill in all fields before enrolling voice.', 'error');
+    }
+    if (password.length < 8) {
+      return showToast('Password must be at least 8 characters.', 'error');
+    }
+
+    const enrollBtn = document.getElementById('enrollVoiceBtn');
+    const status = document.getElementById('voiceEnrollStatus');
+    
+    try {
+      enrollBtn.disabled = true;
+      const micIcon = enrollBtn.querySelector('.mic-icon');
+      micIcon.classList.add('animated');
+
+      status.className = 'voice-status recording';
+      status.textContent = 'Starting voice enrollment... Please allow microphone access.';
+
+      // First create the account
+      const { user, error } = await window._firebase.signUpWithEmail(email, password);
+      if (error) {
+        status.className = 'voice-status';
+        status.textContent = 'Account creation failed: ' + formatError(error);
+        return showToast(formatError(error), 'error');
+      }
+
+      // Then enroll voice
+      const enrollResult = await window._firebase.enrollCandidateVoice(email, user.uid);
+      
+      if (enrollResult.success) {
+        status.className = 'voice-status enrolled';
+        status.textContent = '✓ Voice enrollment successful!';
+        localStorage.setItem('titanRole', 'candidate');
+        showToast('Account created with voice authentication!', 'success');
+        setTimeout(() => switchTab('signin'), 2000);
+      } else {
+        status.className = 'voice-status';
+        status.textContent = 'Voice enrollment cancelled. Account created with email login.';
+        showToast('Account created. Voice auth can be added later.', 'success');
+      }
+    } catch (error) {
+      status.className = 'voice-status';
+      status.textContent = 'Enrollment error: ' + error.message;
+      showToast('Voice enrollment error: ' + error.message, 'error');
+    } finally {
+      enrollBtn.disabled = false;
+      const micIcon = enrollBtn.querySelector('.mic-icon');
+      micIcon.classList.remove('animated');
+    }
+  }
+
+  // ── VOICE SIGN IN ──
+  async function handleVoiceSignIn() {
+    const email = document.getElementById('voiceEmail').value.trim();
+    
+    if (!email) {
+      return showToast('Please enter your email for voice authentication.', 'error');
+    }
+
+    const voiceBtn = document.getElementById('voiceSignInBtn');
+    const status = document.getElementById('voiceSignInStatus');
+
+    try {
+      voiceBtn.disabled = true;
+      const micIcon = voiceBtn.querySelector('.mic-icon');
+      micIcon.classList.add('animated');
+
+      status.className = 'voice-status recording';
+      status.textContent = '🎤 Preparing voice authentication...';
+
+      // Check if voice auth is available
+      const availCheck = await window._firebase.checkVoiceAuthAvailable(email);
+      if (!availCheck.voiceAuthAvailable) {
+        status.className = 'voice-status';
+        status.textContent = 'Voice authentication not enrolled.';
+        return showToast('Voice authentication not set up for this account. Please enroll first.', 'error');
+      }
+
+      status.textContent = '🎤 Please say: I am ready for my interview';
+      
+      // Authenticate with voice
+      const result = await window._firebase.authenticateWithVoice(email);
+
+      if (result.authenticated) {
+        status.className = 'voice-status enrolled';
+        status.textContent = `✓ Voice authenticated (${result.confidenceScore}% match)`;
+        localStorage.setItem('titanRole', 'candidate');
+        showToast('Voice authentication successful!', 'success');
+        setTimeout(() => {
+          window.location.href = '/candidate-dashboard.html';
+        }, 1500);
+      } else {
+        status.className = 'voice-status';
+        status.textContent = `❌ Authentication failed (${result.confidenceScore}% match). Try again.`;
+        showToast('Voice authentication failed. Please try again or use email login.', 'error');
+      }
+    } catch (error) {
+      status.className = 'voice-status';
+      status.textContent = 'Voice auth error: ' + error.message;
+      showToast('Voice authentication error: ' + error.message, 'error');
+      window._firebase.stopVoiceListener();
+    } finally {
+      voiceBtn.disabled = false;
+      const micIcon = voiceBtn.querySelector('.mic-icon');
+      micIcon.classList.remove('animated');
+    }
+  }
+
   // ── Error Formatter ──
   function formatError(msg) {
     if (msg.includes('email-already-in-use')) return 'This email is already registered.';
@@ -753,9 +999,8 @@
   window.handleSignUp = handleSignUp;
   window.handleGoogle = handleGoogle;
   window.handleReset = handleReset;
-
-  // Init
-  selectRole('recruiter');
+  window.handleVoiceSignIn = handleVoiceSignIn;
+  window.handleVoiceEnroll = handleVoiceEnroll;
 </script>
 
 </body>
