@@ -33,7 +33,6 @@
       overflow: hidden;
     }
 
-    /* ── Noise texture overlay ── */
     body::after {
       content: '';
       position: fixed;
@@ -44,7 +43,6 @@
       opacity: 0.4;
     }
 
-    /* ── Diagonal grid ── */
     body::before {
       content: '';
       position: fixed;
@@ -57,7 +55,6 @@
       z-index: 0;
     }
 
-    /* ── Ambient orbs ── */
     .orb {
       position: fixed;
       border-radius: 50%;
@@ -96,7 +93,6 @@
       50%      { transform: translateY(-30px); opacity: 1; }
     }
 
-    /* ── Layout ── */
     .layout {
       position: relative;
       z-index: 1;
@@ -105,9 +101,6 @@
       height: 100vh;
     }
 
-    /* ═══════════════════════════════════
-       LEFT — BRAND PANEL
-    ═══════════════════════════════════ */
     .left-panel {
       display: flex;
       flex-direction: column;
@@ -118,7 +111,6 @@
       overflow: hidden;
     }
 
-    /* Diagonal accent stripe */
     .left-panel::after {
       content: '';
       position: absolute;
@@ -163,7 +155,6 @@
       border-radius: 4px;
     }
 
-    /* Hero */
     .hero {
       flex: 1;
       display: flex;
@@ -210,7 +201,6 @@
       animation: slideIn 0.6s 0.2s ease both;
     }
 
-    /* Feature pills */
     .features {
       display: flex;
       flex-direction: column;
@@ -234,7 +224,6 @@
     }
     .feature-text strong { color: var(--text); }
 
-    /* Stats row */
     .stats {
       display: flex;
       gap: 0;
@@ -274,9 +263,6 @@
       margin-top: 2px;
     }
 
-    /* ═══════════════════════════════════
-       RIGHT — AUTH CARD
-    ═══════════════════════════════════ */
     .right-panel {
       display: flex;
       align-items: center;
@@ -291,7 +277,6 @@
       animation: slideIn 0.7s 0.1s ease both;
     }
 
-    /* Tab switcher */
     .tab-switcher {
       display: flex;
       background: var(--surface);
@@ -321,7 +306,6 @@
     }
     .tab-btn:not(.active):hover { color: var(--text); }
 
-    /* Form header */
     .form-header { margin-bottom: 28px; }
     .form-title {
       font-family: 'Bebas Neue', sans-serif;
@@ -337,7 +321,6 @@
     }
     .form-sub span { color: var(--accent); }
 
-    /* Recruiter badge */
     .recruiter-badge {
       display: inline-flex;
       align-items: center;
@@ -364,7 +347,6 @@
       50%      { opacity: 0.3; }
     }
 
-    /* Fields */
     .field { margin-bottom: 16px; position: relative; }
     .field label {
       display: block;
@@ -410,7 +392,6 @@
     }
     .field:focus-within .field-icon { color: var(--accent); }
 
-    /* Password toggle */
     .pwd-toggle {
       position: absolute;
       right: 14px; top: 50%;
@@ -426,7 +407,6 @@
     }
     .pwd-toggle:hover { color: var(--accent); }
 
-    /* Inline error */
     .field-error {
       font-size: 11px;
       color: var(--error);
@@ -435,7 +415,6 @@
     }
     .field-error.show { display: block; }
 
-    /* Row: remember + forgot */
     .field-row {
       display: flex;
       align-items: center;
@@ -463,7 +442,6 @@
     }
     .forgot-link:hover { color: var(--accent); }
 
-    /* Submit button */
     .submit-btn {
       width: 100%;
       padding: 15px;
@@ -496,7 +474,6 @@
     .submit-btn:active { transform: translateY(0); }
     .submit-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    /* Divider */
     .divider {
       display: flex; align-items: center; gap: 14px;
       margin-bottom: 18px; color: var(--text-muted); font-size: 11px;
@@ -506,7 +483,6 @@
       content: ''; flex: 1; height: 1px; background: var(--border);
     }
 
-    /* Google */
     .google-btn {
       width: 100%; padding: 13px;
       background: transparent;
@@ -526,9 +502,12 @@
       border-color: rgba(255,255,255,0.14);
       transform: translateY(-1px);
     }
-    .google-btn img { width: 18px; height: 18px; }
+    /* Inline SVG Google icon — no external image request */
+    .google-icon {
+      width: 18px; height: 18px;
+      flex-shrink: 0;
+    }
 
-    /* Password strength */
     .pwd-strength {
       margin-top: 8px; display: none;
     }
@@ -547,7 +526,6 @@
       color: var(--text-muted);
     }
 
-    /* Reset screen */
     #formReset { display: none; }
     .back-link {
       display: inline-flex; align-items: center; gap: 6px;
@@ -559,7 +537,6 @@
     }
     .back-link:hover { color: var(--accent); }
 
-    /* ── Toast ── */
     .toast {
       position: fixed; bottom: 28px; left: 50%;
       transform: translateX(-50%) translateY(80px);
@@ -579,7 +556,6 @@
     .toast.error   { border-color: rgba(255,79,106,0.3); color: var(--error); }
     .toast.info    { border-color: rgba(232,255,71,0.3); color: var(--accent); }
 
-    /* ── Spinner ── */
     .spinner {
       width: 17px; height: 17px;
       border: 2px solid transparent;
@@ -590,21 +566,18 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Animations ── */
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(18px); }
       to   { opacity: 1; transform: translateY(0); }
     }
     .fade-in { animation: slideIn 0.35s ease both; }
 
-    /* ── Responsive ── */
     @media (max-width: 860px) {
       .layout { grid-template-columns: 1fr; }
       .left-panel { display: none; }
       .right-panel { padding: 28px 20px; }
     }
 
-    /* Focus ring */
     button:focus-visible, input:focus-visible, a:focus-visible {
       outline: 2px solid var(--accent);
       outline-offset: 3px;
@@ -619,12 +592,7 @@
 
 <div class="layout">
 
-  <!-- ═══════════════════════════════════
-       LEFT BRAND PANEL
-  ═══════════════════════════════════ -->
   <div class="left-panel">
-
-    <!-- Brand -->
     <div class="brand">
       <div class="brand-mark">
         <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -637,7 +605,6 @@
       <span class="brand-tag">Recruiter</span>
     </div>
 
-    <!-- Hero -->
     <div class="hero">
       <div class="eyebrow">Talent Intelligence Platform</div>
       <h1 class="hero-title">FIND YOUR<br><em>NEXT</em><br>HIRE TODAY</h1>
@@ -661,7 +628,6 @@
       </div>
     </div>
 
-    <!-- Stats -->
     <div class="stats">
       <div class="stat">
         <div class="stat-n">48K+</div>
@@ -676,12 +642,8 @@
         <div class="stat-l">Match Rate</div>
       </div>
     </div>
-
   </div>
 
-  <!-- ═══════════════════════════════════
-       RIGHT AUTH PANEL
-  ═══════════════════════════════════ -->
   <div class="right-panel">
     <div class="auth-card">
 
@@ -690,7 +652,6 @@
         Recruiter Portal
       </div>
 
-      <!-- Tab switcher -->
       <div class="tab-switcher" role="tablist">
         <button class="tab-btn active" id="tabIn"
           onclick="switchTab('signin')"
@@ -700,9 +661,7 @@
           role="tab" aria-selected="false">Sign Up</button>
       </div>
 
-      <!-- ─────────────────────
-           SIGN IN FORM
-      ───────────────────── -->
+      <!-- SIGN IN -->
       <div id="formSignIn">
         <div class="form-header">
           <div class="form-title">WELCOME BACK</div>
@@ -748,14 +707,17 @@
 
         <div class="divider">or continue with</div>
         <button class="google-btn" onclick="handleGoogle()">
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" aria-hidden="true"/>
+          <svg class="google-icon" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
           Continue with Google
         </button>
       </div>
 
-      <!-- ─────────────────────
-           SIGN UP FORM
-      ───────────────────── -->
+      <!-- SIGN UP -->
       <div id="formSignUp" style="display:none;" class="fade-in">
         <div class="form-header">
           <div class="form-title">JOIN TITAN</div>
@@ -826,14 +788,17 @@
 
         <div class="divider">or continue with</div>
         <button class="google-btn" onclick="handleGoogle()">
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" aria-hidden="true"/>
+          <svg class="google-icon" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
           Continue with Google
         </button>
       </div>
 
-      <!-- ─────────────────────
-           RESET PASSWORD
-      ───────────────────── -->
+      <!-- RESET PASSWORD -->
       <div id="formReset" class="fade-in">
         <div class="form-header">
           <div class="form-title">RESET PASSWORD</div>
@@ -861,13 +826,10 @@
 
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast" role="alert" aria-live="assertive"></div>
 
 <script>
-/* ──────────────────────────────────────────────────
-   TAB MANAGEMENT
-───────────────────────────────────────────────────*/
+/* ── TAB MANAGEMENT ── */
 let activeTab = 'signin';
 
 function switchTab(tab) {
@@ -897,9 +859,7 @@ function switchToReset() {
   setTimeout(() => document.getElementById('resetEmail').focus(), 50);
 }
 
-/* ──────────────────────────────────────────────────
-   TOAST
-───────────────────────────────────────────────────*/
+/* ── TOAST ── */
 function showToast(msg, type = 'info') {
   const t = document.getElementById('toast');
   const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
@@ -909,9 +869,7 @@ function showToast(msg, type = 'info') {
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-/* ──────────────────────────────────────────────────
-   FIELD HELPERS
-───────────────────────────────────────────────────*/
+/* ── FIELD HELPERS ── */
 function showFieldError(id, msg) {
   const el = document.getElementById(id);
   el.textContent = msg;
@@ -932,26 +890,20 @@ function togglePwd(inputId, btn) {
   else { inp.type = 'password'; btn.textContent = '👁'; }
 }
 
-/* ──────────────────────────────────────────────────
-   PASSWORD STRENGTH
-───────────────────────────────────────────────────*/
+/* ── PASSWORD STRENGTH ── */
 function onPwdInput(input) {
   const val = input.value;
   const el = document.getElementById('pwdStrength');
   clearFieldError('suPwdErr');
-
   if (!val) { el.classList.remove('show'); return; }
   el.classList.add('show');
-
   let score = 0;
   if (val.length >= 8)  score++;
   if (/[A-Z]/.test(val)) score++;
   if (/[0-9]/.test(val)) score++;
   if (/[^A-Za-z0-9]/.test(val)) score++;
-
   const colors = ['#ff4f6a','#ff9940','#ffe040','#47ffaa'];
   const labels = ['Too weak','Weak','Good','Strong'];
-
   for (let i = 0; i < 4; i++) {
     document.getElementById(`sb${i}`).style.background = i < score ? colors[score-1] : 'var(--border)';
   }
@@ -959,20 +911,25 @@ function onPwdInput(input) {
   document.getElementById('strengthLabel').style.color = colors[score-1] || 'var(--text-muted)';
 }
 
-/* ──────────────────────────────────────────────────
-   LOADING STATE
-───────────────────────────────────────────────────*/
+/* ── LOADING STATE ── */
 function setLoading(id, loading, label) {
   const btn = document.getElementById(id);
   btn.disabled = loading;
   btn.innerHTML = loading ? '<span class="spinner"></span>' : label;
 }
-
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-/* ──────────────────────────────────────────────────
-   SIGN IN
-───────────────────────────────────────────────────*/
+/* ── REDIRECT HELPER ──
+   Uses the DASHBOARD_URL constant so there's one place to update.
+   Falls back gracefully if the page doesn't exist yet (demo mode). */
+const DASHBOARD_URL = 'recruiter-dashboard.html'; // ← update this to match your file path
+
+function redirectToDashboard() {
+  // If Firebase is integrated, let it handle navigation; otherwise use the constant
+  window.location.href = DASHBOARD_URL;
+}
+
+/* ── SIGN IN ── */
 async function handleSignIn() {
   const email = document.getElementById('siEmail').value.trim();
   const pwd   = document.getElementById('siPwd').value;
@@ -989,7 +946,7 @@ async function handleSignIn() {
   if (window._firebase) {
     res = await window._firebase.signInWithEmail(email, pwd);
   } else {
-    await sleep(1100); // demo delay
+    await sleep(1100);
     res = { user: { uid: 'demo', email }, error: null };
   }
 
@@ -998,12 +955,10 @@ async function handleSignIn() {
   if (res.error) return showToast(formatError(res.error), 'error');
   localStorage.setItem('titanRole', 'recruiter');
   showToast('Signed in successfully!', 'success');
-  setTimeout(() => { window.location.href = './recruiter-dashboard.html'; }, 1400);
+  setTimeout(redirectToDashboard, 1400);
 }
 
-/* ──────────────────────────────────────────────────
-   SIGN UP
-───────────────────────────────────────────────────*/
+/* ── SIGN UP ── */
 async function handleSignUp() {
   const name    = document.getElementById('suName').value.trim();
   const company = document.getElementById('suCompany').value.trim();
@@ -1023,6 +978,12 @@ async function handleSignUp() {
   let res = { user: null, error: null };
   if (window._firebase) {
     res = await window._firebase.signUpWithEmail(email, pwd);
+    // Save recruiter profile to Firestore after successful sign-up
+    if (res.user && !res.error) {
+      await window._firebase.saveRecruiterProfile(res.user.uid, {
+        name, company, email, role: 'recruiter', createdAt: new Date().toISOString()
+      });
+    }
   } else {
     await sleep(1200);
     res = { user: { uid: 'demo', email }, error: null };
@@ -1032,25 +993,23 @@ async function handleSignUp() {
 
   if (res.error) return showToast(formatError(res.error), 'error');
   localStorage.setItem('titanRole', 'recruiter');
+  localStorage.setItem('titanName', name);
+  localStorage.setItem('titanCompany', company);
   showToast('Account created! Welcome to Titan.', 'success');
-  setTimeout(() => { window.location.href = '/recruiter-dashboard.html'; }, 1400);
+  setTimeout(redirectToDashboard, 1400);
 }
 
-/* ──────────────────────────────────────────────────
-   GOOGLE
-───────────────────────────────────────────────────*/
+/* ── GOOGLE ── */
 async function handleGoogle() {
   if (!window._firebase) return showToast('Google sign-in requires Firebase integration.', 'info');
   const res = await window._firebase.signInWithGoogle();
   if (res.error) return showToast(formatError(res.error), 'error');
   localStorage.setItem('titanRole', 'recruiter');
   showToast('Signed in with Google!', 'success');
-  setTimeout(() => { window.location.href = './recruiter-dashboard.html'; }, 1400);
+  setTimeout(redirectToDashboard, 1400);
 }
 
-/* ──────────────────────────────────────────────────
-   RESET PASSWORD
-───────────────────────────────────────────────────*/
+/* ── RESET PASSWORD ── */
 async function handleReset() {
   const email = document.getElementById('resetEmail').value.trim();
   if (!email) return showToast('Please enter your email address.', 'error');
@@ -1062,9 +1021,7 @@ async function handleReset() {
   setTimeout(() => switchTab('signin'), 2200);
 }
 
-/* ──────────────────────────────────────────────────
-   ERROR FORMATTER
-───────────────────────────────────────────────────*/
+/* ── ERROR FORMATTER ── */
 function formatError(msg) {
   if (!msg) return 'Something went wrong.';
   if (msg.includes('email-already-in-use')) return 'This email is already registered.';
@@ -1077,29 +1034,11 @@ function formatError(msg) {
   return 'Something went wrong. Please try again.';
 }
 
-/* ──────────────────────────────────────────────────
-   FIREBASE (optional)
-───────────────────────────────────────────────────*/
-try {
-  const s = document.createElement('script');
-  s.type = 'module';
-  s.textContent = `
-    import { signUpWithEmail, signInWithEmail, signInWithGoogle, resetPassword, onAuthChange }
-      from "./index.js";
-    window._firebase = { signUpWithEmail, signInWithEmail, signInWithGoogle, resetPassword };
-    onAuthChange(u => {
-      if (u.isLoggedIn) {
-        localStorage.setItem('titanRole','recruiter');
-        window.location.href = './recruiter-dashboard.html';
-      }
-    });
-  `;
-  document.head.appendChild(s);
-} catch(e) { /* demo mode */ }
+/* ── FIREBASE ── (wired to firebase.js) */
+// Loaded via the <script type="module"> tag at the bottom of the body.
+// window._firebase is populated there once the module resolves.
 
-/* ──────────────────────────────────────────────────
-   KEYBOARD SHORTCUTS
-───────────────────────────────────────────────────*/
+/* ── KEYBOARD SHORTCUTS ── */
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     const reset = document.getElementById('formReset');
@@ -1107,14 +1046,11 @@ document.addEventListener('keydown', e => {
   }
 });
 
-/* ──────────────────────────────────────────────────
-   INIT
-───────────────────────────────────────────────────*/
+/* ── INIT ── */
 window.addEventListener('load', () => {
   document.getElementById('siEmail').focus();
 });
 
-// Expose
 window.switchTab = switchTab;
 window.switchToReset = switchToReset;
 window.handleSignIn = handleSignIn;
@@ -1124,6 +1060,46 @@ window.handleReset = handleReset;
 window.togglePwd = togglePwd;
 window.onPwdInput = onPwdInput;
 window.clearFieldError = clearFieldError;
+</script>
+
+<!-- ── Firebase module — imports from firebase.js in the same directory ── -->
+<script type="module">
+  import {
+    signUpWithEmail,
+    signInWithEmail,
+    signInWithGoogle,
+    resetPassword,
+    onAuthChange,
+    db,
+  } from "./firebase.js";
+
+  import { setDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+  // Save recruiter profile to Firestore
+  async function saveRecruiterProfile(uid, data) {
+    try {
+      await setDoc(doc(db, "recruiters", uid), data, { merge: true });
+    } catch (e) {
+      console.error("Failed to save profile:", e);
+    }
+  }
+
+  // Expose to the non-module script above
+  window._firebase = {
+    signUpWithEmail,
+    signInWithEmail,
+    signInWithGoogle,
+    resetPassword,
+    saveRecruiterProfile,
+  };
+
+  // If already logged in (e.g. page refresh), redirect immediately
+  onAuthChange((user) => {
+    if (user.isLoggedIn) {
+      localStorage.setItem("titanRole", "recruiter");
+      window.location.href = DASHBOARD_URL;
+    }
+  });
 </script>
 </body>
 </html>
