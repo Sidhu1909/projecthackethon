@@ -18,6 +18,7 @@
             --border: rgba(197,160,89,0.15);
             --error: #c97070;
             --success: #70c9a8;
+            --info: #7090c9;
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,11 +34,8 @@
             overflow: hidden;
         }
 
-        /* Starfield background */
-        .stars {
-            position: fixed; inset: 0; z-index: 0;
-            background: radial-gradient(ellipse at 30% 20%, #0d0c1a 0%, #050505 60%);
-        }
+        /* Starfield */
+        .stars { position: fixed; inset: 0; z-index: 0; background: radial-gradient(ellipse at 30% 20%, #0d0c1a 0%, #050505 60%); }
         .stars canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 
         /* Noise grain */
@@ -57,36 +55,40 @@
         }
 
         /* Header */
-        .header { margin-bottom: 32px; animation: fadeUp 0.8s ease both; }
-        .logo {
-            font-family: 'Cinzel', serif;
-            font-size: clamp(1.4rem, 3vw, 2rem);
-            letter-spacing: 10px;
-            text-transform: uppercase;
-            color: var(--text-white);
-        }
+        .header { margin-bottom: 28px; animation: fadeUp 0.8s ease both; }
+        .logo { font-family: 'Cinzel', serif; font-size: clamp(1.4rem,3vw,2rem); letter-spacing: 10px; text-transform: uppercase; color: var(--text-white); }
         .logo em { color: var(--gold); font-style: normal; }
-        .tagline {
-            font-size: 0.6rem; letter-spacing: 5px; color: var(--text-muted);
-            margin-top: 6px; text-transform: uppercase;
-        }
+        .tagline { font-size: 0.6rem; letter-spacing: 5px; color: var(--text-muted); margin-top: 6px; text-transform: uppercase; }
 
-        /* Mic visualiser */
-        .voice-interface { margin: 24px 0; animation: fadeUp 0.8s 0.1s ease both; }
+        /* Candidate info strip */
+        .cand-strip {
+            display: none;
+            margin-bottom: 16px;
+            padding: 10px 18px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.72rem;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            animation: fadeUp 0.5s ease both;
+        }
+        .cand-strip span { color: var(--gold); }
+
+        /* Mic */
+        .voice-interface { margin: 20px 0; animation: fadeUp 0.8s 0.1s ease both; }
         .mic-outer-circle {
             width: 140px; height: 140px;
-            border: 1px solid var(--border);
-            border-radius: 50%;
+            border: 1px solid var(--border); border-radius: 50%;
             margin: 0 auto;
             display: flex; align-items: center; justify-content: center;
             transition: all 0.5s cubic-bezier(0.4,0,0.2,1);
             position: relative;
         }
         .mic-outer-circle::before {
-            content: '';
-            position: absolute; inset: -10px; border-radius: 50%;
-            border: 1px solid transparent;
-            transition: border-color 0.5s;
+            content: ''; position: absolute; inset: -10px; border-radius: 50%;
+            border: 1px solid transparent; transition: border-color 0.5s;
         }
         .mic-outer-circle.active {
             border-color: var(--gold);
@@ -95,102 +97,96 @@
         .mic-outer-circle.active::before { border-color: rgba(197,160,89,0.2); }
         .mic-inner-circle {
             width: 58px; height: 58px;
-            background: var(--glass);
-            border: 1px solid var(--border);
+            background: var(--glass); border: 1px solid var(--border);
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.4rem;
-            transition: all 0.3s;
+            font-size: 1.4rem; transition: all 0.3s;
         }
         .mic-outer-circle.active .mic-inner-circle { background: var(--gold-dim); border-color: var(--gold); }
+        .mic-outer-circle.loading-q .mic-inner-circle { background: rgba(112,144,201,0.15); border-color: var(--info); }
 
-        @keyframes pulse {
-            0% { box-shadow: 0 0 40px var(--gold-glow); }
-            50% { box-shadow: 0 0 70px var(--gold-glow), 0 0 120px rgba(197,160,89,0.15); }
-            100% { box-shadow: 0 0 40px var(--gold-glow); }
-        }
+        @keyframes pulse { 0% { box-shadow: 0 0 40px var(--gold-glow); } 50% { box-shadow: 0 0 70px var(--gold-glow), 0 0 120px rgba(197,160,89,0.15); } 100% { box-shadow: 0 0 40px var(--gold-glow); } }
         .mic-outer-circle.active { animation: pulse 2.2s ease-in-out infinite; }
 
-        .status-badge {
-            display: inline-flex; align-items: center; gap: 8px;
-            margin-top: 16px;
-            font-size: 0.6rem; letter-spacing: 4px; text-transform: uppercase;
-            color: var(--text-muted);
-        }
-        .status-dot {
-            width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);
-            transition: background 0.3s;
-        }
-        .status-badge.active .status-dot {
-            background: var(--gold);
-            box-shadow: 0 0 6px var(--gold);
-            animation: blink 1.2s ease infinite;
-        }
-        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
+        .status-badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 0.6rem; letter-spacing: 4px; text-transform: uppercase; color: var(--text-muted); }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); transition: background 0.3s; }
+        .status-badge.active .status-dot { background: var(--gold); box-shadow: 0 0 6px var(--gold); animation: blink 1.2s ease infinite; }
+        .status-badge.loading .status-dot { background: var(--info); box-shadow: 0 0 6px var(--info); animation: blink 0.8s ease infinite; }
+        @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
 
-        /* Current question */
+        /* Question set fetch status */
+        .fetch-banner {
+            margin: 12px auto;
+            padding: 12px 18px;
+            background: rgba(112,144,201,0.08);
+            border: 1px solid rgba(112,144,201,0.25);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            color: var(--info);
+            text-transform: uppercase;
+            display: none;
+            animation: fadeUp 0.4s ease both;
+        }
+        .fetch-banner.show { display: block; }
+        .fetch-banner.ok   { color: var(--success); border-color: rgba(112,201,168,0.3); background: rgba(112,201,168,0.06); }
+        .fetch-banner.err  { color: var(--error);   border-color: rgba(201,112,112,0.3); background: rgba(201,112,112,0.06); }
+
+        /* Question card */
         .question-card {
-            margin: 20px auto;
+            margin: 16px auto;
             padding: 20px 24px;
-            border-left: 3px solid var(--gold);
-            background: var(--glass);
             border: 1px solid var(--border);
             border-left: 3px solid var(--gold);
+            background: var(--glass);
             border-radius: 4px;
             text-align: left;
             min-height: 76px;
             animation: fadeUp 0.8s 0.2s ease both;
-            position: relative;
         }
-        .question-num {
-            font-size: 0.6rem; letter-spacing: 4px; text-transform: uppercase;
-            color: var(--gold); margin-bottom: 8px; opacity: 0.8;
-        }
-        .question-text {
-            font-size: 1.05rem; line-height: 1.55; color: var(--text-white); font-weight: 300;
-        }
+        .question-num  { font-size: 0.6rem; letter-spacing: 4px; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; opacity: 0.8; }
+        .question-text { font-size: 1.05rem; line-height: 1.55; color: var(--text-white); font-weight: 300; }
         .question-card.waiting .question-text { color: var(--text-muted); font-style: italic; }
 
-        /* Progress bar */
-        .progress-wrap {
-            margin: 12px 0 20px; animation: fadeUp 0.8s 0.25s ease both;
-        }
-        .progress-bar-track {
-            height: 2px; background: var(--border); border-radius: 2px; overflow: hidden;
-        }
-        .progress-bar-fill {
-            height: 100%; background: var(--gold); border-radius: 2px;
-            transition: width 0.5s ease; width: 0%;
-        }
-        .progress-label {
-            font-size: 0.6rem; letter-spacing: 3px; color: var(--text-muted);
-            text-transform: uppercase; margin-top: 6px; text-align: right;
-        }
+        /* Progress */
+        .progress-wrap { margin: 10px 0 16px; animation: fadeUp 0.8s 0.25s ease both; }
+        .progress-bar-track { height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; }
+        .progress-bar-fill  { height: 100%; background: var(--gold); border-radius: 2px; transition: width 0.5s ease; width: 0%; }
+        .progress-label { font-size: 0.6rem; letter-spacing: 3px; color: var(--text-muted); text-transform: uppercase; margin-top: 6px; text-align: right; }
 
         /* Transcript */
         .transcript-box {
-            max-height: 100px; overflow-y: auto;
+            max-height: 90px; overflow-y: auto;
             background: var(--glass); border: 1px solid var(--border);
-            border-radius: 4px; padding: 14px 16px;
-            font-style: italic; font-size: 0.88rem; line-height: 1.6;
-            color: rgba(224,224,224,0.65);
-            text-align: left; margin-bottom: 20px;
+            border-radius: 4px; padding: 12px 16px;
+            font-style: italic; font-size: 0.85rem; line-height: 1.6;
+            color: rgba(224,224,224,0.6);
+            text-align: left; margin-bottom: 16px;
             animation: fadeUp 0.8s 0.3s ease both;
         }
         .transcript-box:empty::before { content: 'Your answer will appear here…'; color: var(--text-muted); }
 
         /* Controls */
-        .controls { display: flex; justify-content: center; gap: 16px; animation: fadeUp 0.8s 0.35s ease both; }
-        .btn {
-            background: transparent; border: 1px solid;
-            font-family: 'Inter', sans-serif; letter-spacing: 3px;
-            font-size: 0.65rem; cursor: pointer; transition: all 0.3s;
-            text-transform: uppercase; padding: 12px 24px;
-        }
+        .controls { display: flex; justify-content: center; gap: 16px; animation: fadeUp 0.8s 0.35s ease both; flex-wrap: wrap; }
+        .btn { background: transparent; border: 1px solid; font-family: 'Inter', sans-serif; letter-spacing: 3px; font-size: 0.65rem; cursor: pointer; transition: all 0.3s; text-transform: uppercase; padding: 12px 24px; }
         .btn-gold  { border-color: var(--gold);  color: var(--gold); }
         .btn-white { border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.4); }
+        .btn-info  { border-color: rgba(112,144,201,0.5); color: var(--info); }
         .btn:hover { background: currentColor; color: var(--dark-bg); box-shadow: 0 0 20px var(--gold-glow); }
         .btn:disabled { opacity: 0.3; pointer-events: none; }
+
+        /* Auth guard */
+        #auth-guard {
+            position: fixed; inset: 0; z-index: 500;
+            background: var(--dark-bg);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 20px;
+            text-align: center;
+        }
+        #auth-guard .guard-title { font-family: 'Cinzel', serif; font-size: 1.4rem; letter-spacing: 8px; color: var(--gold); }
+        #auth-guard p { font-size: 0.75rem; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; }
+        #auth-guard a { display: inline-block; margin-top: 8px; border: 1px solid var(--gold); color: var(--gold); padding: 12px 28px; font-size: 0.65rem; letter-spacing: 4px; text-transform: uppercase; text-decoration: none; transition: all 0.3s; }
+        #auth-guard a:hover { background: var(--gold); color: var(--dark-bg); }
 
         /* Toast */
         .toast {
@@ -208,67 +204,31 @@
         .toast.error   { border-color: rgba(201,112,112,0.4); color: var(--error); }
         .toast.info    { border-color: rgba(197,160,89,0.3);  color: var(--gold); }
 
-        /* Auth guard overlay */
-        #auth-guard {
-            position: fixed; inset: 0; z-index: 500;
-            background: var(--dark-bg);
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 20px;
-            text-align: center;
-        }
-        #auth-guard .guard-title {
-            font-family: 'Cinzel', serif; font-size: 1.4rem;
-            letter-spacing: 8px; color: var(--gold);
-        }
-        #auth-guard p {
-            font-size: 0.75rem; letter-spacing: 2px; color: var(--text-muted);
-            text-transform: uppercase;
-        }
-        #auth-guard a {
-            display: inline-block; margin-top: 8px;
-            border: 1px solid var(--gold); color: var(--gold);
-            padding: 12px 28px; font-size: 0.65rem; letter-spacing: 4px;
-            text-transform: uppercase; text-decoration: none;
-            transition: all 0.3s;
-        }
-        #auth-guard a:hover { background: var(--gold); color: var(--dark-bg); }
-
-        /* Completion screen */
-        #completion-screen {
-            display: none; flex-direction: column; align-items: center;
-            gap: 16px; text-align: center;
-        }
+        /* Completion */
+        #completion-screen { display: none; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
         #completion-screen.show { display: flex; animation: fadeUp 0.6s ease both; }
-        .completion-icon {
-            width: 72px; height: 72px; border-radius: 50%;
-            border: 1px solid var(--success);
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 30px rgba(112,201,168,0.3);
-            font-size: 1.6rem;
-            animation: pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
-        }
+        .completion-icon { width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--success); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 30px rgba(112,201,168,0.3); font-size: 1.6rem; animation: pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
         @keyframes pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .completion-title { font-family: 'Cinzel', serif; font-size: 1.6rem; letter-spacing: 6px; color: var(--success); }
         .completion-sub   { font-size: 0.7rem; letter-spacing: 3px; color: var(--text-muted); text-transform: uppercase; }
 
         @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 600px) { .container { padding: 24px 0; } .question-text { font-size: 0.95rem; } }
 
-        @media (max-width: 600px) {
-            .container { padding: 24px 0; }
-            .question-text { font-size: 0.95rem; }
-        }
+        .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(197,160,89,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spinner 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+        @keyframes spinner { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<!-- Auth guard — hidden once auth is confirmed -->
+<!-- Auth guard -->
 <div id="auth-guard">
     <div class="guard-title">ACCESS REQUIRED</div>
     <p>Please sign in to begin your interview</p>
     <a href="./candidate-voice-auth.html">Go to Sign In →</a>
 </div>
 
-<!-- Stars canvas -->
+<!-- Stars -->
 <div class="stars"><canvas id="starCanvas"></canvas></div>
 
 <div class="container" id="main-content" style="display:none;">
@@ -276,6 +236,14 @@
         <h1 class="logo"><em>Talent</em>Bridge</h1>
         <p class="tagline">Voice Interview · Candidate Portal</p>
     </header>
+
+    <!-- Candidate info strip -->
+    <div class="cand-strip" id="candStrip">
+        Signed in as: <span id="candEmail">—</span>
+    </div>
+
+    <!-- Question fetch banner -->
+    <div class="fetch-banner" id="fetchBanner"></div>
 
     <!-- Main interview UI -->
     <div id="interview-ui">
@@ -285,63 +253,56 @@
             </div>
             <div class="status-badge" id="status-badge">
                 <span class="status-dot"></span>
-                <span id="status-text">READY</span>
+                <span id="status-text">LOADING…</span>
             </div>
         </div>
 
         <div class="progress-wrap" id="progress-wrap" style="display:none;">
             <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill"></div></div>
-            <div class="progress-label" id="progress-label">0 / 6</div>
+            <div class="progress-label" id="progress-label">0 / ?</div>
         </div>
 
         <div class="question-card waiting" id="question-card">
             <div class="question-num" id="question-num"></div>
-            <div class="question-text" id="current-question">Say <strong>"Start Interview"</strong> to begin, or press the button below.</div>
+            <div class="question-text" id="current-question">
+                <span class="spin"></span> Fetching your assigned questions…
+            </div>
         </div>
 
         <div class="transcript-box" id="live-transcript"></div>
 
         <div class="controls">
-            <button class="btn btn-gold"  id="start-btn"  onclick="startInterview()">Start Interview</button>
+            <button class="btn btn-gold"  id="start-btn"  onclick="startInterview()" disabled>Start Interview</button>
             <button class="btn btn-white" id="finish-btn" onclick="finishInterview()" style="display:none;">Finish Early</button>
+            <button class="btn btn-info"  id="retry-btn"  onclick="fetchAssignedQuestions()" style="display:none;">↻ Retry Load</button>
         </div>
     </div>
 
-    <!-- Recruiter file upload panel (hidden for candidates, shown for recruiters) -->
-    <div id="recruiter-upload" style="display:none; margin-bottom:20px; animation: fadeUp 0.8s ease both;">
-        <div class="question-card" style="border-left-color: var(--gold);">
-            <div class="question-num">Recruiter — Upload Job Spec</div>
-            <div class="question-text" style="font-size:0.9rem; margin-bottom:14px;">
-                Upload a job description or spec file. It will be stored in Firebase and linked to new submissions.
-            </div>
-            <label style="display:inline-block; cursor:pointer;">
-                <input type="file" onchange="uploadFiles(this)" style="display:none;" accept=".pdf,.doc,.docx,.txt"/>
-                <span class="btn btn-gold" style="display:inline-block; padding:10px 22px; font-size:0.62rem; letter-spacing:3px; cursor:pointer;">
-                    Choose File &amp; Upload
-                </span>
-            </label>
-        </div>
-    </div>
-
-    <!-- Completion screen (replaces interview-ui on done) -->
+    <!-- Completion -->
     <div id="completion-screen">
         <div class="completion-icon">✓</div>
         <div class="completion-title">INTERVIEW COMPLETE</div>
         <div class="completion-sub">Your responses have been recorded and sent to the recruiter</div>
-        <button class="btn btn-white" style="margin-top:8px;" onclick="location.reload()">Start Another</button>
+        <button class="btn btn-white" style="margin-top:8px;" onclick="location.reload()">Start Another Session</button>
     </div>
 </div>
 
 <div class="toast" id="toast" role="alert"></div>
 
 <script type="module">
-    // ── Firebase imports (same version as candlogin.js) ──────────────────────
-    import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    // ── Firebase ──────────────────────────────────────────────────────────────
+    import { initializeApp }      from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getStorage, ref as sRef, uploadBytes, getDownloadURL }
+        from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+    import {
+        getFirestore,
+        collection, doc, addDoc, setDoc, updateDoc, getDoc, getDocs,
+        query, where, orderBy, arrayUnion,
+        serverTimestamp,
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // ── 🔧 SAME CONFIG as candlogin.js ───────────────────────────────────────
+    // ── 🔧  Same config as recruit.js ────────────────────────────────────────
     const firebaseConfig = {
         apiKey:            "YOUR_API_KEY",
         authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
@@ -355,139 +316,31 @@
     let firebaseReady = false;
 
     try {
-        app     = initializeApp(firebaseConfig, "interview");
+        app     = initializeApp(firebaseConfig, "candidate-interview");
         auth    = getAuth(app);
         storage = getStorage(app);
         db      = getFirestore(app);
         firebaseReady = true;
     } catch(e) {
-        console.warn("[interview] Firebase init failed — running in demo mode.", e.message);
+        console.warn("[candidate] Firebase init failed — demo mode.", e.message);
     }
 
-    // ── Auth guard ────────────────────────────────────────────────────────────
-    // Show main content only when a user is confirmed (Firebase) OR
-    // when localStorage role is set (demo / already-checked path).
-    const guard       = document.getElementById('auth-guard');
-    const mainContent = document.getElementById('main-content');
-
-    function revealPage() {
-        guard.style.display       = 'none';
-        mainContent.style.display = '';
-        // Show recruiter upload panel if the logged-in user is a recruiter
-        if (localStorage.getItem('titanRole') === 'recruiter') {
-            document.getElementById('recruiter-upload').style.display = '';
-        }
-        startStarfield();
-        startWakeWordListening();
-    }
-
-    if (firebaseReady) {
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // Genuine Firebase session
-                localStorage.setItem('titanRole', 'candidate');
-                localStorage.setItem('titanEmail', user.email ?? '');
-                revealPage();
-            } else {
-                // No Firebase session — check localStorage fallback (demo mode)
-                if (localStorage.getItem('titanRole') === 'candidate') {
-                    revealPage();
-                } else {
-                    guard.style.display = 'flex'; // Stay on guard
-                }
-            }
-        });
-    } else {
-        // Firebase not configured — use localStorage check for demo mode
-        if (localStorage.getItem('titanRole') === 'candidate') {
-            revealPage();
-        } else {
-            guard.style.display = 'flex';
-        }
-    }
-
-    // ── Starfield ─────────────────────────────────────────────────────────────
-    function startStarfield() {
-        const canvas = document.getElementById('starCanvas');
-        const ctx    = canvas.getContext('2d');
-        let stars    = [];
-        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-        function initStars() {
-            stars = [];
-            const n = Math.floor((canvas.width * canvas.height) / 5000);
-            for (let i = 0; i < n; i++) {
-                stars.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    r: Math.random() * 0.8 + 0.1,
-                    o: Math.random() * 0.6 + 0.1,
-                    s: Math.random() * 0.008 + 0.002,
-                    p: Math.random() * Math.PI * 2,
-                });
-            }
-        }
-        let f = 0;
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            f++;
-            for (const s of stars) {
-                const op = s.o * (0.4 + 0.6 * Math.sin(f * s.s + s.p));
-                ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(197,160,89,${op})`; ctx.fill();
-            }
-            requestAnimationFrame(draw);
-        }
-        window.addEventListener('resize', () => { resize(); initStars(); });
-        resize(); initStars(); draw();
-    }
-
-    // ── uploadFiles — Recruiter file upload (job specs etc.) ─────────────────
-    // Called via: <input type="file" onchange="uploadFiles(this)">
-    // Uploads to Firebase Storage and logs metadata to Firestore "job_specs" collection.
-    window.uploadFiles = async (input) => {
-        const file = input.files[0];
-        if (!file) return;
-
-        const storageRef = ref(storage, `recruiter_files/${Date.now()}_${file.name}`);
-
-        try {
-            showToast('Uploading file…', 'info');
-            const snapshot    = await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-
-            await addDoc(collection(db, "job_specs"), {
-                fileName:   file.name,
-                fileUrl:    downloadURL,
-                uploadedAt: serverTimestamp(),
-            });
-
-            showToast('File uploaded successfully!', 'success');
-            speak("File uploaded successfully to Firebase.");
-        } catch (error) {
-            console.error("[interview] Upload failed:", error);
-            showToast('Upload failed. Check console.', 'error');
-        }
-    };
-
-    
-    const questions = [
-        "Please introduce yourself and walk us through your professional background.",
-        "What are your key skills and areas of technical expertise?",
-        "Why do you want to join our company, and what excites you about this role?",
-        "Describe a significant challenge you faced at work and how you resolved it.",
-        "Where do you see your career heading over the next five years?",
-        "Do you have any questions for the interviewer?"
-    ];
-
-    const SILENCE_THRESHOLD = 5000; // 5 s of silence → advance
-
+    // ── State ─────────────────────────────────────────────────────────────────
+    let questions            = [];   // assigned by recruiter
+    let perQuestionAnswers   = [];   // per-question string array
     let fullTranscript       = "";
     let interviewStarted     = false;
     let currentQuestionIndex = -1;
     let silenceTimeout       = null;
     let wakeRecognition      = null;
     let interviewRecognition = null;
+    let assignedSetId        = null;
+    let candidateId          = null;
+    let candidateEmail       = "";
 
+    const SILENCE_THRESHOLD = 6000; // 6s of silence → advance
+
+    // ── DOM refs ──────────────────────────────────────────────────────────────
     const statusBadge  = document.getElementById('status-badge');
     const statusText   = document.getElementById('status-text');
     const micViz       = document.getElementById('mic-visualizer');
@@ -500,104 +353,284 @@
     const progressLbl  = document.getElementById('progress-label');
     const startBtn     = document.getElementById('start-btn');
     const finishBtn    = document.getElementById('finish-btn');
+    const retryBtn     = document.getElementById('retry-btn');
+    const fetchBanner  = document.getElementById('fetchBanner');
+    const candStrip    = document.getElementById('candStrip');
+    const guard        = document.getElementById('auth-guard');
+    const mainContent  = document.getElementById('main-content');
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    // Toast
-    function showToast(msg, type = 'info') {
+    // ── Toast ─────────────────────────────────────────────────────────────────
+    function showToast(msg, type='info') {
         const t = document.getElementById('toast');
-        const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : '—';
-        t.className = `toast ${type}`; t.innerHTML = `${icon} ${msg}`; t.classList.add('show');
+        const icon = type==='success'?'✓':type==='error'?'✕':'—';
+        t.className = `toast ${type}`;
+        t.innerHTML = `${icon} ${msg}`;
+        t.classList.add('show');
         setTimeout(() => t.classList.remove('show'), 3500);
     }
 
-    function setStatus(text, active = false) {
+    function setStatus(text, mode='idle') {
         statusText.textContent = text;
-        statusBadge.classList.toggle('active', active);
+        statusBadge.classList.remove('active','loading');
+        if (mode==='active')  statusBadge.classList.add('active');
+        if (mode==='loading') statusBadge.classList.add('loading');
     }
 
+    function showFetchBanner(msg, cls='') {
+        fetchBanner.textContent = msg;
+        fetchBanner.className = `fetch-banner show ${cls}`;
+    }
+    function hideFetchBanner() { fetchBanner.className='fetch-banner'; }
+
+    // ── Auth guard ────────────────────────────────────────────────────────────
+    function revealPage() {
+        guard.style.display      = 'none';
+        mainContent.style.display = '';
+        candStrip.style.display  = 'block';
+        document.getElementById('candEmail').textContent = candidateEmail || 'candidate';
+        startStarfield();
+        fetchAssignedQuestions();   // ← pull questions from Firebase
+    }
+
+    if (firebaseReady) {
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                candidateId    = user.uid;
+                candidateEmail = user.email || '';
+                localStorage.setItem('titanRole',  'candidate');
+                localStorage.setItem('titanEmail', candidateEmail);
+                localStorage.setItem('titanUID',   candidateId);
+                revealPage();
+            } else {
+                candidateEmail = localStorage.getItem('titanEmail') || '';
+                candidateId    = localStorage.getItem('titanUID')   || localStorage.getItem('titanEmail') || 'demo';
+                if (localStorage.getItem('titanRole') === 'candidate') {
+                    revealPage();
+                } else {
+                    guard.style.display = 'flex';
+                }
+            }
+        });
+    } else {
+        candidateEmail = localStorage.getItem('titanEmail') || 'demo@talentbridge.ai';
+        candidateId    = localStorage.getItem('titanUID')   || candidateEmail || 'demo';
+        if (localStorage.getItem('titanRole') === 'candidate') {
+            revealPage();
+        } else {
+            guard.style.display = 'flex';
+        }
+    }
+
+    // ── Fetch assigned questions from Firebase ────────────────────────────────
+    window.fetchAssignedQuestions = async function() {
+        retryBtn.style.display = 'none';
+        micViz.classList.add('loading-q');
+        setStatus('FETCHING QUESTIONS…', 'loading');
+        showFetchBanner('⏳ Contacting Firebase for your assigned question set…');
+        questionCard.classList.add('waiting');
+        questionEl.innerHTML = '<span class="spin"></span> Fetching your assigned questions…';
+
+        if (!firebaseReady || !db) {
+            // Demo fallback
+            useDemoQuestions();
+            return;
+        }
+
+        try {
+            let found = null;
+
+            // 1. Check candidate doc for assignedSets
+            const candDoc = await getDoc(doc(db, "candidates", candidateId));
+            if (candDoc.exists()) {
+                const assignedSets = candDoc.data().assignedSets || [];
+                if (assignedSets.length > 0) {
+                    const latestSetId = assignedSets[assignedSets.length - 1];
+                    const setDoc = await getDoc(doc(db, "interview_sets", latestSetId));
+                    if (setDoc.exists() && setDoc.data().questions?.length) {
+                        found = { questions: setDoc.data().questions, setId: latestSetId };
+                    }
+                }
+            }
+
+            // 2. Fallback: query interview_sets by candidateId
+            if (!found) {
+                const snap = await getDocs(
+                    query(
+                        collection(db, "interview_sets"),
+                        where("candidateId", "==", candidateId),
+                        orderBy("createdAt", "desc")
+                    )
+                );
+                if (!snap.empty) {
+                    const latest = snap.docs[0];
+                    if (latest.data().questions?.length) {
+                        found = { questions: latest.data().questions, setId: latest.id };
+                    }
+                }
+            }
+
+            // 3. Fallback: query by email
+            if (!found && candidateEmail) {
+                const snap = await getDocs(
+                    query(
+                        collection(db, "interview_sets"),
+                        where("candidateEmail", "==", candidateEmail),
+                        orderBy("createdAt", "desc")
+                    )
+                );
+                if (!snap.empty) {
+                    const latest = snap.docs[0];
+                    if (latest.data().questions?.length) {
+                        found = { questions: latest.data().questions, setId: latest.id };
+                    }
+                }
+            }
+
+            micViz.classList.remove('loading-q');
+
+            if (found) {
+                questions     = found.questions;
+                assignedSetId = found.setId;
+                perQuestionAnswers = new Array(questions.length).fill('');
+
+                showFetchBanner(`✓ ${questions.length} questions assigned by your recruiter`, 'ok');
+                setTimeout(hideFetchBanner, 4000);
+                setStatus('READY — SAY "START INTERVIEW"', 'idle');
+                questionEl.textContent = 'Say "Start Interview" or press the button to begin.';
+                questionCard.classList.add('waiting');
+                startBtn.disabled = false;
+                startWakeWordListening();
+            } else {
+                // No questions assigned yet
+                showFetchBanner('⚠️ No question set assigned yet. Please wait for your recruiter.', 'err');
+                setStatus('AWAITING QUESTIONS', 'idle');
+                questionEl.textContent = 'Your recruiter has not assigned questions yet. Check back shortly.';
+                retryBtn.style.display = 'inline-block';
+            }
+        } catch(err) {
+            console.error("[candidate] fetchAssignedQuestions error:", err);
+            micViz.classList.remove('loading-q');
+            showFetchBanner('⚠️ Could not load questions — using defaults.', 'err');
+            useDemoQuestions();
+        }
+    };
+
+    function useDemoQuestions() {
+        questions = [
+            "Please introduce yourself and walk us through your professional background.",
+            "What are your key technical skills and areas of expertise?",
+            "Why do you want to join our company, and what excites you about this role?",
+            "Describe a significant challenge you faced at work and how you resolved it.",
+            "Where do you see your career heading over the next five years?",
+            "Do you have any questions for the interviewer?"
+        ];
+        perQuestionAnswers = new Array(questions.length).fill('');
+        assignedSetId = null;
+        micViz.classList.remove('loading-q');
+        showFetchBanner('ℹ️ Using default questions (demo mode)', '');
+        setTimeout(hideFetchBanner, 4000);
+        setStatus('READY — SAY "START INTERVIEW"', 'idle');
+        questionEl.textContent = 'Say "Start Interview" or press the button to begin.';
+        questionCard.classList.add('waiting');
+        startBtn.disabled = false;
+        startWakeWordListening();
+    }
+
+    // ── Starfield ─────────────────────────────────────────────────────────────
+    function startStarfield() {
+        const canvas = document.getElementById('starCanvas');
+        const ctx    = canvas.getContext('2d');
+        let stars    = [];
+        function resize() { canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
+        function initStars() {
+            stars = [];
+            const n = Math.floor((canvas.width*canvas.height)/5000);
+            for (let i=0;i<n;i++) stars.push({ x:Math.random()*canvas.width, y:Math.random()*canvas.height, r:Math.random()*0.8+0.1, o:Math.random()*0.6+0.1, s:Math.random()*0.008+0.002, p:Math.random()*Math.PI*2 });
+        }
+        let f=0;
+        function draw() {
+            ctx.clearRect(0,0,canvas.width,canvas.height); f++;
+            for (const s of stars) {
+                const op=s.o*(0.4+0.6*Math.sin(f*s.s+s.p));
+                ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+                ctx.fillStyle=`rgba(197,160,89,${op})`; ctx.fill();
+            }
+            requestAnimationFrame(draw);
+        }
+        window.addEventListener('resize',()=>{resize();initStars();});
+        resize(); initStars(); draw();
+    }
+
+    // ── Progress ──────────────────────────────────────────────────────────────
     function updateProgress() {
         const done = Math.max(0, currentQuestionIndex);
-        const pct  = (done / questions.length) * 100;
-        progressFill.style.width = pct + '%';
-        progressLbl.textContent  = `${done} / ${questions.length}`;
+        const total = questions.length || 1;
+        const pct  = (done/total)*100;
+        progressFill.style.width = pct+'%';
+        progressLbl.textContent  = `${done} / ${total}`;
     }
 
+    // ── TTS speak ─────────────────────────────────────────────────────────────
     function speak(text, onEnd) {
         if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
         const utt   = new SpeechSynthesisUtterance(text);
-        utt.rate    = 0.92; utt.pitch = 0.8; utt.volume = 1;
+        utt.rate    = 0.9; utt.pitch = 0.85; utt.volume = 1;
         const voices = speechSynthesis.getVoices();
-        const v = voices.find(v => /Samantha|Karen|Daniel|Google UK|Google US/i.test(v.name))
-               || voices.find(v => v.lang.startsWith('en'));
+        const v = voices.find(v=>/Samantha|Karen|Daniel|Google UK|Google US/i.test(v.name))
+               || voices.find(v=>v.lang.startsWith('en'));
         if (v) utt.voice = v;
-
-        const timer = setTimeout(() => { if (onEnd) onEnd(); }, 12000);
-        utt.onend   = () => { clearTimeout(timer); if (onEnd) onEnd(); };
-        utt.onerror = () => { clearTimeout(timer); if (onEnd) onEnd(); };
+        const timer = setTimeout(()=>{ if (onEnd) onEnd(); }, 15000);
+        utt.onend   = ()=>{ clearTimeout(timer); if (onEnd) onEnd(); };
+        utt.onerror = ()=>{ clearTimeout(timer); if (onEnd) onEnd(); };
         speechSynthesis.cancel();
         speechSynthesis.speak(utt);
     }
 
     function resetSilenceTimer() {
         if (silenceTimeout) clearTimeout(silenceTimeout);
-        silenceTimeout = setTimeout(() => {
-            if (interviewStarted) nextQuestion();
-        }, SILENCE_THRESHOLD);
+        silenceTimeout = setTimeout(()=>{ if (interviewStarted) nextQuestion(); }, SILENCE_THRESHOLD);
     }
 
-    // ── Wake-word listener (before interview starts) ─────────────────────────
+    // ── Wake-word ─────────────────────────────────────────────────────────────
     function startWakeWordListening() {
-        if (!SR) {
-            setStatus('BROWSER UNSUPPORTED'); return;
-        }
-        setStatus('SAY "START INTERVIEW"', false);
-
-        function startWakeRec() {
+        if (!SR) { setStatus('BROWSER UNSUPPORTED'); return; }
+        setStatus('SAY "START INTERVIEW"', 'idle');
+        function startWake() {
             wakeRecognition = new SR();
-            wakeRecognition.lang = 'en-US';
-            wakeRecognition.continuous = false;
-            wakeRecognition.interimResults = true;
-
-            wakeRecognition.onresult = (e) => {
-                let text = '';
-                for (let i = e.resultIndex; i < e.results.length; i++) {
-                    text += e.results[i][0].transcript;
-                }
-                if (text.toLowerCase().includes('start interview')) {
-                    wakeRecognition.abort();
-                    startInterview();
-                }
+            wakeRecognition.lang='en-US'; wakeRecognition.continuous=false; wakeRecognition.interimResults=true;
+            wakeRecognition.onresult = e => {
+                let txt='';
+                for(let i=e.resultIndex;i<e.results.length;i++) txt+=e.results[i][0].transcript;
+                if (txt.toLowerCase().includes('start interview')) { wakeRecognition.abort(); window.startInterview(); }
             };
-            wakeRecognition.onend = () => {
-                if (!interviewStarted) setTimeout(startWakeRec, 200);
-            };
-            wakeRecognition.onerror = () => {
-                if (!interviewStarted) setTimeout(startWakeRec, 300);
-            };
-
+            wakeRecognition.onend   = ()=>{ if (!interviewStarted) setTimeout(startWake,200); };
+            wakeRecognition.onerror = ()=>{ if (!interviewStarted) setTimeout(startWake,300); };
             try { wakeRecognition.start(); } catch(e) {}
         }
-        startWakeRec();
+        startWake();
     }
 
     // ── Start interview ───────────────────────────────────────────────────────
     window.startInterview = function() {
-        if (interviewStarted) return;
+        if (interviewStarted || questions.length===0) return;
         interviewStarted = true;
+        if (wakeRecognition) { try { wakeRecognition.abort(); } catch(e){} }
 
-        if (wakeRecognition) { try { wakeRecognition.abort(); } catch(e) {} }
-
-        fullTranscript = `=== TALENTBRIDGE VOICE INTERVIEW ===\nCandidate: ${localStorage.getItem('titanEmail') || 'Unknown'}\nDate: ${new Date().toISOString()}\n\n`;
+        const date = new Date().toISOString();
+        fullTranscript = `=== TALENTBRIDGE VOICE INTERVIEW ===\nCandidate: ${candidateEmail}\nDate: ${date}\nSet ID: ${assignedSetId||'N/A'}\n\n`;
 
         micViz.classList.add('active');
-        setStatus('INTERVIEW IN PROGRESS', true);
+        setStatus('INTERVIEW IN PROGRESS', 'active');
         startBtn.style.display  = 'none';
         finishBtn.style.display = 'inline-block';
+        retryBtn.style.display  = 'none';
         progressWrap.style.display = '';
         questionCard.classList.remove('waiting');
+        hideFetchBanner();
 
-        speak("Welcome to TalentBridge. We will now begin your voice interview. Please answer each question clearly. I will move to the next question after a brief pause.", () => {
+        speak(`Welcome to TalentBridge. Your recruiter has assigned ${questions.length} questions for today's interview. Please answer each question clearly. I will move to the next question after a brief pause. Let's begin.`, ()=>{
             currentQuestionIndex = -1;
             nextQuestion();
         });
@@ -607,137 +640,174 @@
     function nextQuestion() {
         currentQuestionIndex++;
         updateProgress();
+        if (currentQuestionIndex >= questions.length) { finishInterview(); return; }
 
-        if (currentQuestionIndex >= questions.length) {
-            finishInterview(); return;
+        // Snapshot the answer collected so far for the previous question
+        if (currentQuestionIndex > 0 && perQuestionAnswers) {
+            // already saved in onresult
         }
 
-        // Stop any active recording before speaking
-        if (interviewRecognition) { try { interviewRecognition.stop(); } catch(e) {} }
+        if (interviewRecognition) { try { interviewRecognition.stop(); } catch(e){} }
 
         const q = questions[currentQuestionIndex];
-        questionNum.textContent  = `Question ${currentQuestionIndex + 1} of ${questions.length}`;
-        questionEl.textContent   = q;
-        fullTranscript += `\nQuestion ${currentQuestionIndex + 1}: ${q}\nAnswer: `;
+        questionNum.textContent = `Question ${currentQuestionIndex+1} of ${questions.length}`;
+        questionEl.textContent  = q;
+        fullTranscript += `\nQuestion ${currentQuestionIndex+1}: ${q}\nAnswer: `;
+        perQuestionAnswers[currentQuestionIndex] = '';   // reset slot for this Q
 
-        speak(q, () => {
-            startAnswerListening();
-        });
+        speak(q, ()=>{ startAnswerListening(); });
     }
 
     // ── Answer listening ──────────────────────────────────────────────────────
     function startAnswerListening() {
         if (!SR) return;
-        setStatus(`LISTENING — Q${currentQuestionIndex + 1}`, true);
+        setStatus(`LISTENING — Q${currentQuestionIndex+1}`, 'active');
+        const qIdx = currentQuestionIndex;   // capture
 
         function startRec() {
             interviewRecognition = new SR();
-            interviewRecognition.lang = 'en-US';
-            interviewRecognition.continuous = true;
-            interviewRecognition.interimResults = true;
+            interviewRecognition.lang='en-US'; interviewRecognition.continuous=true; interviewRecognition.interimResults=true;
 
-            interviewRecognition.onresult = (e) => {
-                let interim = '', final = '';
-                for (let i = e.resultIndex; i < e.results.length; i++) {
-                    if (e.results[i].isFinal) final += e.results[i][0].transcript + ' ';
-                    else interim += e.results[i][0].transcript;
+            interviewRecognition.onresult = e => {
+                let interim='', final='';
+                for(let i=e.resultIndex;i<e.results.length;i++) {
+                    if (e.results[i].isFinal) final+=e.results[i][0].transcript+' ';
+                    else interim+=e.results[i][0].transcript;
                 }
-                if (final) fullTranscript += final;
-                transcriptEl.textContent = (fullTranscript + interim).split('\n').pop();
+                if (final) {
+                    fullTranscript+=final;
+                    perQuestionAnswers[qIdx] = (perQuestionAnswers[qIdx]||'') + final;
+                }
+                transcriptEl.textContent = ((perQuestionAnswers[qIdx]||'')+interim).trim();
                 transcriptEl.scrollTop   = transcriptEl.scrollHeight;
                 resetSilenceTimer();
             };
 
-            interviewRecognition.onend = () => {
-                if (interviewStarted && currentQuestionIndex < questions.length) {
-                    setTimeout(startRec, 150);
-                }
+            interviewRecognition.onend = ()=>{
+                if (interviewStarted && currentQuestionIndex<questions.length) setTimeout(startRec,150);
             };
-
-            interviewRecognition.onerror = (e) => {
-                if (e.error !== 'aborted' && interviewStarted) {
-                    setTimeout(startRec, 250);
-                }
+            interviewRecognition.onerror = e=>{
+                if (e.error!=='aborted' && interviewStarted) setTimeout(startRec,250);
             };
-
-            try { interviewRecognition.start(); } catch(e) {}
+            try { interviewRecognition.start(); } catch(e){}
         }
 
         startRec();
         resetSilenceTimer();
     }
 
-    // ── Finish interview ──────────────────────────────────────────────────────
+    // ── Finish & submit ───────────────────────────────────────────────────────
     window.finishInterview = async function() {
         if (!interviewStarted) return;
         interviewStarted = false;
 
-        if (silenceTimeout)      clearTimeout(silenceTimeout);
-        if (interviewRecognition) { try { interviewRecognition.stop(); } catch(e) {} }
-        if (wakeRecognition)      { try { wakeRecognition.abort(); }    catch(e) {} }
+        if (silenceTimeout)       clearTimeout(silenceTimeout);
+        if (interviewRecognition) { try { interviewRecognition.stop(); } catch(e){} }
+        if (wakeRecognition)      { try { wakeRecognition.abort(); }    catch(e){} }
 
         micViz.classList.remove('active');
-        setStatus('SAVING…', false);
+        setStatus('SAVING…', 'loading');
         finishBtn.style.display = 'none';
 
         fullTranscript += `\n\n=== END OF INTERVIEW ===\nCompleted: ${new Date().toISOString()}`;
 
-        const blob     = new Blob([fullTranscript], { type: 'text/plain' });
-        const fileName = `interview_${Date.now()}.txt`;
+        // Clean per-question answers
+        const cleanAnswers = perQuestionAnswers.map(a => (a||'').trim());
 
-        if (firebaseReady) {
+        if (firebaseReady && db) {
             try {
-                setStatus('UPLOADING…', false);
+                setStatus('UPLOADING…', 'loading');
                 showToast('Saving your interview…', 'info');
 
-                // Upload transcript to Firebase Storage
-                const storageRef = ref(storage, `transcripts/${fileName}`);
-                const snapshot   = await uploadBytes(storageRef, blob);
-                const fileUrl    = await getDownloadURL(snapshot.ref);
+                // Upload transcript to Storage
+                let transcriptUrl = null;
+                if (storage) {
+                    const blob = new Blob([fullTranscript], { type:'text/plain' });
+                    const fileName = `interview_${candidateId}_${Date.now()}.txt`;
+                    const storageReference = sRef(storage, `transcripts/${fileName}`);
+                    const snap = await uploadBytes(storageReference, blob);
+                    transcriptUrl = await getDownloadURL(snap.ref);
+                }
 
-                // Save metadata to Firestore
-                await addDoc(collection(db, "submissions"), {
-                    transcriptUrl: fileUrl,
-                    content:       fullTranscript,
-                    candidateEmail: localStorage.getItem('titanEmail') || 'unknown',
+                const payload = {
+                    candidateId,
+                    candidateEmail,
+                    answers:       cleanAnswers,
+                    questions,
+                    fullTranscript,
+                    transcriptUrl: transcriptUrl || null,
+                    setId:         assignedSetId || null,
                     submittedAt:   serverTimestamp(),
-                    status:        "New",
-                });
+                    status:        "submitted",
+                };
 
-                showToast('Interview saved!', 'success');
-                speak("Thank you. Your interview has been successfully recorded and sent to the recruiter.", showCompletion);
+                // Global submissions collection
+                await addDoc(collection(db, "submissions"), payload);
+
+                // Candidate sub-collection
+                try {
+                    await addDoc(collection(db, "candidates", candidateId, "submissions"), payload);
+                } catch(e) { console.warn("sub-collection write skipped:", e.message); }
+
+                // Update candidate top-level doc
+                try {
+                    await updateDoc(doc(db, "candidates", candidateId), {
+                        status:      "submitted",
+                        answers:     cleanAnswers,
+                        fullTranscript,
+                        transcriptUrl: transcriptUrl||null,
+                        submittedAt: serverTimestamp(),
+                        lastSetId:   assignedSetId||null,
+                    });
+                } catch(e) {
+                    // Create doc if it doesn't exist
+                    await setDoc(doc(db, "candidates", candidateId), {
+                        email:         candidateEmail,
+                        status:        "submitted",
+                        answers:       cleanAnswers,
+                        fullTranscript,
+                        transcriptUrl: transcriptUrl||null,
+                        submittedAt:   serverTimestamp(),
+                        lastSetId:     assignedSetId||null,
+                    }, { merge: true });
+                }
+
+                showToast('Interview saved & sent to recruiter!', 'success');
+                speak("Thank you. Your interview has been successfully recorded and sent to your recruiter.", showCompletion);
 
             } catch(err) {
-                console.error("[interview] Upload error:", err);
+                console.error("[candidate] Upload error:", err);
                 showToast('Upload failed — saving locally.', 'error');
-                downloadLocally(blob, fileName);
-                showCompletion();
+                downloadLocally();
+                speak("Thank you. Your interview has been completed.", showCompletion);
             }
         } else {
-            // Demo mode — offer local download
-            showToast('Demo mode — downloading transcript locally.', 'info');
-            downloadLocally(blob, fileName);
+            // Demo fallback
+            showToast('Demo mode — downloading transcript.', 'info');
+            downloadLocally();
             speak("Thank you. Your interview has been completed.", showCompletion);
         }
     };
 
-    function downloadLocally(blob, fileName) {
+    function downloadLocally() {
+        const blob = new Blob([fullTranscript], { type:'text/plain' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
-        a.href     = url; a.download = fileName;
+        a.href=url; a.download=`interview_${Date.now()}.txt`;
         a.click(); URL.revokeObjectURL(url);
     }
 
     function showCompletion() {
-        document.getElementById('interview-ui').style.display    = 'none';
+        document.getElementById('interview-ui').style.display = 'none';
         document.getElementById('completion-screen').classList.add('show');
-        setStatus('COMPLETED', false);
-        updateProgress();
+        setStatus('COMPLETED', 'idle');
+        progressFill.style.width = '100%';
+        progressLbl.textContent  = `${questions.length} / ${questions.length}`;
     }
 
     // Space-bar to start
-    document.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && !interviewStarted && e.target === document.body) {
+    document.addEventListener('keydown', e=>{
+        if (e.code==='Space' && !interviewStarted && e.target===document.body) {
             e.preventDefault(); window.startInterview();
         }
     });

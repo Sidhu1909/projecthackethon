@@ -33,15 +33,22 @@
 
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
     header h1 { font-family: var(--font-display); font-size: 2.5rem; letter-spacing: 3px; color: var(--cyan); text-transform: uppercase; }
+    .header-right { display: flex; align-items: center; gap: 1rem; }
+    .recruiter-badge { padding: 0.35rem 0.9rem; background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); border-radius: 20px; font-size: 0.75rem; color: var(--cyan); letter-spacing: 1px; }
 
     .logout-btn { padding: 0.75rem 1.5rem; background: rgba(255,71,87,0.1); border: 1px solid var(--red); color: var(--red); border-radius: 6px; cursor: pointer; font-family: var(--font-sans); font-size: 0.9rem; transition: all 0.3s; }
     .logout-btn:hover { background: var(--red); color: var(--white); }
+
+    /* Live connection indicator */
+    .live-dot { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--green); }
+    .live-dot::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: liveBlink 1.5s ease infinite; }
+    @keyframes liveBlink { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
 
     .sections-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; margin-bottom: 3rem; }
     @media (max-width: 900px) { .sections-grid { grid-template-columns: 1fr; } }
 
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; transition: all 0.3s; }
-    .card:hover { border-color: var(--cyan); box-shadow: 0 0 20px rgba(0,212,255,0.2); }
+    .card:hover { border-color: rgba(0,212,255,0.3); box-shadow: 0 0 24px rgba(0,212,255,0.08); }
     .card h2 { font-family: var(--font-display); font-size: 1.8rem; letter-spacing: 2px; color: var(--blue); margin-bottom: 1.5rem; text-transform: uppercase; }
 
     .upload-area { border: 2px dashed var(--border); border-radius: 10px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(100,149,237,0.05); margin-bottom: 1.5rem; }
@@ -57,8 +64,10 @@
     .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
     .btn-danger { background: rgba(255,71,87,0.2); color: var(--red); border: 1px solid var(--red); padding: 0.5rem 1rem; font-size: 0.8rem; }
     .btn-danger:hover { background: var(--red); color: var(--white); }
+    .btn-outline { background: transparent; border: 1px solid var(--cyan); color: var(--cyan); }
+    .btn-outline:hover { background: var(--cyan); color: var(--bg); box-shadow: 0 0 16px rgba(0,212,255,0.4); }
 
-    .question { background: rgba(100,149,237,0.05); border-left: 3px solid var(--blue); border-radius: 6px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .question { background: rgba(100,149,237,0.05); border-left: 3px solid var(--blue); border-radius: 6px; padding: 1.5rem; margin-bottom: 1rem; }
     .question-text { color: var(--white); margin-bottom: 0.5rem; line-height: 1.6; }
     .question-number { color: var(--blue); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
 
@@ -69,7 +78,7 @@
     .score-display.high   { color: var(--green); }
     .evaluation-feedback { color: var(--muted); font-size: 0.95rem; line-height: 1.6; margin-top: 1rem; }
 
-    .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(100,149,237,0.3); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    .loading { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(100,149,237,0.3); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .status-message { padding: 1rem; border-radius: 6px; margin-bottom: 1rem; animation: slideIn 0.3s ease; font-size: 0.9rem; }
@@ -78,33 +87,49 @@
     .status-message.info    { background: rgba(100,149,237,0.1); border: 1px solid var(--blue);  color: var(--blue);  }
     @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* Candidate select */
     .select-wrap { position: relative; margin-bottom: 1rem; }
     .select-wrap select { width: 100%; padding: 0.75rem 2.5rem 0.75rem 1rem; background: rgba(100,149,237,0.07); border: 1px solid var(--border); color: var(--white); border-radius: 8px; font-family: var(--font-sans); font-size: 0.95rem; appearance: none; cursor: pointer; transition: border-color 0.25s; }
     .select-wrap select:focus { border-color: var(--cyan); outline: none; }
     .select-wrap::after { content: '▾'; position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+    .select-wrap select option { background: var(--surface); color: var(--white); }
 
-    /* Candidate badge row */
     .candidate-badge { display: inline-flex; align-items: center; gap: 8px; padding: 0.35rem 0.9rem; border-radius: 20px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
     .badge-pending   { background: rgba(100,149,237,0.15); color: var(--blue);  border: 1px solid var(--blue); }
     .badge-invited   { background: rgba(255,215,0,0.12);   color: var(--amber); border: 1px solid var(--amber); }
     .badge-submitted { background: rgba(0,255,136,0.12);   color: var(--green); border: 1px solid var(--green); }
 
-    /* Candidate card in the select panel */
     .cand-meta { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
     .cand-meta:last-child { border-bottom: none; }
-    .cand-name { color: var(--white); font-weight: 600; font-size: 0.9rem; }
+    .cand-name  { color: var(--white); font-weight: 600; font-size: 0.9rem; }
     .cand-email { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
 
-    /* Refresh button */
     .refresh-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.4rem 0.9rem; font-size: 0.8rem; cursor: pointer; font-family: var(--font-sans); transition: all 0.2s; }
     .refresh-btn:hover { border-color: var(--cyan); color: var(--cyan); }
 
     .section-divider { width: 100%; height: 1px; background: var(--border); margin: 3rem 0; }
-    .file-list { margin-top: 1.5rem; }
-    .file-item { background: rgba(100,149,237,0.05); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; }
+
+    .file-item { background: rgba(100,149,237,0.05); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; }
     .file-name { color: var(--cyan); font-weight: 600; margin-bottom: 0.25rem; }
     .file-meta { color: var(--muted); font-size: 0.85rem; }
+
+    /* Answer viewer */
+    .answer-block { background: rgba(0,255,136,0.04); border-left: 3px solid var(--green); border-radius: 6px; padding: 1.2rem 1.5rem; margin-bottom: 1rem; }
+    .answer-label { color: var(--green); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; font-weight: 700; }
+    .answer-text  { color: var(--white); font-size: 0.95rem; line-height: 1.65; }
+    .q-ref        { color: var(--muted); font-size: 0.82rem; margin-bottom: 0.5rem; font-style: italic; }
+
+    /* Notification badge */
+    .notif-badge { background: var(--red); color: #fff; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; margin-left: 6px; animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+    @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+
+    .transcript-viewer { max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; font-size: 0.82rem; color: var(--muted); line-height: 1.7; white-space: pre-wrap; font-family: 'Courier New', monospace; margin-top: 1rem; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+    .tab { padding: 0.6rem 1.2rem; background: none; border: none; color: var(--muted); cursor: pointer; font-family: var(--font-sans); font-size: 0.85rem; letter-spacing: 0.5px; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
   </style>
 </head>
 <body>
@@ -112,63 +137,62 @@
 
   <header>
     <h1>📋 Interview Manager</h1>
-    <button class="logout-btn" onclick="handleLogout()">Logout</button>
+    <div class="header-right">
+      <span class="live-dot">Firebase Live</span>
+      <span class="recruiter-badge" id="recruiterBadge">RECRUITER</span>
+      <button class="logout-btn" onclick="handleLogout()">Logout</button>
+    </div>
   </header>
 
   <div class="sections-grid">
 
-    <!-- ── LEFT: Upload Questions ── -->
+    <!-- ── LEFT: Upload & Send Questions ── -->
     <div class="card">
-      <h2>📤 Upload Questions</h2>
-      <p style="color:var(--muted);margin-bottom:1rem;">Upload a .txt file with one question per line.</p>
+      <h2>📤 Upload &amp; Send Questions</h2>
+      <p style="color:var(--muted);margin-bottom:1rem;">Upload a <strong>.txt</strong> file — one question per line. Then select a candidate and send.</p>
 
       <div class="upload-area" id="questionsUploadArea" onclick="document.getElementById('questionsFile').click()">
         <span class="upload-icon">📎</span>
         <p><strong>Click to upload or drag &amp; drop</strong></p>
-        <p style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;">Supported: .txt files</p>
+        <p style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;">Supported: .txt files only</p>
       </div>
       <input type="file" id="questionsFile" accept=".txt" onchange="handleQuestionsUpload(event)"/>
 
       <div id="questionsStatus"></div>
 
-      <div class="file-list" id="questionsFileList" style="display:none;">
-        <div style="color:var(--muted);font-size:0.9rem;margin-bottom:0.75rem;">✓ File loaded</div>
+      <div id="questionsFileList" style="display:none; margin-bottom:1rem;">
         <div class="file-item">
-          <div class="file-info">
+          <div>
             <div class="file-name" id="uploadedFileName">—</div>
             <div class="file-meta" id="uploadedFileMeta">—</div>
           </div>
+          <button class="btn-danger btn" onclick="clearQuestions()">✕ Clear</button>
         </div>
       </div>
 
-      <div id="questionsDisplay" style="margin-top:2rem;"></div>
+      <div id="questionsDisplay"></div>
     </div>
 
-    <!-- ── RIGHT: Candidates & Evaluate ── -->
+    <!-- ── RIGHT: Candidates ── -->
     <div class="card">
       <h2>👥 Candidates</h2>
-      <p style="color:var(--muted);margin-bottom:1rem;">
-        Select a signed-up candidate to view their answers or send them an interview set.
-      </p>
 
-      <!-- Header row with refresh -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-        <label style="color:var(--muted);font-size:0.85rem;letter-spacing:0.5px;">📍 Registered Candidates</label>
+        <label style="color:var(--muted);font-size:0.85rem;">📍 Registered Candidates</label>
         <button class="refresh-btn" onclick="loadCandidatesFromDatabase()">↻ Refresh</button>
       </div>
 
-      <!-- Candidate dropdown -->
       <div class="select-wrap">
         <select id="candidateSelect" onchange="onCandidateSelected(this.value)">
           <option value="">— Loading candidates… —</option>
         </select>
       </div>
 
-      <!-- Selected candidate info strip -->
+      <!-- Selected candidate info -->
       <div id="candidateInfoStrip" style="display:none;margin-bottom:1rem;padding:0.75rem 1rem;background:rgba(100,149,237,0.07);border:1px solid var(--border);border-radius:8px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
-            <div class="cand-name" id="stripName">—</div>
+            <div class="cand-name"  id="stripName">—</div>
             <div class="cand-email" id="stripEmail">—</div>
           </div>
           <span id="stripBadge" class="candidate-badge badge-pending">Pending</span>
@@ -178,16 +202,28 @@
 
       <div id="answersStatus"></div>
 
-      <!-- Answers panel -->
-      <div id="candidateAnswersDisplay" style="margin-top:1rem;"></div>
+      <!-- Tabs: Answers | Transcript | Evaluate -->
+      <div id="answersTabSection" style="display:none;">
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('answers',this)">📝 Answers</button>
+          <button class="tab" onclick="switchTab('transcript',this)">📄 Transcript</button>
+          <button class="tab" onclick="switchTab('evaluate',this)">⚡ Evaluate</button>
+        </div>
 
-      <!-- Evaluate button (visible when answers exist) -->
-      <button class="btn" id="evaluateBtn" onclick="evaluateAnswers()" style="width:100%;margin-top:1rem;display:none;">
-        ⚡ Evaluate Answers
-      </button>
+        <div class="tab-panel active" id="tab-answers">
+          <div id="candidateAnswersDisplay"></div>
+        </div>
 
-      <!-- Evaluation results -->
-      <div id="evaluationResults" style="margin-top:2rem;"></div>
+        <div class="tab-panel" id="tab-transcript">
+          <div id="transcriptDisplay" class="transcript-viewer">No transcript available.</div>
+        </div>
+
+        <div class="tab-panel" id="tab-evaluate">
+          <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem;">AI-powered scoring based on question coverage and response depth.</p>
+          <button class="btn" id="evaluateBtn" onclick="evaluateAnswers()" style="width:100%;">⚡ Run Evaluation</button>
+          <div id="evaluationResults" style="margin-top:1.5rem;"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -195,60 +231,58 @@
   <div class="section-divider"></div>
 
   <div class="card">
-    <h2>💾 Save &amp; Send to Candidate</h2>
+    <h2>🚀 Assign &amp; Send Questions to Candidate</h2>
     <p style="color:var(--muted);margin-bottom:1.5rem;">
-      Save the uploaded question set to Firebase <em>and</em> assign it to the selected candidate — they will see it instantly on their portal (<strong>cand.html</strong>).
+      Saves the question set to Firebase and assigns it to the selected candidate.
+      The candidate will see and hear the questions <strong>immediately</strong> on their interview portal.
     </p>
 
     <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
       <button class="btn" id="saveQuestionsBtn" onclick="saveQuestionsToFirebase()" disabled style="flex:1;min-width:220px;">
-        ☁️ Save &amp; Assign to Candidate
+        🚀 Send Questions to Candidate
       </button>
-
       <div id="assignTarget" style="color:var(--muted);font-size:0.85rem;flex:1;">
-        Upload questions &amp; select a candidate to enable this button.
+        Upload questions &amp; select a candidate to enable.
       </div>
     </div>
 
     <div id="firebaseStatus" style="margin-top:1rem;"></div>
   </div>
 
-</div><!-- /container -->
+</div>
 
-<!-- ── recruit.js (module — provides Firebase globals) ── -->
+<!-- ── recruit.js module ── -->
 <script type="module" src="./recruit.js"></script>
 
 <script>
-/* ─── global state ─────────────────────────────────────────────────────────── */
+/* ── global state ─────────────────────────────────────────────────────────── */
 let uploadedQuestions    = [];
 let uploadedAnswers      = [];
+let candidateTranscript  = "";
 let currentQuestionFile  = null;
 let selectedCandidateId  = null;
-let selectedCandidateObj = null;   // full candidate object from Firestore
+let selectedCandidateObj = null;
 
-/* ─── Drag-and-drop for questions upload ───────────────────────────────────── */
+/* ── Drag and drop ────────────────────────────────────────────────────────── */
 const qArea = document.getElementById('questionsUploadArea');
 qArea.addEventListener('dragover',  e => { e.preventDefault(); qArea.classList.add('drag-over'); });
 qArea.addEventListener('dragleave', ()  => qArea.classList.remove('drag-over'));
 qArea.addEventListener('drop', e => {
   e.preventDefault(); qArea.classList.remove('drag-over');
-  if (e.dataTransfer.files.length > 0) {
-    document.getElementById('questionsFile').files = e.dataTransfer.files;
-    handleQuestionsUpload({ target: { files: e.dataTransfer.files } });
-  }
+  if (e.dataTransfer.files[0]) handleQuestionsUpload({ target: { files: e.dataTransfer.files } });
 });
 
-/* ─── Parse text file into lines ───────────────────────────────────────────── */
+/* ── Parse text file ──────────────────────────────────────────────────────── */
 function parseTextFile(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = e => resolve(e.target.result.split('\n').filter(l => l.trim().length > 0));
-    reader.onerror = reject;
-    reader.readAsText(file);
+    const r = new FileReader();
+    r.onload  = e => resolve(e.target.result.split('\n').map(l=>l.trim()).filter(Boolean));
+    r.onerror = reject;
+    r.readAsText(file);
   });
 }
 
-/* ─── Handle questions file upload ─────────────────────────────────────────── */
+/* ── Handle questions file ────────────────────────────────────────────────── */
 async function handleQuestionsUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -260,10 +294,11 @@ async function handleQuestionsUpload(event) {
     uploadedQuestions = await parseTextFile(file);
     currentQuestionFile = file;
 
-    showStatus('questionsStatus', `✓ Loaded ${uploadedQuestions.length} questions`, 'success');
+    showStatus('questionsStatus', `✓ ${uploadedQuestions.length} questions loaded`, 'success');
     document.getElementById('questionsFileList').style.display = 'block';
     document.getElementById('uploadedFileName').textContent = file.name;
-    document.getElementById('uploadedFileMeta').textContent = `${uploadedQuestions.length} questions · ${(file.size / 1024).toFixed(1)} KB`;
+    document.getElementById('uploadedFileMeta').textContent =
+      `${uploadedQuestions.length} questions · ${(file.size/1024).toFixed(1)} KB`;
 
     displayQuestions();
     updateSaveButton();
@@ -272,94 +307,94 @@ async function handleQuestionsUpload(event) {
   }
 }
 
-/* ─── Render questions list ─────────────────────────────────────────────────── */
+function clearQuestions() {
+  uploadedQuestions = []; currentQuestionFile = null;
+  document.getElementById('questionsFileList').style.display = 'none';
+  document.getElementById('questionsDisplay').innerHTML = '';
+  document.getElementById('questionsStatus').innerHTML = '';
+  document.getElementById('questionsFile').value = '';
+  updateSaveButton();
+}
+
 function displayQuestions() {
   const el = document.getElementById('questionsDisplay');
-  el.innerHTML = `<h3 style="color:var(--blue);margin-bottom:1rem;font-size:0.95rem;letter-spacing:1px;text-transform:uppercase;">Questions (${uploadedQuestions.length})</h3>`;
+  el.innerHTML = `<h3 style="color:var(--blue);margin-bottom:1rem;font-size:0.9rem;letter-spacing:1px;text-transform:uppercase;">Questions Preview (${uploadedQuestions.length})</h3>`;
   uploadedQuestions.forEach((q, i) => {
     const d = document.createElement('div');
     d.className = 'question';
-    d.innerHTML = `<div class="question-number">Q${i + 1}</div><div class="question-text">${q}</div>`;
+    d.innerHTML = `<div class="question-number">Q${i+1}</div><div class="question-text">${q}</div>`;
     el.appendChild(d);
   });
 }
 
-/* ─── Load signed-up candidates from Firestore ──────────────────────────────── */
+/* ── Load candidates ──────────────────────────────────────────────────────── */
 async function loadCandidatesFromDatabase() {
   const sel = document.getElementById('candidateSelect');
   sel.innerHTML = '<option value="">— Loading… —</option>';
   showStatus('answersStatus', '<span class="loading"></span> Fetching candidates…', 'info');
 
-  // Wait for module to expose the global
   let attempts = 0;
-  while (!window.getCandidatesWithAnswers && attempts < 20) {
-    await new Promise(r => setTimeout(r, 250));
-    attempts++;
+  while (!window.getCandidatesWithAnswers && attempts < 30) {
+    await delay(250); attempts++;
   }
-
   if (!window.getCandidatesWithAnswers) {
-    showStatus('answersStatus', '⚠️ Firebase module not ready. Refresh the page.', 'error');
-    sel.innerHTML = '<option value="">— Error loading —</option>';
+    showStatus('answersStatus', '⚠️ Firebase module not ready. Refresh.', 'error');
+    sel.innerHTML = '<option value="">— Error —</option>';
     return;
   }
 
   try {
     const candidates = await window.getCandidatesWithAnswers();
     sel.innerHTML = '<option value="">— Choose a candidate —</option>';
-
     if (candidates.length === 0) {
-      showStatus('answersStatus', '⚠️ No registered candidates found yet.', 'error');
-      return;
+      showStatus('answersStatus', '⚠️ No candidates registered yet.', 'error'); return;
     }
-
     candidates.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
-      const statusIcon = c.status === 'submitted' ? '✅' : c.status === 'invited' ? '📨' : '🔵';
-      opt.textContent  = `${statusIcon}  ${c.name || c.email}  —  ${c.email}`;
+      const icon = c.status === 'submitted' ? '✅' : c.status === 'invited' ? '📨' : '🔵';
+      opt.textContent = `${icon}  ${c.name || c.email}`;
+      if (c.email && c.name) opt.textContent += `  —  ${c.email}`;
       opt.dataset.candidateJson = JSON.stringify(c);
       sel.appendChild(opt);
     });
-
-    showStatus('answersStatus', `✓ ${candidates.length} candidate${candidates.length !== 1 ? 's' : ''} found`, 'success');
+    const newCount = candidates.filter(c => c.status === 'submitted').length;
+    const h2 = document.querySelector('.card:nth-child(2) h2');
+    if (h2) {
+      h2.innerHTML = `👥 Candidates${newCount ? `<span class="notif-badge">${newCount}</span>` : ''}`;
+    }
+    showStatus('answersStatus', `✓ ${candidates.length} candidate${candidates.length!==1?'s':''} found`, 'success');
   } catch (err) {
-    showStatus('answersStatus', 'Error loading candidates: ' + err.message, 'error');
-    sel.innerHTML = '<option value="">— Error loading —</option>';
+    showStatus('answersStatus', 'Error: ' + err.message, 'error');
+    sel.innerHTML = '<option value="">— Error —</option>';
   }
 }
 
-/* ─── Candidate selected from dropdown ──────────────────────────────────────── */
+/* ── Candidate selected ───────────────────────────────────────────────────── */
 async function onCandidateSelected(id) {
   selectedCandidateId  = id || null;
   selectedCandidateObj = null;
+  uploadedAnswers = []; candidateTranscript = '';
   document.getElementById('candidateAnswersDisplay').innerHTML = '';
-  document.getElementById('evaluateBtn').style.display = 'none';
   document.getElementById('evaluationResults').innerHTML = '';
-  uploadedAnswers = [];
+  document.getElementById('transcriptDisplay').textContent = 'No transcript available.';
+  document.getElementById('answersTabSection').style.display = 'none';
   updateSaveButton();
 
-  if (!id) {
-    document.getElementById('candidateInfoStrip').style.display = 'none';
-    return;
-  }
+  if (!id) { document.getElementById('candidateInfoStrip').style.display = 'none'; return; }
 
-  // Show info strip from cached dropdown data
   const opt = document.querySelector(`#candidateSelect option[value="${id}"]`);
-  if (opt && opt.dataset.candidateJson) {
+  if (opt?.dataset.candidateJson) {
     selectedCandidateObj = JSON.parse(opt.dataset.candidateJson);
     showCandidateInfoStrip(selectedCandidateObj);
   }
-
-  // Load answers (if any submitted)
   await loadCandidateAnswers(id);
   updateSaveButton();
 }
 
-/* ─── Render the candidate info strip ───────────────────────────────────────── */
 function showCandidateInfoStrip(c) {
-  document.getElementById('stripName').textContent  = c.name  || '—';
+  document.getElementById('stripName').textContent  = c.name  || c.email || '—';
   document.getElementById('stripEmail').textContent = c.email || '—';
-
   const badge = document.getElementById('stripBadge');
   badge.className = 'candidate-badge';
   if (c.status === 'submitted') { badge.classList.add('badge-submitted'); badge.textContent = '✅ Submitted'; }
@@ -367,149 +402,156 @@ function showCandidateInfoStrip(c) {
   else { badge.classList.add('badge-pending'); badge.textContent = '🔵 Pending'; }
 
   const meta = [];
-  if (c.answerCount) meta.push(`${c.answerCount} answer${c.answerCount !== 1 ? 's' : ''} on file`);
-  if (c.submittedAt)  meta.push(`Submitted: ${new Date(c.submittedAt?.seconds ? c.submittedAt.seconds * 1000 : c.submittedAt).toLocaleDateString()}`);
-  if (c.assignedSets?.length) meta.push(`${c.assignedSets.length} set${c.assignedSets.length !== 1 ? 's' : ''} assigned`);
+  if (c.answerCount) meta.push(`${c.answerCount} answer${c.answerCount!==1?'s':''} on file`);
+  if (c.submittedAt)  meta.push(`Submitted: ${new Date(c.submittedAt?.seconds ? c.submittedAt.seconds*1000 : c.submittedAt).toLocaleDateString()}`);
+  if (c.assignedSets?.length) meta.push(`${c.assignedSets.length} set${c.assignedSets.length!==1?'s':''} assigned`);
   document.getElementById('stripMeta').textContent = meta.join('  ·  ');
   document.getElementById('candidateInfoStrip').style.display = 'block';
 }
 
-/* ─── Load answers for a candidate ─────────────────────────────────────────── */
+/* ── Load answers ─────────────────────────────────────────────────────────── */
 async function loadCandidateAnswers(id) {
   if (!window.getCandidateAnswersById) return;
   try {
     const data = await window.getCandidateAnswersById(id);
     uploadedAnswers = data.answers || [];
+    candidateTranscript = data.fullTranscript || '';
 
     if (uploadedAnswers.length === 0) {
-      showStatus('answersStatus', 'ℹ️ This candidate has not submitted answers yet.', 'info');
+      showStatus('answersStatus', 'ℹ️ Candidate has not submitted answers yet.', 'info');
       return;
     }
 
     const container = document.getElementById('candidateAnswersDisplay');
-    container.innerHTML = `<h3 style="color:var(--blue);margin-bottom:1rem;font-size:0.9rem;text-transform:uppercase;letter-spacing:1px;">📝 Answers (${uploadedAnswers.length})</h3>`;
+    container.innerHTML = `<p style="color:var(--green);font-size:0.85rem;margin-bottom:1rem;">✅ ${uploadedAnswers.length} answers received</p>`;
     uploadedAnswers.forEach((ans, i) => {
       const d = document.createElement('div');
-      d.className = 'question';
-      d.innerHTML = `<div class="question-number">Answer ${i + 1}</div><div class="question-text">${ans}</div>`;
+      d.className = 'answer-block';
+      const qRef = uploadedQuestions[i] ? `<div class="q-ref">Q: ${uploadedQuestions[i]}</div>` : '';
+      d.innerHTML = `<div class="answer-label">Answer ${i+1}</div>${qRef}<div class="answer-text">${ans || '<em style="color:var(--muted)">No response recorded</em>'}</div>`;
       container.appendChild(d);
     });
 
-    showStatus('answersStatus', `✓ ${uploadedAnswers.length} answers loaded`, 'success');
-    document.getElementById('evaluateBtn').style.display = 'block';
+    // Transcript tab
+    if (candidateTranscript) {
+      document.getElementById('transcriptDisplay').textContent = candidateTranscript;
+    }
+
+    showStatus('answersStatus', `✅ ${uploadedAnswers.length} answers loaded from Firebase`, 'success');
+    document.getElementById('answersTabSection').style.display = 'block';
   } catch (err) {
     showStatus('answersStatus', 'Could not load answers: ' + err.message, 'error');
   }
 }
 
-/* ─── Evaluate answers ──────────────────────────────────────────────────────── */
+/* ── Evaluate ─────────────────────────────────────────────────────────────── */
 async function evaluateAnswers() {
-  if (!uploadedQuestions.length || !uploadedAnswers.length) {
-    showStatus('evaluationResults', '⚠️ Load questions and ensure the candidate has submitted answers.', 'error');
-    return;
-  }
+  const btn = document.getElementById('evaluateBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Evaluating…';
   const rc = document.getElementById('evaluationResults');
   rc.innerHTML = '<div style="text-align:center;padding:2rem;"><span class="loading"></span></div>';
-
   try {
     let result;
+    const qs = uploadedQuestions.length ? uploadedQuestions : uploadedAnswers.map((_,i)=>`Question ${i+1}`);
     if (window.evaluateCandidateAnswers) {
-      result = await window.evaluateCandidateAnswers(uploadedQuestions, uploadedAnswers);
+      result = await window.evaluateCandidateAnswers(qs, uploadedAnswers);
     } else {
-      result = basicScore();
+      result = basicScore(qs);
     }
-    displayEvalResults(result);
+    displayEvalResults(result, qs);
   } catch (err) {
-    showStatus('evaluationResults', 'Evaluation error: ' + err.message, 'error');
+    showStatus('evaluationResults','Evaluation error: '+err.message,'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '⚡ Run Evaluation';
   }
 }
 
-function basicScore() {
-  const wc = uploadedAnswers.join(' ').split(/\s+/).length;
+function basicScore(qs) {
+  const wc = uploadedAnswers.join(' ').split(/\s+/).filter(Boolean).length;
+  const avg = Math.round(wc / Math.max(1, uploadedAnswers.length));
   return {
-    overallScore: Math.min(100, Math.round((wc / (uploadedQuestions.length * 50)) * 100)),
-    timestamp:    new Date().toLocaleDateString(),
-    feedback:     `Evaluated ${uploadedAnswers.length} answers across ${uploadedQuestions.length} questions.`,
+    overallScore: Math.min(100, Math.round((avg/60)*60 + (uploadedAnswers.length/Math.max(1,qs.length))*40)),
+    timestamp: new Date().toLocaleDateString(),
+    feedback: `${uploadedAnswers.length} answers, avg ${avg} words each.`,
   };
 }
 
-function displayEvalResults(result) {
-  const cls = result.overallScore >= 70 ? 'high' : result.overallScore >= 50 ? 'medium' : 'low';
+function displayEvalResults(result, qs) {
+  const cls = result.overallScore>=70?'high':result.overallScore>=50?'medium':'low';
   document.getElementById('evaluationResults').innerHTML = `
     <div class="evaluation-result">
       <h3 style="color:var(--cyan);margin-bottom:1rem;">📊 Evaluation Complete</h3>
       <div class="score-display ${cls}">${result.overallScore}%</div>
-      <p style="text-align:center;color:var(--muted);">Overall Score</p>
+      <p style="text-align:center;color:var(--muted);margin-bottom:1rem;">Overall Score</p>
       <div class="evaluation-feedback">
-        <strong>Questions:</strong> ${uploadedQuestions.length}<br/>
-        <strong>Answers:</strong> ${uploadedAnswers.length}<br/>
-        <strong>Date:</strong> ${result.timestamp}<br/>
+        <strong>Questions:</strong> ${qs.length}<br/>
+        <strong>Answers received:</strong> ${uploadedAnswers.length}<br/>
+        <strong>Evaluated:</strong> ${result.timestamp}<br/>
         <p style="margin-top:0.75rem;">${result.feedback || ''}</p>
       </div>
     </div>`;
 }
 
-/* ─── Save & assign questions to candidate ──────────────────────────────────── */
+/* ── Save & assign ────────────────────────────────────────────────────────── */
 function updateSaveButton() {
   const btn = document.getElementById('saveQuestionsBtn');
   const msg = document.getElementById('assignTarget');
   const ready = uploadedQuestions.length > 0 && selectedCandidateId;
   btn.disabled = !ready;
   if (!uploadedQuestions.length && !selectedCandidateId) {
-    msg.textContent = 'Upload questions & select a candidate to enable this button.';
+    msg.textContent = 'Upload questions & select a candidate to enable.';
   } else if (!uploadedQuestions.length) {
-    msg.textContent = 'Upload a questions file first.';
+    msg.textContent = 'Upload a questions .txt file first.';
   } else if (!selectedCandidateId) {
-    msg.textContent = 'Select a candidate to assign the questions to.';
+    msg.textContent = 'Select a candidate to assign questions to.';
   } else {
     const c = selectedCandidateObj;
-    msg.innerHTML = `Will assign <strong>${uploadedQuestions.length} question${uploadedQuestions.length !== 1 ? 's' : ''}</strong> to <strong>${c ? (c.name || c.email) : selectedCandidateId}</strong>`;
+    msg.innerHTML = `Will send <strong>${uploadedQuestions.length} question${uploadedQuestions.length!==1?'s':''}</strong> → <strong>${c ? (c.name||c.email) : selectedCandidateId}</strong>`;
   }
 }
 
 async function saveQuestionsToFirebase() {
-  if (!uploadedQuestions.length) { showStatus('firebaseStatus', 'No questions to save.', 'error'); return; }
+  if (!uploadedQuestions.length) { showStatus('firebaseStatus','No questions to save.','error'); return; }
   const btn = document.getElementById('saveQuestionsBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="loading"></span> Saving…';
+  btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Sending…';
 
-  // Wait for module
   let attempts = 0;
-  while (!window.saveInterviewQuestions && attempts < 20) {
-    await new Promise(r => setTimeout(r, 250)); attempts++;
-  }
+  while (!window.saveInterviewQuestions && attempts < 30) { await delay(250); attempts++; }
   if (!window.saveInterviewQuestions) {
-    showStatus('firebaseStatus', '⚠️ Firebase module not ready.', 'error');
-    btn.disabled = false; btn.innerHTML = '☁️ Save & Assign to Candidate'; return;
+    showStatus('firebaseStatus','⚠️ Firebase module not ready.','error');
+    btn.disabled=false; btn.innerHTML='🚀 Send Questions to Candidate'; return;
   }
 
   try {
-    const setId = await window.saveInterviewQuestions(
-      uploadedQuestions,
-      selectedCandidateId || null,
-      null,
-    );
-    const cname = selectedCandidateObj ? (selectedCandidateObj.name || selectedCandidateObj.email) : '—';
+    const setId = await window.saveInterviewQuestions(uploadedQuestions, selectedCandidateId||null, null);
+    const cname = selectedCandidateObj ? (selectedCandidateObj.name||selectedCandidateObj.email) : '—';
     showStatus('firebaseStatus',
-      `✅ Saved ${uploadedQuestions.length} questions (set ID: <code>${setId}</code>)`
-      + (selectedCandidateId ? ` and assigned to <strong>${cname}</strong>. They'll see it on cand.html.` : '.'),
+      `✅ ${uploadedQuestions.length} questions saved (set: <code>${setId}</code>)`
+      + (selectedCandidateId ? ` — assigned to <strong>${cname}</strong>. They'll see it instantly.` : ''),
       'success');
-
-    // Refresh candidate info strip to reflect new 'invited' status
     if (selectedCandidateId) await loadCandidatesFromDatabase();
   } catch (err) {
-    showStatus('firebaseStatus', 'Firebase error: ' + err.message, 'error');
+    showStatus('firebaseStatus','Firebase error: '+err.message,'error');
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = '☁️ Save & Assign to Candidate';
+    btn.disabled=false; btn.innerHTML='🚀 Send Questions to Candidate';
     updateSaveButton();
   }
 }
 
-/* ─── Utility ───────────────────────────────────────────────────────────────── */
+/* ── Tab switch ───────────────────────────────────────────────────────────── */
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+/* ── Utils ────────────────────────────────────────────────────────────────── */
+function delay(ms) { return new Promise(r => setTimeout(r,ms)); }
+
 function showStatus(elId, html, type) {
   const el = document.getElementById(elId);
-  if (type === 'success' || type === 'error' || type === 'info') {
+  if (['success','error','info'].includes(type)) {
     el.innerHTML = `<div class="status-message ${type}">${html}</div>`;
   } else {
     el.innerHTML = `<div style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0;">${html}</div>`;
@@ -518,18 +560,19 @@ function showStatus(elId, html, type) {
 
 function handleLogout() {
   if (window.logoutRecruiter) window.logoutRecruiter();
-  else { localStorage.removeItem('titanRole'); window.location.href = './recruiterlogin.html'; }
+  else { localStorage.removeItem('titanRole'); window.location.href='./recruiterlogin.html'; }
 }
 
-/* ─── Boot ───────────────────────────────────────────────────────────────────── */
+/* ── Boot ─────────────────────────────────────────────────────────────────── */
 window.addEventListener('load', () => {
   if (window.checkRecruiterAuth) window.checkRecruiterAuth();
   loadCandidatesFromDatabase();
+  const email = localStorage.getItem('titanEmail');
+  if (email) document.getElementById('recruiterBadge').textContent = email;
 });
 
-// expose for module callbacks
 window.loadCandidatesFromDatabase = loadCandidatesFromDatabase;
-window.handleLogout               = handleLogout;
+window.handleLogout = handleLogout;
 </script>
 </body>
 </html>
