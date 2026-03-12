@@ -138,16 +138,10 @@ const voiceProfiles = new Map();
 export async function recordVoiceSample(duration = 5000) {
   return new Promise((resolve, reject) => {
     try {
-      // Audio feedback
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then((stream) => {
           const mediaRecorder = new MediaRecorder(stream);
           const audioChunks = [];
-          
-          // Play start sound
-          speakText("Recording voice sample. Please speak clearly.");
           
           mediaRecorder.ondataavailable = (event) => {
             audioChunks.push(event.data);
@@ -156,7 +150,6 @@ export async function recordVoiceSample(duration = 5000) {
           mediaRecorder.onstop = () => {
             const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
             const audioUrl = URL.createObjectURL(audioBlob);
-            speakText("Recording complete.");
             
             // Stop all tracks
             stream.getTracks().forEach(track => track.stop());
@@ -183,7 +176,6 @@ export async function recordVoiceSample(duration = 5000) {
         })
         .catch((error) => {
           console.error("Microphone access error:", error);
-          speakText("Error accessing microphone. Please enable microphone permissions.");
           reject({ error: error.message });
         });
     } catch (error) {
@@ -212,7 +204,8 @@ export function startVoiceListener(language = 'en-US') {
     let transcript = '';
     
     recognition.onstart = () => {
-      speakText("Listening...");
+      // Don't speak here - let the HTML handle all prompts
+      console.log("Voice listener started");
     };
     
     recognition.onresult = (event) => {
@@ -225,12 +218,11 @@ export function startVoiceListener(language = 'en-US') {
     
     recognition.onerror = (event) => {
       console.error("Voice recognition error:", event.error);
-      speakText(`Error: ${event.error}`);
       reject({ error: event.error });
     };
     
     recognition.onend = () => {
-      speakText("Processing voice input.");
+      console.log("Voice listener ended. Transcript:", transcript);
       resolve({ transcript: transcript.trim() });
     };
     
@@ -241,18 +233,12 @@ export function startVoiceListener(language = 'en-US') {
 // ── Enroll Candidate Voice (First Time Setup) ──
 export async function enrollCandidateVoice(email, userId) {
   try {
-    // Record 3 voice samples for better recognition accuracy
-    speakText("Voice enrollment starting. You will record 3 voice samples.");
-    
     const samples = [];
     for (let i = 1; i <= 3; i++) {
-      speakText(`Recording sample ${i} of 3. Please say: I am ready for my interview.`);
-      
       const sample = await recordVoiceSample(3000);
       samples.push(sample.voiceData);
       
       if (i < 3) {
-        speakText("Sample recorded. Please prepare for the next sample.");
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
@@ -272,7 +258,6 @@ export async function enrollCandidateVoice(email, userId) {
     
     // Save to Firestore
     try {
-      const voiceRef = collection(db, 'voiceProfiles');
       await setDoc(doc(db, 'voiceProfiles', userId), {
         email: email,
         userId: userId,
@@ -285,7 +270,6 @@ export async function enrollCandidateVoice(email, userId) {
       console.warn("Firestore save warning:", firestoreError);
     }
     
-    speakText("Voice enrollment successful. You can now use voice authentication to login.");
     console.log("Voice profile enrolled for:", email);
     
     return {
@@ -296,7 +280,6 @@ export async function enrollCandidateVoice(email, userId) {
     
   } catch (error) {
     console.error("Voice enrollment error:", error);
-    speakText("Voice enrollment failed. Please try again.");
     return {
       success: false,
       error: error.message,
@@ -304,11 +287,9 @@ export async function enrollCandidateVoice(email, userId) {
   }
 }
 
-// ── Voice Authentication Login ──
+// ── Voice Authentication Login (simplified for enrollment phrase matching) ──
 export async function authenticateWithVoice(email) {
   try {
-    speakText(`Voice authentication for ${email}. Please say the enrollment phrase.`);
-    
     // Start listening for voice
     const voiceInput = await startVoiceListener('en-US');
     const recognizedText = voiceInput.transcript.toLowerCase();
@@ -316,7 +297,6 @@ export async function authenticateWithVoice(email) {
     // Check if profile exists
     const voiceProfile = voiceProfiles.get(email);
     if (!voiceProfile) {
-      speakText("Voice profile not found. Please enroll first.");
       return {
         authenticated: false,
         error: "Voice profile not found",
@@ -331,8 +311,6 @@ export async function authenticateWithVoice(email) {
     
     // If similarity is above 70%, consider it authenticated
     if (similarity > 70) {
-      speakText("Voice authentication successful. Welcome back.");
-      
       // Sign in with Firebase
       const result = await signInWithEmail(email, "voice_auth_" + voiceProfile.userId);
       
@@ -342,7 +320,6 @@ export async function authenticateWithVoice(email) {
         confidenceScore: similarity,
       };
     } else {
-      speakText("Voice authentication failed. Please try again or use another login method.");
       return {
         authenticated: false,
         error: "Voice did not match enrollment",
@@ -352,7 +329,6 @@ export async function authenticateWithVoice(email) {
     
   } catch (error) {
     console.error("Voice authentication error:", error);
-    speakText("Voice authentication error. Please try again.");
     return {
       authenticated: false,
       error: error.message,

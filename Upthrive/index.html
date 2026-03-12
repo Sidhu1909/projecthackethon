@@ -578,18 +578,14 @@
         <div class="form-title">WELCOME BACK</div>
         <div class="form-sub" id="signinSub">Signing in as <span id="signinRoleLabel">Recruiter</span></div>
 
-        <!-- Voice Authentication (Candidate Only) -->
+        <!-- Voice Authentication -->
         <div class="voice-section" id="voiceSignInSection">
           <div class="voice-label"><span class="mic-icon">🎤</span> Voice Authentication</div>
           <div class="voice-status" id="voiceSignInStatus">Ready to authenticate with voice</div>
-          <div class="field">
-            <label>Email (for voice auth)</label>
-            <input type="email" id="voiceEmail" placeholder="you@company.com"/>
-          </div>
           <button class="voice-btn" id="voiceSignInBtn" onclick="handleVoiceSignIn()">
-            <span class="mic-icon">🎤</span> Authenticate with Voice
+            <span class="mic-icon">🎤</span> Start Voice Authentication
           </button>
-          <div class="voice-divider">or use email</div>
+          <div class="voice-divider">or use email & password</div>
         </div>
 
         <div class="field">
@@ -688,6 +684,7 @@
     authenticateWithVoice,
     checkVoiceAuthAvailable,
     speakText,
+    startVoiceListener,
     stopVoiceListener
   } from "./index.js";
 
@@ -701,6 +698,7 @@
     authenticateWithVoice,
     checkVoiceAuthAvailable,
     speakText,
+    startVoiceListener,
     stopVoiceListener
   };
 
@@ -923,12 +921,6 @@
 
   // ── VOICE SIGN IN ──
   async function handleVoiceSignIn() {
-    const email = document.getElementById('voiceEmail').value.trim();
-    
-    if (!email) {
-      return showToast('Please enter your email for voice authentication.', 'error');
-    }
-
     const voiceBtn = document.getElementById('voiceSignInBtn');
     const status = document.getElementById('voiceSignInStatus');
 
@@ -937,38 +929,115 @@
       const micIcon = voiceBtn.querySelector('.mic-icon');
       micIcon.classList.add('animated');
 
+      // STEP 1: Ask if recruiter or candidate
       status.className = 'voice-status recording';
-      status.textContent = '🎤 Preparing voice authentication...';
+      status.textContent = '🎤 Asking about your role...';
 
-      // Check if voice auth is available
-      const availCheck = await window._firebase.checkVoiceAuthAvailable(email);
-      if (!availCheck.voiceAuthAvailable) {
-        status.className = 'voice-status';
-        status.textContent = 'Voice authentication not enrolled.';
-        return showToast('Voice authentication not set up for this account. Please enroll first.', 'error');
+      window._firebase.speakText('Are you a recruiter or a candidate?');
+      await sleep(1000);
+
+      const roleResponse = await window._firebase.startVoiceListener('en-US');
+      const roleText = roleResponse.transcript.toLowerCase();
+
+      console.log('Role response:', roleText);
+
+      // Determine role
+      let detectedRole = 'candidate';
+      if (roleText.includes('recruiter') || roleText.includes('recru')) {
+        detectedRole = 'recruiter';
+        status.textContent = 'Detected: Recruiter';
+      } else {
+        status.textContent = 'Detected: Candidate';
       }
 
-      status.textContent = '🎤 Please say: I am ready for my interview';
-      
-      // Authenticate with voice
-      const result = await window._firebase.authenticateWithVoice(email);
+      await sleep(800);
 
-      if (result.authenticated) {
+      // STEP 2: If recruiter, switch back to normal form. If candidate, use voice auth
+      if (detectedRole === 'recruiter') {
+        status.className = 'voice-status';
+        status.textContent = 'Switching to recruiter login...';
+        window._firebase.speakText('Switching to recruiter login form.');
+        selectRole('recruiter');
+        showToast('Please use email and password to login as recruiter.', 'error');
+        voiceBtn.disabled = false;
+        const icon = voiceBtn.querySelector('.mic-icon');
+        icon.classList.remove('animated');
+        return;
+      }
+
+      // CANDIDATE VOICE AUTHENTICATION
+      selectRole('candidate');
+      
+      // Ask for email
+      status.textContent = '🎤 Listening for email...';
+      window._firebase.speakText('Please say your email address clearly.');
+      await sleep(500);
+
+      const emailResponse = await window._firebase.startVoiceListener('en-US');
+      let emailText = emailResponse.transcript.toLowerCase().trim();
+      
+      // Clean up email
+      emailText = emailText.replace(/\s+at\s+/g, '@').replace(/\s+dot\s+/g, '.');
+      emailText = emailText.replace(/\s/g, '');
+
+      console.log('Email detected:', emailText);
+
+      if (!emailText.includes('@')) {
+        status.className = 'voice-status';
+        status.textContent = '❌ Email not recognized. Please try normal login.';
+        window._firebase.speakText('I could not understand the email. Please use the normal login form.');
+        showToast('Email not recognized. Please login manually.', 'error');
+        return;
+      }
+
+      status.textContent = '🎤 Email received. Listening for password...';
+      await sleep(500);
+
+      // Ask for password
+      window._firebase.speakText('Now please say your password.');
+      await sleep(500);
+
+      const passwordResponse = await window._firebase.startVoiceListener('en-US');
+      const password = passwordResponse.transcript.trim();
+
+      console.log('Password detected (masked)');
+
+      if (!password || password.length < 6) {
+        status.className = 'voice-status';
+        status.textContent = '❌ Password too short. Please try normal login.';
+        window._firebase.speakText('Password is too short or not recognized. Please use normal login.');
+        showToast('Password invalid. Please login manually.', 'error');
+        return;
+      }
+
+      // Attempt sign in
+      status.textContent = 'Authenticating candidate...';
+      window._firebase.speakText('Authenticating. Please wait.');
+      await sleep(300);
+
+      const { user, error } = await window._firebase.signInWithEmail(emailText, password);
+
+      if (!error && user) {
         status.className = 'voice-status enrolled';
-        status.textContent = `✓ Voice authenticated (${result.confidenceScore}% match)`;
+        status.textContent = '✓ Candidate authenticated via voice';
         localStorage.setItem('titanRole', 'candidate');
-        showToast('Voice authentication successful!', 'success');
+        window._firebase.speakText('Authentication successful. Welcome to the interview system.');
+        showToast('Candidate voice authentication successful!', 'success');
         setTimeout(() => {
           window.location.href = '/candidate-dashboard.html';
         }, 1500);
       } else {
         status.className = 'voice-status';
-        status.textContent = `❌ Authentication failed (${result.confidenceScore}% match). Try again.`;
-        showToast('Voice authentication failed. Please try again or use email login.', 'error');
+        status.textContent = '❌ Authentication failed. Incorrect credentials.';
+        window._firebase.speakText('Authentication failed. Incorrect email or password. Please try again with the normal login form.');
+        showToast('Authentication failed. ' + formatError(error), 'error');
       }
+
     } catch (error) {
       status.className = 'voice-status';
       status.textContent = 'Voice auth error: ' + error.message;
+      console.error('Voice auth error:', error);
+      window._firebase.speakText('Voice authentication encountered an error. Please use normal login.');
       showToast('Voice authentication error: ' + error.message, 'error');
       window._firebase.stopVoiceListener();
     } finally {
@@ -976,6 +1045,11 @@
       const micIcon = voiceBtn.querySelector('.mic-icon');
       micIcon.classList.remove('animated');
     }
+  }
+
+  // ── Helper: Sleep function ──
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // ── Error Formatter ──
