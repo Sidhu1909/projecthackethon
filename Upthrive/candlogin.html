@@ -817,7 +817,8 @@ function switchTab(mode) {
     cardSubtitle.textContent = 'Create your account';
   }
 
-  resetFlow();
+  // reset UI then start the selected flow without re‑asking intent
+  resetFlow(true);
 }
 
 function captureIntentMode() {
@@ -1222,7 +1223,7 @@ function handleAuthResult(result) {
   }
 }
 
-function resetFlow() {
+function resetFlow(skipIntent = false) {
   speechSynthesis && speechSynthesis.cancel();
   state = 'idle';
 
@@ -1240,7 +1241,13 @@ function resetFlow() {
   enableMic(false);
 
   setTimeout(() => {
-    captureIntentMode();
+    if (skipIntent) {
+      // resume the currently selected mode
+      if (currentMode === 'signin') startSignInFlow();
+      else startSignUpFlow();
+    } else {
+      captureIntentMode();
+    }
   }, 300);
 }
 
