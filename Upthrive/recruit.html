@@ -454,9 +454,10 @@
   <script type="module" src="./recruit.js"></script>
 
   <script>
-    // Global state for questions and answers
+    // Global state for questions, answers and file
     let uploadedQuestions = [];
     let uploadedAnswers = [];
+    let currentQuestionFile = null;  // store original file for database/storage upload
 
     // Handle drag and drop for questions
     document.getElementById('questionsUploadArea').addEventListener('dragover', (e) => {
@@ -523,6 +524,7 @@
       try {
         showStatus('questionsStatus', 'Parsing file...', '');
         uploadedQuestions = await parseTextFile(file);
+        currentQuestionFile = file; // remember for storage upload
 
         showStatus('questionsStatus', `✓ Loaded ${uploadedQuestions.length} questions`, 'success');
         document.getElementById('questionsFileList').style.display = 'block';
@@ -550,14 +552,18 @@
           selectElement.innerHTML = '<option value="">-- Choose a candidate --</option>';
           
           if (candidates.length === 0) {
-            showStatus('answersStatus', '⚠️ No candidates with answers found in database', 'error');
+            showStatus('answersStatus', '⚠️ No candidates found in database', 'error');
             return;
           }
           
           candidates.forEach(candidate => {
             const option = document.createElement('option');
             option.value = candidate.id;
-            option.textContent = `${candidate.email} (${candidate.answerCount} answers)`;
+            // show answer count if available
+            const label = candidate.answerCount != null
+              ? `${candidate.email} (${candidate.answerCount} answers)`
+              : candidate.email;
+            option.textContent = label;
             option.dataset.candidateData = JSON.stringify(candidate);
             selectElement.appendChild(option);
           });
@@ -725,9 +731,34 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="loading"></span> Saving...';
 
+      const candidateId = document.getElementById('candidateSelect').value || null;
+
       if (window.saveInterviewQuestions) {
-        window.saveInterviewQuestions(uploadedQuestions).then(() => {
-          showStatus('firebaseStatus', `✓ Saved ${uploadedQuestions.length} questions to Firebase`, 'success');
+        // if a file is available, upload it to storage first
+        const maybeUpload = async () => {
+          if (currentQuestionFile && window.firebase && firebase.storage) {
+            const storageRef = firebase.storage().ref();
+            const path = `questionFiles/${firebase.auth().currentUser.uid}/${Date.now()}_${currentQuestionFile.name}`;
+            const fileRef = storageRef.child(path);
+            await fileRef.put(currentQuestionFile);
+            return await fileRef.getDownloadURL();
+          }
+          return null;
+        };
+
+        maybeUpload().then(fileUrl => {
+          return window.saveInterviewQuestions(uploadedQuestions, candidateId, fileUrl);
+        }).then(() => {
+          let msg = `✓ Saved ${uploadedQuestions.length} questions to Firebase`;
+          if (candidateId) {
+            const opt = document.querySelector(`#candidateSelect option[value="${candidateId}"]`);
+            const email = opt ? opt.textContent : '';
+            msg += ` and assigned to ${email}`;
+          }
+          if (currentQuestionFile) {
+            msg += ` (original file uploaded)`;
+          }
+          showStatus('firebaseStatus', msg, 'success');
           btn.disabled = false;
           btn.innerHTML = '☁️ Save Questions to Firebase';
         }).catch(err => {

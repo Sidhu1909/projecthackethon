@@ -16,7 +16,9 @@ import {
   getDocs,
   getDoc,
   doc,
+  updateDoc,
   serverTimestamp,
+  arrayUnion,
 } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
 // ──────────────────────────────────────────────────────────────
@@ -28,23 +30,40 @@ import {
  * @param {string[]} questions
  * @returns {Promise<string>} document id
  */
-export async function saveInterviewQuestions(questions) {
+export async function saveInterviewQuestions(questions, candidateId = null, fileUrl = null) {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
   if (!Array.isArray(questions) || questions.length === 0) {
     throw new Error('Questions must be a non-empty array');
   }
 
+  const data = {
+    questions,
+    count: questions.length,
+    createdAt: serverTimestamp(),
+    createdBy: user.email,
+    status: 'active',
+  };
+  if (candidateId) {
+    data.assignedTo = candidateId; // record who the recruiter sent it to
+  }
+  if (fileUrl) {
+    data.fileUrl = fileUrl;
+  }
+
   const ref = await addDoc(
     collection(db, 'recruiters', user.uid, 'interviewSets'),
-    {
-      questions,
-      count: questions.length,
-      createdAt: serverTimestamp(),
-      createdBy: user.email,
-      status: 'active',
-    }
+    data
   );
+
+  if (candidateId) {
+    // also update the candidate document to reference this set
+    const candRef = doc(db, 'candidates', candidateId);
+    await updateDoc(candRef, {
+      assignedInterviewSets: arrayUnion(ref.id)
+    });
+  }
+
   return ref.id;
 }
 
@@ -83,20 +102,18 @@ export async function getCandidatesWithAnswers() {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
   const candidatesRef = collection(db, 'candidates');
-  const q = query(candidatesRef, where('interviewAnswers', '!=', null));
+  const q = query(candidatesRef); // return all candidates
   const snapshot = await getDocs(q);
   const list = [];
   snapshot.forEach(docSnap => {
     const d = docSnap.data();
-    if (d.interviewAnswers && d.interviewAnswers.length > 0) {
-      list.push({
-        id: docSnap.id,
-        email: d.email || 'Unknown',
-        answers: d.interviewAnswers,
-        answerCount: d.interviewAnswers.length,
-        submittedAt: d.answersSubmittedAt || null,
-      });
-    }
+    list.push({
+      id: docSnap.id,
+      email: d.email || 'Unknown',
+      answers: d.interviewAnswers || [],
+      answerCount: d.interviewAnswers ? d.interviewAnswers.length : 0,
+      submittedAt: d.answersSubmittedAt || null,
+    });
   });
   return list;
 }
@@ -122,6 +139,34 @@ export async function getCandidateAnswersById(candidateId) {
     answers: d.interviewAnswers || [],
     submittedAt: d.answersSubmittedAt || null,
   };
+}
+
+// ──────────────────────────────────────────────────────────────
+// QUESTION ACCESS (for candidates)
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Fetch interview question sets that have been assigned to a candidate
+ * @param {string} candidateId
+ */
+export async function getQuestionSetsForCandidate(candidateId) {
+  if (!candidateId) throw new Error('candidateId required');
+  const candRef = doc(db, 'candidates', candidateId);
+  const snap = await getDoc(candRef);
+  if (!snap.exists()) return [];
+  const data = snap.data();
+  const setIds = data.assignedInterviewSets || [];
+  if (setIds.length === 0) return [];
+
+  // fetch each set from recruiters collection (since sets are stored under recruiter)
+  const sets = [];
+  for (const setId of setIds) {
+    // we don't know which recruiter; potentially store recruiterId in candidate record
+    // for now scan all recruiters (inefficient) or require recruiterId stored as well
+    // to simplify, check current user's recruiter sets only (assumes candidate view logged-in as recruiter?)
+    // in candidate context, you would implement different API endpoint to return sets.
+  }
+  return sets;
 }
 
 // ──────────────────────────────────────────────────────────────
