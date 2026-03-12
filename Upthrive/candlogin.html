@@ -4,7 +4,6 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Voice Authentication — TalentBridge</title>
-  <!-- ARIA live regions announced immediately for screen readers -->
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,13 +34,11 @@
       overflow: hidden;
     }
 
-    /* ── Accessibility: visible focus ring ── */
     :focus-visible {
       outline: 2px solid var(--blue);
       outline-offset: 4px;
     }
 
-    /* ── ARIA live region (off-screen but readable by screen readers) ── */
     #aria-live {
       position: absolute;
       width: 1px; height: 1px;
@@ -50,7 +47,6 @@
       white-space: nowrap;
     }
 
-    /* ── Background grid ── */
     body::before {
       content: '';
       position: fixed; inset: 0;
@@ -61,7 +57,6 @@
       pointer-events: none;
     }
 
-    /* ── Radial glow behind card ── */
     body::after {
       content: '';
       position: fixed;
@@ -72,7 +67,6 @@
       pointer-events: none;
     }
 
-    /* ── Layout ── */
     #app {
       position: relative; z-index: 2;
       min-height: 100vh;
@@ -81,7 +75,6 @@
       padding: 1.5rem;
     }
 
-    /* ── Card ── */
     .card {
       width: 100%;
       max-width: 520px;
@@ -95,7 +88,6 @@
         0 24px 80px rgba(0,0,0,0.6);
     }
 
-    /* Corner decorations */
     .card::before, .card::after {
       content: '';
       position: absolute;
@@ -106,7 +98,6 @@
     .card::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
     .card::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
 
-    /* ── Header ── */
     .card-header {
       text-align: center;
       margin-bottom: 2.5rem;
@@ -148,7 +139,6 @@
       color: var(--muted);
     }
 
-    /* ── Steps indicator ── */
     .steps {
       display: flex;
       align-items: center;
@@ -200,7 +190,6 @@
       transition: color 0.3s;
     }
 
-    /* ── Waveform visualizer ── */
     .viz-wrap {
       display: flex;
       align-items: center;
@@ -233,7 +222,6 @@
       to   { height: var(--h, 40px); }
     }
 
-    /* ── Status / prompt text ── */
     .prompt-box {
       text-align: center;
       margin-bottom: 1.5rem;
@@ -261,7 +249,6 @@
       font-style: normal;
     }
 
-    /* ── State pill ── */
     .state-pill {
       display: inline-flex;
       align-items: center;
@@ -316,7 +303,6 @@
       50% { opacity: 0.3; }
     }
 
-    /* ── Mic button ── */
     .mic-btn {
       display: block;
       width: 72px; height: 72px;
@@ -358,7 +344,6 @@
       50% { transform: scale(1.08); }
     }
 
-    /* ── Auth tabs ── */
     .auth-tab {
       background: none;
       border: none;
@@ -372,16 +357,13 @@
       cursor: pointer;
       transition: all 0.3s;
     }
-    .auth-tab:hover {
-      color: var(--blue);
-    }
+    .auth-tab:hover { color: var(--blue); }
     .auth-tab.active {
       color: var(--blue);
       border-bottom-color: var(--blue);
       text-shadow: 0 0 8px rgba(91,156,246,0.3);
     }
 
-    /* ── Hint text ── */
     .hint {
       text-align: center;
       font-size: 0.6rem;
@@ -391,7 +373,6 @@
       margin-bottom: 1rem;
     }
 
-    /* ── Result overlay ── */
     #result-screen {
       display: none;
       flex-direction: column;
@@ -462,7 +443,6 @@
       color: var(--blue);
     }
 
-    /* ── Demo credentials note ── */
     .demo-note {
       margin-top: 2rem;
       border-top: 1px solid var(--border);
@@ -477,13 +457,11 @@
     }
     .demo-note strong { color: var(--blue); }
 
-    /* ── Animations ── */
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* ── Keyboard shortcut badge ── */
     .kbd {
       display: inline-block;
       border: 1px solid var(--border);
@@ -497,13 +475,11 @@
 </head>
 <body>
 
-<!-- Screen-reader live region -->
 <div id="aria-live" aria-live="assertive" aria-atomic="true" role="status"></div>
 
 <div id="app">
   <div class="card" role="main" aria-label="Voice Authentication">
 
-    <!-- Header -->
     <div class="card-header">
       <div class="logo-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5z"/><path d="M3 11a9 9 0 0 0 18 0"/><line x1="12" y1="20" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -512,27 +488,11 @@
       <p class="card-subtitle" id="card-subtitle">Speak to authenticate</p>
     </div>
 
-    <!-- Auth tabs -->
     <div style="display: flex; gap: 0.8rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); justify-content: center;">
-      <button 
-        id="tab-signin" 
-        class="auth-tab active" 
-        onclick="switchTab('signin')"
-        aria-selected="true"
-        aria-label="Sign in tab">
-        SIGN IN
-      </button>
-      <button 
-        id="tab-signup" 
-        class="auth-tab" 
-        onclick="switchTab('signup')"
-        aria-selected="false"
-        aria-label="Sign up tab">
-        SIGN UP
-      </button>
+      <button id="tab-signin" class="auth-tab active" onclick="switchTab('signin')" aria-selected="true" aria-label="Sign in tab">SIGN IN</button>
+      <button id="tab-signup" class="auth-tab" onclick="switchTab('signup')" aria-selected="false" aria-label="Sign up tab">SIGN UP</button>
     </div>
 
-    <!-- Steps -->
     <div class="steps" aria-label="Authentication progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="2" id="steps-bar">
       <div class="step-dot active" id="step1" aria-label="Step 1: Email">1</div>
       <div class="step-line" id="line1"></div>
@@ -541,20 +501,16 @@
       <div class="step-dot" id="step3" aria-label="Step 3: Result">✓</div>
     </div>
 
-    <!-- Auth form section -->
     <div id="auth-section">
       <div class="step-label" id="step-label">STEP 1 OF 2 — EMAIL</div>
 
-      <!-- Waveform -->
       <div class="viz-wrap" aria-hidden="true" id="viz"></div>
 
-      <!-- Prompt -->
       <div class="prompt-box">
         <div class="prompt-text" id="prompt-text">Initialising…</div>
         <div class="transcript-text" id="transcript-text"></div>
       </div>
 
-      <!-- State pill -->
       <div style="text-align:center; margin-bottom: 1.5rem;">
         <div class="state-pill" id="state-pill">
           <span class="dot"></span>
@@ -562,7 +518,6 @@
         </div>
       </div>
 
-      <!-- Mic button -->
       <button
         class="mic-btn disabled"
         id="mic-btn"
@@ -576,10 +531,8 @@
       <p class="hint">Press <span class="kbd">Space</span> or tap the mic to speak</p>
     </div>
 
-    <!-- Result screen -->
     <div id="result-screen" role="alert" aria-live="assertive"></div>
 
-    <!-- Demo credentials -->
     <div class="demo-note" aria-label="Demo credentials for testing">
       Demo credentials — say: <strong>email</strong> "john at example dot com" &nbsp;·&nbsp; <strong>password</strong> "open sesame"
     </div>
@@ -592,11 +545,10 @@
    CONFIG
 ════════════════════════════════════════ */
 const CREDENTIALS = {
-  email: 'john at example dot com',   // spoken form
+  email: 'john at example dot com',
   password: 'open sesame'
 };
 
-// Normalise spoken text for comparison
 function normalize(str) {
   return str.toLowerCase()
     .replace(/[^a-z0-9\s]/g, '')
@@ -607,9 +559,9 @@ function normalize(str) {
 /* ════════════════════════════════════════
    STATE
 ════════════════════════════════════════ */
-let currentMode = 'signin';  // signin | signup
-let state = 'idle';   // idle | speaking | waiting | listening | done
-let authStep = 'email'; // email | password | password-confirm (for signup)
+let currentMode = 'signin';
+let state = 'idle';
+let authStep = 'email';
 let spokenEmail = '';
 let spokenPassword = '';
 let spokenPasswordConfirm = '';
@@ -632,7 +584,6 @@ for (let i = 0; i < BAR_COUNT; i++) {
 }
 
 function setBars(mode) {
-  // mode: idle | listening | speaking | success | error
   viz.querySelectorAll('.bar').forEach(b => {
     b.className = 'bar';
     if (mode === 'listening') { b.classList.add('active'); }
@@ -654,23 +605,16 @@ function announce(msg) {
 /* ════════════════════════════════════════
    UI HELPERS
 ════════════════════════════════════════ */
+
+// FIX 1: setPrompt no longer calls speak() — the flow controls all speech explicitly
 function setPrompt(text) {
   document.getElementById('prompt-text').textContent = text;
-  // also speak any prompt text that appears (if not already speaking)
-  if (!isSpeaking) {
-    speak(text);
-  }
 }
 
+// FIX 2: setTranscript no longer calls speak() — eliminates conflict with flow speech
 function setTranscript(text) {
-  // convert spoken ' at ' and ' dot ' to symbols for clarity
   let disp = text.replace(/\s+at\s+/gi, '@').replace(/\s+dot\s+/gi, '.');
-  const el = document.getElementById('transcript-text');
-  el.textContent = disp;
-  // speak transcript as feedback (optional)
-  if (!isSpeaking && disp) {
-    speak(disp);
-  }
+  document.getElementById('transcript-text').textContent = disp;
 }
 
 function setPill(mode, label) {
@@ -693,9 +637,6 @@ function enableMic(on) {
 }
 
 function updateSteps(step) {
-  // step: 1, 2, 3
-  // for signin: 1=email, 2=password, 3=result
-  // for signup: 1=email, 2=password, 3=confirm
   const s1 = document.getElementById('step1');
   const s2 = document.getElementById('step2');
   const s3 = document.getElementById('step3');
@@ -722,6 +663,7 @@ function updateSteps(step) {
 
 /* ════════════════════════════════════════
    SPEECH SYNTHESIS
+   FIX 3: isSpeaking guard with reliable reset on both onend AND onerror
 ════════════════════════════════════════ */
 function speak(text, onEnd) {
   if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
@@ -735,20 +677,34 @@ function speak(text, onEnd) {
   utt.pitch = 1.0;
   utt.volume = 1;
 
-  // Pick a clear, natural voice
   const voices = speechSynthesis.getVoices();
   const preferred = voices.find(v =>
     /Samantha|Karen|Daniel|Google UK|Google US|Alex/i.test(v.name)
   ) || voices.find(v => v.lang.startsWith('en'));
   if (preferred) utt.voice = preferred;
 
-  utt.onend = () => {
+  // FIX 3a: always reset isSpeaking and call onEnd in both handlers
+  const done = () => {
     isSpeaking = false;
     if (onEnd) onEnd();
   };
-  utt.onerror = () => { isSpeaking = false; if (onEnd) onEnd(); };
+  utt.onend   = done;
+  utt.onerror = done;
 
-  announce(text); // also announce to screen readers
+  // FIX 3b: safety timeout — if synthesis hangs (common Chrome bug), unblock after 8s
+  const safetyTimer = setTimeout(() => {
+    if (isSpeaking) {
+      isSpeaking = false;
+      if (onEnd) onEnd();
+    }
+  }, 8000);
+
+  // Clear safety timer if speech ends normally
+  const originalDone = done;
+  utt.onend = () => { clearTimeout(safetyTimer); isSpeaking = false; if (onEnd) onEnd(); };
+  utt.onerror = () => { clearTimeout(safetyTimer); isSpeaking = false; if (onEnd) onEnd(); };
+
+  announce(text);
   speechSynthesis.speak(utt);
 }
 
@@ -771,33 +727,41 @@ function listen(onResult, onError) {
   setMicState(true);
   setBars('listening');
 
+  let finalResult = '';
+
   recognition.onresult = (e) => {
-    let interim = '', final = '';
+    let interim = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalResult += e.results[i][0].transcript;
       else interim += e.results[i][0].transcript;
     }
-    setTranscript('"' + (final || interim) + '"');
-    if (final) {
-      recognition.stop();
-      const out = final.trim().toLowerCase();
-      // global commands
+    // FIX 4: only update display here — do NOT call speak() from setTranscript
+    setTranscript('"' + (finalResult || interim) + '"');
+  };
+
+  recognition.onend = () => {
+    setMicState(false);
+    // FIX 5: handle result in onend so we're sure recognition has fully stopped
+    // before we call speak() again — prevents overlap
+    if (finalResult) {
+      const out = finalResult.trim().toLowerCase();
       if (out.includes('try again')) {
         resetFlow();
         return;
       }
-      onResult(final.trim());
+      // Short delay to ensure recognition is fully torn down before speech starts
+      setTimeout(() => onResult(finalResult.trim()), 150);
     }
   };
 
   recognition.onerror = (e) => {
     setMicState(false);
+    finalResult = '';
     if (e.error === 'no-speech') onError('No speech detected. Please try again.');
     else if (e.error === 'not-allowed') onError('Microphone access denied. Please allow mic access.');
     else onError('Error: ' + e.error);
   };
 
-  recognition.onend = () => { setMicState(false); };
   recognition.start();
 }
 
@@ -807,55 +771,49 @@ function listen(onResult, onError) {
 
 function switchTab(mode) {
   speechSynthesis && speechSynthesis.cancel();
-  if (recognition) {
-    try { recognition.abort(); } catch(e) {}
-  }
+  isSpeaking = false; // FIX 6: always clear isSpeaking on tab switch
+  if (recognition) { try { recognition.abort(); } catch(e) {} }
 
   currentMode = mode;
-  const tabSignin = document.getElementById('tab-signin');
-  const tabSignup = document.getElementById('tab-signup');
-  const cardTitle = document.getElementById('card-title');
-  const cardSubtitle = document.getElementById('card-subtitle');
+  const tabSignin  = document.getElementById('tab-signin');
+  const tabSignup  = document.getElementById('tab-signup');
+  const cardTitle  = document.getElementById('card-title');
+  const cardSub    = document.getElementById('card-subtitle');
 
   if (mode === 'signin') {
-    tabSignin.classList.add('active');
-    tabSignup.classList.remove('active');
+    tabSignin.classList.add('active');    tabSignup.classList.remove('active');
     tabSignin.setAttribute('aria-selected', 'true');
     tabSignup.setAttribute('aria-selected', 'false');
     cardTitle.textContent = 'Voice Sign In';
-    cardSubtitle.textContent = 'Speak to authenticate';
+    cardSub.textContent   = 'Speak to authenticate';
   } else {
-    tabSignup.classList.add('active');
-    tabSignin.classList.remove('active');
+    tabSignup.classList.add('active');    tabSignin.classList.remove('active');
     tabSignup.setAttribute('aria-selected', 'true');
     tabSignin.setAttribute('aria-selected', 'false');
     cardTitle.textContent = 'Voice Sign Up';
-    cardSubtitle.textContent = 'Create your account';
+    cardSub.textContent   = 'Create your account';
   }
 
-  // reset UI then start the selected flow without re‑asking intent
   resetFlow(true);
 }
 
 function captureIntentMode() {
-  // Ask user if they want to sign in or sign up
   state = 'idle';
   authStep = 'intent';
   enableMic(false);
-  setPill('speaking', 'SPEAKING');
-  
-  // Update card title/subtitle for intent selection
+
   const cardTitle = document.getElementById('card-title');
-  const cardSubtitle = document.getElementById('card-subtitle');
+  const cardSub   = document.getElementById('card-subtitle');
   cardTitle.textContent = 'Welcome to TalentBridge';
-  cardSubtitle.textContent = 'What would you like to do?';
+  cardSub.textContent   = 'What would you like to do?';
+
+  setPrompt("Sign in or sign up?");
 
   speak("Welcome to TalentBridge. Would you like to sign in or sign up?", () => {
-    setPrompt("Sign in or sign up?");
-    announce("Listening. Please say 'sign in' or 'sign up'.");
+    announce("Listening. Please say sign in or sign up.");
     setPill('', 'READY');
     setBars('idle');
-    setTimeout(() => listenForIntent(), 500);  // Auto-start microphone
+    setTimeout(() => listenForIntent(), 300);
   });
 }
 
@@ -872,26 +830,19 @@ function listenForIntent() {
     setBars('idle');
     setPill('', 'RECEIVED');
 
-    // Check if user said "sign in" or "sign up"
-    const wantsSignIn = spokenIntent.includes('signin') || spokenIntent.includes('sign in') || spokenIntent.includes('signin');
-    const wantsSignUp = spokenIntent.includes('signup') || spokenIntent.includes('sign up') || spokenIntent.includes('signup');
+    const wantsSignIn = /sign\s*in/.test(spokenIntent);
+    const wantsSignUp = /sign\s*up/.test(spokenIntent);
 
     if (wantsSignIn) {
-      speak("Taking you to sign in.", () => {
-        switchTab('signin');
-      });
+      speak("Taking you to sign in.", () => { switchTab('signin'); });
     } else if (wantsSignUp) {
-      speak("Taking you to sign up.", () => {
-        switchTab('signup');
-      });
+      speak("Taking you to sign up.", () => { switchTab('signup'); });
     } else {
-      // If didn't understand, ask again
       speak("Sorry, I didn't catch that. Please say sign in or sign up.", () => {
         setPrompt("Sign in or sign up?");
-        announce("Please try again. Say sign in or sign up.");
         setTranscript('');
         setPill('', 'READY');
-        setTimeout(() => listenForIntent(), 500);
+        setTimeout(() => listenForIntent(), 300);
       });
     }
 
@@ -900,11 +851,10 @@ function listenForIntent() {
     setBars('idle');
     setPill('error', 'ERROR');
     setPrompt(err);
-    announce(err + " Please try again.");
     setTimeout(() => {
       setPrompt("Sign in or sign up?");
       setPill('', 'READY');
-      setTimeout(() => listenForIntent(), 500);
+      setTimeout(() => listenForIntent(), 300);
     }, 2800);
   });
 }
@@ -916,17 +866,16 @@ function startSignInFlow() {
   updateSteps(1);
   setTranscript('');
   enableMic(false);
-  setPill('speaking', 'SPEAKING');
 
-  speak("Welcome. This is the voice authentication system for TalentBridge. Please say your email address after the tone.", () => {
+  setPrompt("Welcome to TalentBridge voice sign-in.");
+
+  speak("Welcome. Please say your email address.", () => {
     setPrompt("Please say your email address.");
     announce("Listening for your email address.");
     setPill('', 'READY');
     setBars('idle');
-    setTimeout(() => captureEmailSignIn(), 500);  // Auto-start microphone
+    setTimeout(() => captureEmailSignIn(), 300);
   });
-
-  setPrompt("Welcome to TalentBridge voice sign-in.");
 }
 
 function startSignUpFlow() {
@@ -937,31 +886,32 @@ function startSignUpFlow() {
   updateSteps(1);
   setTranscript('');
   enableMic(false);
-  setPill('speaking', 'SPEAKING');
 
-  speak("Welcome to TalentBridge. Let's create your voice account. First, please say your email address after the tone.", () => {
+  setPrompt("Let's create your TalentBridge voice account.");
+
+  speak("Welcome. Let's create your account. Please say your email address.", () => {
     setPrompt("Please say your email address.");
     announce("Listening for your email address.");
     setPill('', 'READY');
     setBars('idle');
-    setTimeout(() => captureEmailSignUp(), 500);  // Auto-start microphone
+    setTimeout(() => captureEmailSignUp(), 300);
   });
-
-  setPrompt("Let's create your TalentBridge voice account.");
 }
 
 function handleMicClick() {
   if (state === 'listening') return;
-  
+
   if (currentMode === 'signin') {
-    if (authStep === 'email') captureEmailSignIn();
+    if (authStep === 'email')    captureEmailSignIn();
     else if (authStep === 'password') capturePasswordSignIn();
   } else {
-    if (authStep === 'email') captureEmailSignUp();
+    if (authStep === 'email')    captureEmailSignUp();
     else if (authStep === 'password') capturePasswordSignUp();
     else if (authStep === 'password-confirm') capturePasswordConfirmSignUp();
   }
 }
+
+/* ── Sign-In capture functions ── */
 
 function captureEmailSignIn() {
   state = 'listening';
@@ -976,15 +926,16 @@ function captureEmailSignIn() {
     setBars('idle');
     setPill('', 'RECEIVED');
 
-    // Confirm and move to password
+    // FIX 7: state/step updated BEFORE speaking so next listen starts correctly
+    authStep = 'password';
+    updateSteps(2);
+
     speak('Got it. Now please say your password.', () => {
-      authStep = 'password';
-      updateSteps(2);
       setPrompt("Please say your password.");
       announce("Listening for your password.");
       setTranscript('');
       setPill('', 'READY');
-      setTimeout(() => capturePasswordSignIn(), 500);  // Auto-start microphone
+      setTimeout(() => capturePasswordSignIn(), 300);
     });
 
   }, (err) => {
@@ -992,7 +943,6 @@ function captureEmailSignIn() {
     setBars('idle');
     setPill('error', 'ERROR');
     setPrompt(err);
-    announce(err + " Please try again.");
     setTimeout(() => {
       setPrompt("Please say your email address.");
       setPill('', 'READY');
@@ -1010,19 +960,20 @@ function capturePasswordSignIn() {
   listen((result) => {
     state = 'verifying';
     spokenPassword = normalize(result);
+    // FIX 8: show transcript THEN move to verifying — no speech called from setTranscript
     setTranscript('"' + result + '"');
     setBars('idle');
     setPill('', 'VERIFYING');
     updateSteps(3);
 
-    setTimeout(() => verifySignInCredentials(), 600);
+    // FIX 9: short delay so DOM settles before verification kicks off
+    setTimeout(() => verifySignInCredentials(), 400);
 
   }, (err) => {
     state = 'idle';
     setBars('idle');
     setPill('error', 'ERROR');
     setPrompt(err);
-    announce(err + " Please try again.");
     setTimeout(() => {
       setPrompt("Please say your password.");
       setPill('', 'READY');
@@ -1032,22 +983,23 @@ function capturePasswordSignIn() {
 }
 
 function verifySignInCredentials() {
-  // use firebase instead of dummy credentials
   if (window.attemptFirebaseSignIn) {
     window.attemptFirebaseSignIn(spokenEmail, spokenPassword).then(result => {
       handleAuthResult(result);
     }).catch(err => {
-      console.error('firebase attempt failed:', err);
-      handleAuthResult({ success: false, error: 'Sign-in error' });
+      console.error('Firebase sign-in failed:', err);
+      handleAuthResult({ success: false, error: 'Sign-in error. Please try again.' });
     });
   } else {
-    // fallback to demo mode if firebase not loaded
+    // Demo fallback
     const emailOk    = spokenEmail    === normalize(CREDENTIALS.email);
     const passwordOk = spokenPassword === normalize(CREDENTIALS.password);
     const granted    = emailOk && passwordOk;
-    handleAuthResult({ success: granted, error: granted ? null : 'Credentials do not match' });
+    handleAuthResult({ success: granted, error: granted ? null : 'Credentials do not match.' });
   }
 }
+
+/* ── Sign-Up capture functions ── */
 
 function captureEmailSignUp() {
   state = 'listening';
@@ -1062,15 +1014,15 @@ function captureEmailSignUp() {
     setBars('idle');
     setPill('', 'RECEIVED');
 
-    // Confirm and move to password
+    authStep = 'password';
+    updateSteps(2);
+
     speak('Got it. Now please say your password.', () => {
-      authStep = 'password';
-      updateSteps(2);
       setPrompt("Please say your password.");
       announce("Listening for your password.");
       setTranscript('');
       setPill('', 'READY');
-      setTimeout(() => capturePasswordSignUp(), 500);  // Auto-start microphone
+      setTimeout(() => capturePasswordSignUp(), 300);
     });
 
   }, (err) => {
@@ -1078,7 +1030,6 @@ function captureEmailSignUp() {
     setBars('idle');
     setPill('error', 'ERROR');
     setPrompt(err);
-    announce(err + " Please try again.");
     setTimeout(() => {
       setPrompt("Please say your email address.");
       setPill('', 'READY');
@@ -1100,15 +1051,15 @@ function capturePasswordSignUp() {
     setBars('idle');
     setPill('', 'RECEIVED');
 
-    // Confirm password step
+    authStep = 'password-confirm';
+    updateSteps(3);
+
     speak('Got it. Now please confirm your password.', () => {
-      authStep = 'password-confirm';
-      updateSteps(3);
       setPrompt("Please confirm your password.");
       announce("Listening for password confirmation.");
       setTranscript('');
       setPill('', 'READY');
-      setTimeout(() => capturePasswordConfirmSignUp(), 500);  // Auto-start microphone
+      setTimeout(() => capturePasswordConfirmSignUp(), 300);
     });
 
   }, (err) => {
@@ -1116,7 +1067,6 @@ function capturePasswordSignUp() {
     setBars('idle');
     setPill('error', 'ERROR');
     setPrompt(err);
-    announce(err + " Please try again.");
     setTimeout(() => {
       setPrompt("Please say your password.");
       setPill('', 'READY');
@@ -1138,14 +1088,13 @@ function capturePasswordConfirmSignUp() {
     setBars('idle');
     setPill('', 'VERIFYING');
 
-    setTimeout(() => verifySignUpCredentials(), 600);
+    setTimeout(() => verifySignUpCredentials(), 400);
 
   }, (err) => {
     state = 'idle';
     setBars('idle');
     setPill('error', 'ERROR');
     setPrompt(err);
-    announce(err + " Please try again.");
     setTimeout(() => {
       setPrompt("Please confirm your password.");
       setPill('', 'READY');
@@ -1155,38 +1104,28 @@ function capturePasswordConfirmSignUp() {
 }
 
 function verifySignUpCredentials() {
-  // Check if passwords match
   if (spokenPassword !== spokenPasswordConfirm) {
-    handleAuthResult({
-      success: false,
-      error: 'Passwords do not match'
-    });
+    handleAuthResult({ success: false, error: 'Passwords do not match.' });
     return;
   }
 
-  // Convert spoken form back to email format (e.g., "john at example dot com" → "john@example.com")
   let email = spokenEmail
     .replace(/\s+at\s+/gi, '@')
     .replace(/\s+dot\s+/gi, '.')
     .trim();
 
-  // Use Firebase sign-up
   if (window.signUpWithEmail) {
     window.signUpWithEmail(email, spokenPassword).then(result => {
       handleAuthResult(result);
     }).catch(err => {
-      console.error('firebase signup failed:', err);
-      handleAuthResult({ 
-        success: false, 
+      console.error('Firebase signup failed:', err);
+      handleAuthResult({
+        success: false,
         error: err.message || 'Sign-up failed. Account may already exist.'
       });
     });
   } else {
-    // Fallback if firebase not loaded
-    handleAuthResult({
-      success: false,
-      error: 'Sign-up service not available'
-    });
+    handleAuthResult({ success: false, error: 'Sign-up service not available.' });
   }
 }
 
@@ -1200,11 +1139,11 @@ function handleAuthResult(result) {
   if (result.success) {
     setBars('success');
     setPill('success', 'GRANTED');
-    
-    const isSignUp = currentMode === 'signup';
-    const titleText = isSignUp ? 'Account Created' : 'Access Granted';
-    const subtitleText = isSignUp ? 'Welcome to TalentBridge' : 'Identity verified — welcome back';
-    
+
+    const isSignUp    = currentMode === 'signup';
+    const titleText   = isSignUp ? 'Account Created' : 'Access Granted';
+    const subtitleText= isSignUp ? 'Welcome to TalentBridge' : 'Identity verified — welcome back';
+
     resultScreen.innerHTML = `
       <div class="result-icon success" aria-hidden="true">
         <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1213,35 +1152,40 @@ function handleAuthResult(result) {
       <div class="result-sub">${subtitleText}</div>
       <button class="retry-btn" onclick="resetFlow()" aria-label="Continue">Continue</button>
     `;
-    
-    const msg = isSignUp 
+
+    const msg = isSignUp
       ? "Account created successfully. Welcome to TalentBridge."
       : "Access granted. Identity verified. Welcome back.";
     announce(msg);
     speak(msg);
+
   } else {
     setBars('error');
     setPill('error', 'DENIED');
 
-    const reason = result.error || (currentMode === 'signup' 
-      ? 'Sign-up failed. Please try again.' 
-      : 'Credentials did not match');
+    const reason = result.error || (currentMode === 'signup'
+      ? 'Sign-up failed. Please try again.'
+      : 'Credentials did not match.');
+
     resultScreen.innerHTML = `
       <div class="result-icon error" aria-hidden="true">
         <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </div>
-      <div class="result-title error">Registration Denied</div>
+      <div class="result-title error">${currentMode === 'signup' ? 'Registration Failed' : 'Access Denied'}</div>
       <div class="result-sub">${reason}</div>
       <button class="retry-btn" onclick="resetFlow()" aria-label="Try again">Try Again</button>
     `;
-    announce("Registration not granted. " + reason + ". Please try again.");
-    speak("Registration not granted. " + reason + ". Please try again.");
+    announce("Not granted. " + reason + " Please try again.");
+    speak("Not granted. " + reason + " Please try again.");
   }
 }
 
 function resetFlow(skipIntent = false) {
   speechSynthesis && speechSynthesis.cancel();
+  isSpeaking = false; // FIX 10: always clear on reset
   state = 'idle';
+
+  if (recognition) { try { recognition.abort(); } catch(e) {} }
 
   const authSection  = document.getElementById('auth-section');
   const resultScreen = document.getElementById('result-screen');
@@ -1258,7 +1202,6 @@ function resetFlow(skipIntent = false) {
 
   setTimeout(() => {
     if (skipIntent) {
-      // resume the currently selected mode
       if (currentMode === 'signin') startSignInFlow();
       else startSignUpFlow();
     } else {
@@ -1268,7 +1211,7 @@ function resetFlow(skipIntent = false) {
 }
 
 /* ════════════════════════════════════════
-   KEYBOARD SHORTCUT (Space = mic)
+   KEYBOARD SHORTCUT
 ════════════════════════════════════════ */
 document.addEventListener('keydown', (e) => {
   if (e.code === 'Space' && e.target === document.body) {
@@ -1280,12 +1223,11 @@ document.addEventListener('keydown', (e) => {
 /* ════════════════════════════════════════
    BOOT
 ════════════════════════════════════════ */
-// Voices load async
 function boot() {
   if (speechSynthesis && speechSynthesis.getVoices().length === 0) {
     speechSynthesis.onvoiceschanged = captureIntentMode;
   } else {
-    setTimeout(captureIntentMode, 1000);
+    setTimeout(captureIntentMode, 800);
   }
 }
 
@@ -1295,7 +1237,6 @@ window.addEventListener('load', boot);
 <!-- Load Firebase helpers for sign-in and sign-up -->
 <script type="module">
   import { attemptFirebaseSignIn, attemptFirebaseSignUp } from './candlogin.js';
-  // Functions are exposed to window in candlogin.js
 </script>
 
 </body>
