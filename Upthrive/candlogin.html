@@ -656,11 +656,21 @@ function announce(msg) {
 ════════════════════════════════════════ */
 function setPrompt(text) {
   document.getElementById('prompt-text').textContent = text;
+  // also speak any prompt text that appears (if not already speaking)
+  if (!isSpeaking) {
+    speak(text);
+  }
 }
 
 function setTranscript(text) {
+  // convert spoken ' at ' and ' dot ' to symbols for clarity
+  let disp = text.replace(/\s+at\s+/gi, '@').replace(/\s+dot\s+/gi, '.');
   const el = document.getElementById('transcript-text');
-  el.textContent = text;
+  el.textContent = disp;
+  // speak transcript as feedback (optional)
+  if (!isSpeaking && disp) {
+    speak(disp);
+  }
 }
 
 function setPill(mode, label) {
@@ -770,6 +780,12 @@ function listen(onResult, onError) {
     setTranscript('"' + (final || interim) + '"');
     if (final) {
       recognition.stop();
+      const out = final.trim().toLowerCase();
+      // global commands
+      if (out.includes('try again')) {
+        resetFlow();
+        return;
+      }
       onResult(final.trim());
     }
   };

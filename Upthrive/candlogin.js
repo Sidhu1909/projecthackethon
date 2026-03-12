@@ -15,28 +15,37 @@ import {
 export async function attemptFirebaseSignIn(spokenEmail, spokenPassword) {
   try {
     // normalize inputs (remove spaces, handle common speech errors)
-    const email = spokenEmail.toLowerCase().replace(/\s+/g, '').replace(/at/g, '@').replace(/dot/g, '.');
+    let email = spokenEmail.toLowerCase()
+      .replace(/\s+at\s+/gi, '@')
+      .replace(/\s+dot\s+/gi, '.')
+      .replace(/\s+/g, '');
     const password = spokenPassword.trim();
 
     // basic validation
     if (!email.includes('@') || password.length < 6) {
-      return { success: false, error: 'Invalid email or password format' };
+      const msg = 'Invalid email or password format';
+      window.speak && window.speak(msg);
+      return { success: false, error: msg };
     }
 
     // attempt firebase sign-in
     const result = await signInWithEmail(email, password);
 
     if (result.error) {
+      window.speak && window.speak('Sign in failed: ' + result.error);
       return { success: false, error: result.error };
     }
 
     // success: persist role and return user
     localStorage.setItem('titanRole', 'candidate');
+    window.speak && window.speak('Sign in successful. Welcome back.');
     return { success: true, user: result.user };
 
   } catch (err) {
     console.error('firebase sign-in error:', err);
-    return { success: false, error: err.message || 'Sign-in failed' };
+    const msg = err.message || 'Sign-in failed';
+    window.speak && window.speak(msg);
+    return { success: false, error: msg };
   }
 }
 
@@ -44,29 +53,38 @@ export async function attemptFirebaseSignIn(spokenEmail, spokenPassword) {
 export async function attemptFirebaseSignUp(spokenEmail, spokenPassword) {
   try {
     // normalize inputs (remove spaces, handle common speech errors)
-    const email = spokenEmail.toLowerCase().replace(/\s+/g, '').replace(/at/g, '@').replace(/dot/g, '.');
+    let email = spokenEmail.toLowerCase()
+      .replace(/\s+at\s+/gi, '@')
+      .replace(/\s+dot\s+/gi, '.')
+      .replace(/\s+/g, '');
     const password = spokenPassword.trim();
 
     // basic validation
     if (!email.includes('@') || password.length < 6) {
-      return { success: false, error: 'Invalid email or password format' };
+      const msg = 'Invalid email or password format';
+      window.speak && window.speak(msg);
+      return { success: false, error: msg };
     }
 
     // attempt firebase sign-up
     const result = await signUpWithEmail(email, password);
 
     if (result.error) {
+      window.speak && window.speak('Sign up failed: ' + result.error);
       return { success: false, error: result.error };
     }
 
     // success: persist role and candidate identifier
     localStorage.setItem('titanRole', 'candidate');
     localStorage.setItem('candidateEmail', email);
+    window.speak && window.speak('Account created successfully.');
     return { success: true, user: result.user };
 
   } catch (err) {
     console.error('firebase sign-up error:', err);
-    return { success: false, error: err.message || 'Sign-up failed' };
+    const msg = err.message || 'Sign-up failed';
+    window.speak && window.speak(msg);
+    return { success: false, error: msg };
   }
 }
 
