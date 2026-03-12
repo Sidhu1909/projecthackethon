@@ -414,7 +414,12 @@ async function loadCandidateAnswers(id) {
   if (!window.getCandidateAnswersById) return;
   try {
     const data = await window.getCandidateAnswersById(id);
+<<<<<<< HEAD
     uploadedAnswers = data.answers || [];
+=======
+    // recruit.js getCandidateAnswersById maps interviewAnswers → answers for us
+    uploadedAnswers    = data.answers        || [];
+>>>>>>> 81d43c0 (Add to new file)
     candidateTranscript = data.fullTranscript || '';
 
     if (uploadedAnswers.length === 0) {
