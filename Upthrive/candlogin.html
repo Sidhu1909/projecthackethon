@@ -717,60 +717,70 @@ function listen(onResult, onError) {
   if (!SR) { onError('Speech recognition not supported'); return; }
   if (recognition) { try { recognition.abort(); } catch(e) {} }
 
-  recognition = new SR();
-  recognition.lang = 'en-US';
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 3;
-  recognition.continuous = false;
-
-  setPill('listening', 'LISTENING');
-  setMicState(true);
-  setBars('listening');
-
   let finalResult = '';
-  let resultFired = false; // guard so we never call onResult twice
+  let resultFired = false;
+  let dead = false;
 
-  recognition.onresult = (e) => {
-    let interim = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) finalResult += e.results[i][0].transcript;
-      else interim += e.results[i][0].transcript;
-    }
-    setTranscript('"' + (finalResult || interim) + '"');
+  function startRec() {
+    if (dead) return;
+    recognition = new SR();
+    recognition.lang = 'en-US';
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 3;
+    recognition.continuous = false;
 
-    // ── KEY FIX: fire as soon as we get a final result, don't wait for onend ──
-    // This eliminates the ~5-7 second browser silence-detection timeout
-    if (finalResult && !resultFired) {
-      resultFired = true;
-      recognition.stop(); // stop gracefully — triggers onend but we guard with resultFired
-      const text = finalResult.trim();
-      if (text.toLowerCase().includes('try again')) {
-        resetFlow();
-        return;
+    setPill('listening', 'LISTENING');
+    setMicState(true);
+    setBars('listening');
+
+    recognition.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalResult += e.results[i][0].transcript;
+        else interim += e.results[i][0].transcript;
       }
-      // Tiny rAF delay just to let recognition.stop() flush before speech starts
-      requestAnimationFrame(() => onResult(text));
-    }
-  };
+      setTranscript('"' + (finalResult || interim) + '"');
 
-  recognition.onend = () => {
-    setMicState(false);
-    // Only handle no-result case here (e.g. user said nothing and it timed out)
-    if (!resultFired && !finalResult) {
-      onError('No speech detected. Please try again.');
-    }
-  };
+      if (finalResult && !resultFired) {
+        resultFired = true;
+        dead = true;
+        recognition.stop();
+        const text = finalResult.trim();
+        if (text.toLowerCase().includes('try again')) { resetFlow(); return; }
+        requestAnimationFrame(() => onResult(text));
+      }
+    };
 
-  recognition.onerror = (e) => {
-    setMicState(false);
-    if (resultFired) return; // already handled
-    if (e.error === 'no-speech') onError('No speech detected. Please try again.');
-    else if (e.error === 'not-allowed') onError('Microphone access denied. Please allow mic access.');
-    else if (e.error === 'aborted') return; // intentional abort, ignore
-    else onError('Error: ' + e.error);
-  };
+    recognition.onend = () => {
+      setMicState(false);
+      if (resultFired || dead) return;
+      // No speech — restart silently, keep waveform active
+      setBars('listening');
+      setTimeout(startRec, 100);
+    };
 
-  recognition.start();
+    recognition.onerror = (e) => {
+      setMicState(false);
+      if (resultFired || dead) return;
+      if (e.error === 'no-speech') {
+        // Timed out waiting — restart silently
+        setBars('listening');
+        setTimeout(startRec, 100);
+      } else if (e.error === 'not-allowed') {
+        dead = true;
+        onError('Microphone access denied. Please allow mic access.');
+      } else if (e.error === 'aborted') {
+        return;
+      } else {
+        setBars('listening');
+        setTimeout(startRec, 200);
+      }
+    };
+
+    recognition.start();
+  }
+
+  startRec();
 }
 
 /* ════════════════════════════════════════
@@ -951,11 +961,13 @@ function captureEmailSignIn() {
     setBars('idle');
     setPill('error', 'ERROR');
     setPrompt(err);
-    setTimeout(() => {
-      setPrompt("Please say your email address.");
-      setPill('', 'READY');
-      enableMic(true);
-    }, 2800);
+    // Only show error for real failures (not-allowed); no-speech auto-retries inside listen()
+    if (err.includes('denied')) {
+      setTimeout(() => {
+        setPrompt("Please say your email address.");
+        setPill('', 'READY');
+      }, 2800);
+    }
   });
 }
 
@@ -980,11 +992,9 @@ function capturePasswordSignIn() {
     setBars('idle');
     setPill('error', 'ERROR');
     setPrompt(err);
-    setTimeout(() => {
-      setPrompt("Please say your password.");
-      setPill('', 'READY');
-      enableMic(true);
-    }, 2800);
+    if (err.includes('denied')) {
+      setTimeout(() => { setPrompt("Please say your password."); setPill('', 'READY'); }, 2800);
+    }
   });
 }
 
@@ -1036,11 +1046,9 @@ function captureEmailSignUp() {
     setBars('idle');
     setPill('error', 'ERROR');
     setPrompt(err);
-    setTimeout(() => {
-      setPrompt("Please say your email address.");
-      setPill('', 'READY');
-      enableMic(true);
-    }, 2800);
+    if (err.includes('denied')) {
+      setTimeout(() => { setPrompt("Please say your email address."); setPill('', 'READY'); }, 2800);
+    }
   });
 }
 
@@ -1073,11 +1081,9 @@ function capturePasswordSignUp() {
     setBars('idle');
     setPill('error', 'ERROR');
     setPrompt(err);
-    setTimeout(() => {
-      setPrompt("Please say your password.");
-      setPill('', 'READY');
-      enableMic(true);
-    }, 2800);
+    if (err.includes('denied')) {
+      setTimeout(() => { setPrompt("Please say your password."); setPill('', 'READY'); }, 2800);
+    }
   });
 }
 
@@ -1100,11 +1106,9 @@ function capturePasswordConfirmSignUp() {
     setBars('idle');
     setPill('error', 'ERROR');
     setPrompt(err);
-    setTimeout(() => {
-      setPrompt("Please confirm your password.");
-      setPill('', 'READY');
-      enableMic(true);
-    }, 2800);
+    if (err.includes('denied')) {
+      setTimeout(() => { setPrompt("Please confirm your password."); setPill('', 'READY'); }, 2800);
+    }
   });
 }
 
