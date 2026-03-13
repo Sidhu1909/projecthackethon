@@ -1,0 +1,58 @@
+type User @table {
+  username: String!
+  email: String!
+  role: String!
+  createdAt: Timestamp!
+  firstName: String
+  lastName: String
+  accessibilityPreferences: String
+}
+
+type JobOpening @table {
+  title: String!
+  description: String!
+  department: String!
+  createdAt: Timestamp!
+  requirements: String
+  location: String
+  status: String
+}
+
+type InterviewTemplate @table {
+  name: String!
+  description: String!
+  createdAt: Timestamp!
+  category: String
+  creator: User
+}
+
+type Question @table {
+  text: String!
+  type: String!
+  orderInTemplate: Int!
+  guidanceForInterviewer: String
+  expectedKeywords: String
+  interviewTemplate: InterviewTemplate
+}
+
+type InterviewSession @table {
+  scheduledAt: Timestamp!
+  status: String!
+  createdAt: Timestamp!
+  feedback: String
+  overallScore: Int
+  candidate: User
+  interviewer: User
+  jobOpening: JobOpening
+  interviewTemplate: InterviewTemplate
+}
+
+type CandidateResponse @table {
+  audioTranscript: String!
+  recordedAt: Timestamp!
+  interviewerNotes: String
+  score: Int
+  sentimentAnalysis: String
+  interviewSession: InterviewSession
+  question: Question
+}
