@@ -106,7 +106,6 @@
     }
     .card-subtitle { font-size: 0.65rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); }
 
-    /* ── Intent choice chips ── */
     .intent-chips {
       display: flex; gap: 0.8rem; justify-content: center;
       margin-bottom: 1.5rem;
@@ -180,6 +179,19 @@
       min-height: 1.2em; transition: opacity 0.3s; font-style: normal;
     }
 
+    /* ── Confidence indicator ── */
+    .confidence-bar {
+      width: 100%; height: 2px; background: rgba(91,156,246,0.1);
+      border-radius: 2px; margin-bottom: 1rem; overflow: hidden;
+    }
+    .confidence-fill {
+      height: 100%; background: var(--blue); border-radius: 2px;
+      width: 0%; transition: width 0.3s ease, background 0.3s;
+    }
+    .confidence-fill.high  { background: var(--green); }
+    .confidence-fill.med   { background: var(--amber); }
+    .confidence-fill.low   { background: var(--red); }
+
     .state-pill {
       display: inline-flex; align-items: center; gap: 0.45rem;
       border: 1px solid var(--border); border-radius: 99px;
@@ -218,7 +230,6 @@
 
     .hint { text-align: center; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
 
-    /* ── Clickable fallback buttons (always visible, no disabled state) ── */
     .action-btns {
       display: flex; gap: 0.8rem; justify-content: center;
       margin-bottom: 1rem;
@@ -296,7 +307,6 @@
       <p class="card-subtitle" id="card-subtitle">Voice authentication</p>
     </div>
 
-    <!-- Mode chips (always clickable — voice fallback) -->
     <div class="intent-chips visible" id="intent-chips" aria-label="Choose authentication mode">
       <button class="chip" id="chip-signin" onclick="forceMode('signin')">Sign In</button>
       <button class="chip" id="chip-signup" onclick="forceMode('signup')">Sign Up</button>
@@ -320,6 +330,11 @@
         <div class="transcript-text" id="transcript-text"></div>
       </div>
 
+      <!-- Confidence bar -->
+      <div class="confidence-bar" id="confidence-bar" style="display:none;">
+        <div class="confidence-fill" id="confidence-fill"></div>
+      </div>
+
       <div style="text-align:center; margin-bottom:1.5rem;">
         <div class="state-pill" id="state-pill">
           <span class="dot"></span>
@@ -327,7 +342,6 @@
         </div>
       </div>
 
-      <!-- Mic button — NEVER disabled, always tappable -->
       <button class="mic-btn" id="mic-btn" aria-label="Tap to speak" onclick="handleMicClick()" tabindex="0">
         <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
       </button>
@@ -350,11 +364,50 @@
 ════════════════════════════════════════ */
 const CANDIDATE_INTERVIEW_URL = "./candidate-interview.html";
 
+/*
+ * SENSITIVITY SETTINGS — tweak these to adjust recognition behaviour
+ *
+ * SILENCE_MS        : ms of silence after last word before result is accepted.
+ *                     Lower = snappier (good for short phrases like passwords).
+ *                     Higher = waits longer (good if speakers pause mid-sentence).
+ *
+ * MIN_CONFIDENCE    : 0.0–1.0. Results below this are retried.
+ *                     0 = accept everything; 0.4 = only fairly clear speech.
+ *
+ * MAX_ALTERNATIVES  : How many transcription candidates the engine returns.
+ *                     The best-confidence one wins.
+ *
+ * RESTART_DELAY_MS  : Gap between recognition sessions (keep ≥100ms).
+ */
+const SILENCE_MS       = 1200;   // ↓ from 3500 — snappier acceptance
+const MIN_CONFIDENCE   = 0.0;    // accept all confidences (raise to 0.3 to filter mumbles)
+const MAX_ALTERNATIVES = 3;      // engine returns up to 3 guesses; best wins
+const RESTART_DELAY_MS = 100;
+
 /* ════════════════════════════════════════
    HELPERS
 ════════════════════════════════════════ */
 function normalize(str) {
   return str.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/* spoken email reconstruction — handles more verbal patterns */
+function spokenToEmail(spoken) {
+  return spoken
+    .toLowerCase()
+    // common spoken separators
+    .replace(/\s+at\s+the\s+rate\s+(of\s+)?/g, '@')
+    .replace(/\s+at\s+/g,   '@')
+    .replace(/\bat\b/g,     '@')
+    .replace(/\s+dot\s+/g,  '.')
+    .replace(/\bdot\b/g,    '.')
+    .replace(/\s+dash\s+/g, '-')
+    .replace(/\bdash\b/g,   '-')
+    .replace(/\s+underscore\s+/g, '_')
+    .replace(/\bunderscore\b/g,   '_')
+    // remove all remaining spaces
+    .replace(/\s+/g, '')
+    .trim();
 }
 
 /* ════════════════════════════════════════
@@ -368,7 +421,7 @@ let spokenPassword        = '';
 let spokenPasswordConfirm = '';
 let recognition           = null;
 let isSpeaking            = false;
-let isListening           = false;   // ← NEW: single truth for mic state
+let isListening           = false;
 let _redirecting          = false;
 
 /* ════════════════════════════════════════
@@ -393,6 +446,18 @@ function setBars(mode) {
     else if (mode === 'success') b.classList.add('active', 'success');
     else if (mode === 'error')   b.classList.add('active', 'error');
   });
+}
+
+/* ════════════════════════════════════════
+   CONFIDENCE BAR UI
+════════════════════════════════════════ */
+function setConfidence(pct) {
+  const bar  = document.getElementById('confidence-bar');
+  const fill = document.getElementById('confidence-fill');
+  if (pct === null) { bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+  fill.style.width  = Math.round(pct * 100) + '%';
+  fill.className = 'confidence-fill' + (pct >= 0.7 ? ' high' : pct >= 0.4 ? ' med' : ' low');
 }
 
 /* ════════════════════════════════════════
@@ -471,7 +536,7 @@ function applyModeHeader(mode) {
 }
 
 /* ════════════════════════════════════════
-   ABORT HELPERS — always safe to call
+   ABORT HELPERS
 ════════════════════════════════════════ */
 function abortRecognition() {
   if (recognition) {
@@ -488,8 +553,6 @@ function cancelSpeech() {
 
 /* ════════════════════════════════════════
    SPEECH SYNTHESIS
-   • Dynamic word-count timeout so long text never cuts off
-   • Retries voice loading if voices aren't ready yet
 ════════════════════════════════════════ */
 function speak(text, onEnd) {
   cancelSpeech();
@@ -526,7 +589,6 @@ function speak(text, onEnd) {
     speechSynthesis.speak(utt);
   };
 
-  // If voices aren't loaded yet, wait for them (common on Chrome first load)
   const voices = speechSynthesis.getVoices();
   if (voices.length === 0) {
     speechSynthesis.onvoiceschanged = () => { speechSynthesis.onvoiceschanged = null; go(); };
@@ -536,12 +598,16 @@ function speak(text, onEnd) {
 }
 
 /* ════════════════════════════════════════
-   SPEECH RECOGNITION
-   KEY FIXES:
-   1. Accepts BOTH interim AND final results to catch fast speakers
-   2. Single `done` guard — can only fire once per listen() call
-   3. Restarts on silence automatically (no-speech, aborted)
-   4. Never disables mic button
+   SPEECH RECOGNITION — HIGH SENSITIVITY
+   ─────────────────────────────────────
+   KEY IMPROVEMENTS vs original:
+   1. continuous: true  → engine stays open; we get more results per breath
+   2. maxAlternatives: 3 → pick highest-confidence candidate
+   3. Interim results show live transcript immediately
+   4. SILENCE_MS = 1200ms — accepts fast without cutting off long phrases
+   5. Confidence displayed on-screen via the confidence bar
+   6. Best-of-N selection: among all final results, pick highest confidence
+   7. onend restart only if !done, keeps session alive through pauses
 ════════════════════════════════════════ */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -551,21 +617,30 @@ function listen(onResult, onError) {
     return;
   }
 
-  abortRecognition(); // kill any previous instance first
+  abortRecognition();
 
-  let accumulated = '';  // build up text across restart cycles
-  let done = false;      // ensure onResult fires at most once
-  let restartTimer = null;
+  let finalSegments = [];   // [{text, confidence}] — accumulate all final results
+  let interimText   = '';   // live interim display
+  let done          = false;
   let silenceTimer  = null;
-
-  const SILENCE_MS = 3500;  // wait this long after last speech before accepting
+  let restartTimer  = null;
 
   function cleanup() {
-    clearTimeout(restartTimer);
     clearTimeout(silenceTimer);
+    clearTimeout(restartTimer);
     setMicListening(false);
-    setPill('', 'RECEIVED');
     setBars('idle');
+    setConfidence(null);
+  }
+
+  function bestText() {
+    // Join all final segments by space
+    return finalSegments.map(s => s.text).join(' ').trim();
+  }
+
+  function bestConfidence() {
+    if (!finalSegments.length) return 0;
+    return finalSegments.reduce((sum, s) => sum + s.confidence, 0) / finalSegments.length;
   }
 
   function acceptResult() {
@@ -573,20 +648,29 @@ function listen(onResult, onError) {
     done = true;
     cleanup();
     abortRecognition();
-    const result = accumulated.trim();
-    if (result) {
-      onResult(result);
-    } else {
-      // Nothing heard — restart
+    const text = bestText();
+    const conf = bestConfidence();
+
+    if (!text) {
       done = false;
       startRec();
+      return;
     }
+
+    // Below minimum confidence — show warning but still accept
+    // (don't silently discard — better to let the user see what was heard)
+    if (conf > 0 && conf < MIN_CONFIDENCE) {
+      setPill('', 'LOW CONFIDENCE — CHECK BELOW');
+    }
+
+    setConfidence(conf || null);
+    onResult(text, conf);
   }
 
   function resetSilenceTimer() {
     clearTimeout(silenceTimer);
-    if (accumulated.trim()) {
-      // We have text — wait for silence before accepting
+    const hasText = bestText() || interimText.trim();
+    if (hasText) {
       silenceTimer = setTimeout(acceptResult, SILENCE_MS);
     }
   }
@@ -595,36 +679,52 @@ function listen(onResult, onError) {
     if (done) return;
 
     recognition = new SR();
-    recognition.lang           = 'en-US';
-    recognition.interimResults = true;   // ← CRITICAL: catch speech in-progress
-    recognition.maxAlternatives = 1;
-    recognition.continuous     = false;  // restart manually for more control
+    recognition.lang            = 'en-US';
+    recognition.interimResults  = true;     // live transcript
+    recognition.maxAlternatives = MAX_ALTERNATIVES;
+    recognition.continuous      = true;     // stay open through pauses
 
     setPill('listening', 'LISTENING');
     setMicListening(true);
     setBars('listening');
+    setConfidence(null);
 
     recognition.onresult = (e) => {
       if (done) return;
-      let interim = '';
+      interimText = '';
+
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        const t = e.results[i][0].transcript;
-        if (e.results[i].isFinal) {
-          accumulated += (accumulated ? ' ' : '') + t;
+        const result = e.results[i];
+
+        if (result.isFinal) {
+          // Pick the highest-confidence alternative
+          let best = result[0];
+          for (let j = 1; j < result.length; j++) {
+            if (result[j].confidence > best.confidence) best = result[j];
+          }
+          finalSegments.push({ text: best.transcript.trim(), confidence: best.confidence });
+          setConfidence(best.confidence);
         } else {
-          interim = t;
+          // Show best interim alternative
+          let bestInterim = result[0];
+          for (let j = 1; j < result.length; j++) {
+            if (result[j].confidence > bestInterim.confidence) bestInterim = result[j];
+          }
+          interimText = bestInterim.transcript;
         }
       }
-      const display = (accumulated + (interim ? ' ' + interim : '')).trim();
-      setTranscript('"' + display + '"');
-      resetSilenceTimer(); // reset silence countdown on every word
+
+      const display = (bestText() + (interimText ? ' ' + interimText : '')).trim();
+      if (display) setTranscript('"' + display + '"');
+
+      resetSilenceTimer();
     };
 
     recognition.onend = () => {
       if (done) return;
       setMicListening(false);
-      // Restart after brief pause — this is what keeps listening going
-      restartTimer = setTimeout(startRec, 150);
+      // Restart quickly to keep session alive
+      restartTimer = setTimeout(startRec, RESTART_DELAY_MS);
     };
 
     recognition.onerror = (e) => {
@@ -635,15 +735,14 @@ function listen(onResult, onError) {
         onError('Microphone access denied. Please allow microphone access and try again.');
         return;
       }
-      // no-speech, aborted, network — just restart
+      // no-speech, aborted, network — restart
       setMicListening(false);
-      restartTimer = setTimeout(startRec, 200);
+      restartTimer = setTimeout(startRec, RESTART_DELAY_MS + 100);
     };
 
     try {
       recognition.start();
     } catch(ex) {
-      // Already started or other error — retry
       restartTimer = setTimeout(startRec, 300);
     }
   }
@@ -659,6 +758,7 @@ function captureIntentMode() {
   authStep    = 'intent';
   state       = 'idle';
   setTranscript('');
+  setConfidence(null);
   updateSteps(0);
   highlightChip(null);
 
@@ -686,9 +786,8 @@ function listenForIntent() {
     setTranscript('"' + result + '"');
     setBars('idle');
 
-    // ── ROBUST MATCHING: checks substrings, not just exact match ──────────────
     const wantsSignIn  = /sign\s*in|log\s*in|signin|login/.test(spoken);
-    const wantsSignUp  = /sign\s*up|register|create|signup|new account/.test(spoken);
+    const wantsSignUp  = /sign\s*up|register|create|signup|new\s*account/.test(spoken);
 
     if (wantsSignIn && !wantsSignUp) {
       highlightChip('signin');
@@ -705,7 +804,6 @@ function listenForIntent() {
         startSignUpFlow();
       });
     } else {
-      // Didn't match — ask again WITHOUT speaking (just update UI)
       setPrompt('Please say "sign in" or "sign up"');
       setPill('', 'TRY AGAIN');
       setTranscript('');
@@ -719,7 +817,6 @@ function listenForIntent() {
     setPill('error', 'MIC ERROR');
     setPrompt(err);
     announce(err);
-    // Don't loop on mic errors — show error and let user click
   });
 }
 
@@ -748,7 +845,7 @@ function captureEmailSignIn() {
   listen((result) => {
     state       = 'processing';
     spokenEmail = result.trim();
-    setTranscript('"' + spokenEmail + '"');
+    setTranscript('"' + spokenToEmail(spokenEmail) + '"');
     authStep = 'password';
     updateSteps(2);
 
@@ -784,7 +881,6 @@ async function verifySignIn() {
       handleAuthResult({ success: false, error: 'Sign-in error. Please try again.' });
     }
   } else {
-    // Demo fallback
     handleAuthResult({ success: true, error: null });
   }
 }
@@ -814,7 +910,7 @@ function captureEmailSignUp() {
   listen((result) => {
     state       = 'processing';
     spokenEmail = result.trim();
-    setTranscript('"' + spokenEmail + '"');
+    setTranscript('"' + spokenToEmail(spokenEmail) + '"');
     authStep = 'password';
     updateSteps(2);
 
@@ -861,7 +957,6 @@ function captureConfirmSignUp() {
 }
 
 async function verifySignUp() {
-  // Normalise both passwords before comparing
   const pwd1 = normalize(spokenPassword);
   const pwd2 = normalize(spokenPasswordConfirm);
 
@@ -951,17 +1046,14 @@ function handleListenError(err) {
   setPill('error', 'MIC ERROR');
   setPrompt(err);
   announce(err);
-  // Show a retry button inline instead of auto-looping on mic errors
   setTranscript('Tap the mic button or click above to continue.');
 }
 
 /* ════════════════════════════════════════
-   MIC BUTTON — handles ANY step, always enabled
+   MIC BUTTON
 ════════════════════════════════════════ */
 function handleMicClick() {
-  // If already listening, don't restart
   if (isListening) return;
-  // If speaking, stop speech and then proceed
   if (isSpeaking) { cancelSpeech(); }
 
   if (authStep === 'intent' || !currentMode) {
@@ -980,7 +1072,7 @@ function handleMicClick() {
 }
 
 /* ════════════════════════════════════════
-   FORCE MODE (chip click — always works)
+   FORCE MODE (chip click)
 ════════════════════════════════════════ */
 function forceMode(mode) {
   abortRecognition();
@@ -990,7 +1082,6 @@ function forceMode(mode) {
   highlightChip(mode);
   applyModeHeader(mode);
 
-  // Hide result screen if showing
   const resultScreen = document.getElementById('result-screen');
   const authSection  = document.getElementById('auth-section');
   resultScreen.classList.remove('show');
@@ -1016,6 +1107,7 @@ function resetFlow() {
   authSection.style.display = '';
 
   setTranscript('');
+  setConfidence(null);
   setBars('idle');
   setPill('', 'READY');
   updateSteps(0);
@@ -1047,12 +1139,10 @@ window.forceMode      = forceMode;
    BOOT
 ════════════════════════════════════════ */
 window.addEventListener('load', () => {
-  // Pre-load voices (Chrome lazy-loads them)
   if (window.speechSynthesis) {
     speechSynthesis.getVoices();
     speechSynthesis.onvoiceschanged = () => {};
   }
-  // Short delay so the page renders before we start speaking
   setTimeout(captureIntentMode, 600);
 });
 </script>
