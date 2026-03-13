@@ -291,18 +291,19 @@
 
 <script type="module">
     // ── Firebase ──────────────────────────────────────────────────────────────
-    import { initializeApp }      from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getStorage, ref as sRef, uploadBytes, getDownloadURL }
-        from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+    // SDK 11.6.0 — matches recruit.js and candlogin.js exactly.
+    // All Storage + Firestore *writes* are delegated to recruit.js globals
+    // (window.saveInterviewSubmission, window.getAssignedQuestionsForCandidate)
+    // so there is no version mismatch and no duplicate app instances.
+    import { initializeApp }      from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
     import {
         getFirestore,
-        collection, doc, addDoc, setDoc, updateDoc, getDoc, getDocs,
-        query, where, orderBy, arrayUnion,
-        serverTimestamp,
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        getDoc, getDocs, doc, collection,
+        query, where, orderBy,
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
-    // ── 🔧  Same config as recruit.js ────────────────────────────────────────
+    // ── 🔧  Same config as recruit.js / candlogin.js ─────────────────────────
     const firebaseConfig = {
         apiKey:            "YOUR_API_KEY",
         authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
@@ -312,14 +313,15 @@
         appId:             "YOUR_APP_ID",
     };
 
-    let app, auth, storage, db;
+    // Use a named instance so this module doesn't clash with recruit.js
+    // (which uses the default app instance).
+    let app, auth, db;
     let firebaseReady = false;
 
     try {
-        app     = initializeApp(firebaseConfig, "candidate-interview");
-        auth    = getAuth(app);
-        storage = getStorage(app);
-        db      = getFirestore(app);
+        app  = initializeApp(firebaseConfig, "candidate-voice");
+        auth = getAuth(app);
+        db   = getFirestore(app);
         firebaseReady = true;
     } catch(e) {
         console.warn("[candidate] Firebase init failed — demo mode.", e.message);
@@ -424,6 +426,11 @@
     }
 
     // ── Fetch assigned questions from Firebase ────────────────────────────────
+    // Mirrors the logic in recruit.js getAssignedQuestionsForCandidate() but
+    // runs client-side in the candidate's browser.
+    // Collection path:  interviewSets/{setId}   (top-level mirror written by
+    //                   recruit.js saveInterviewQuestions)
+    // Candidate field:  assignedInterviewSets[] (set by candlogin.js + recruit.js)
     window.fetchAssignedQuestions = async function() {
         retryBtn.style.display = 'none';
         micViz.classList.add('loading-q');
@@ -433,7 +440,6 @@
         questionEl.innerHTML = '<span class="spin"></span> Fetching your assigned questions…';
 
         if (!firebaseReady || !db) {
-            // Demo fallback
             useDemoQuestions();
             return;
         }
@@ -441,42 +447,26 @@
         try {
             let found = null;
 
-            // 1. Check candidate doc for assignedSets
+            // 1. Check candidate doc for assignedInterviewSets (candlogin.js field name)
             const candDoc = await getDoc(doc(db, "candidates", candidateId));
             if (candDoc.exists()) {
-                const assignedSets = candDoc.data().assignedSets || [];
+                const assignedSets = candDoc.data().assignedInterviewSets || [];
                 if (assignedSets.length > 0) {
                     const latestSetId = assignedSets[assignedSets.length - 1];
-                    const setDoc = await getDoc(doc(db, "interview_sets", latestSetId));
-                    if (setDoc.exists() && setDoc.data().questions?.length) {
-                        found = { questions: setDoc.data().questions, setId: latestSetId };
+                    // Read from top-level interviewSets mirror (not interview_sets)
+                    const setSnap = await getDoc(doc(db, "interviewSets", latestSetId));
+                    if (setSnap.exists() && setSnap.data().questions?.length) {
+                        found = { questions: setSnap.data().questions, setId: latestSetId };
                     }
                 }
             }
 
-            // 2. Fallback: query interview_sets by candidateId
+            // 2. Fallback: query interviewSets mirror by candidateId
             if (!found) {
                 const snap = await getDocs(
                     query(
-                        collection(db, "interview_sets"),
+                        collection(db, "interviewSets"),
                         where("candidateId", "==", candidateId),
-                        orderBy("createdAt", "desc")
-                    )
-                );
-                if (!snap.empty) {
-                    const latest = snap.docs[0];
-                    if (latest.data().questions?.length) {
-                        found = { questions: latest.data().questions, setId: latest.id };
-                    }
-                }
-            }
-
-            // 3. Fallback: query by email
-            if (!found && candidateEmail) {
-                const snap = await getDocs(
-                    query(
-                        collection(db, "interview_sets"),
-                        where("candidateEmail", "==", candidateEmail),
                         orderBy("createdAt", "desc")
                     )
                 );
@@ -491,8 +481,8 @@
             micViz.classList.remove('loading-q');
 
             if (found) {
-                questions     = found.questions;
-                assignedSetId = found.setId;
+                questions          = found.questions;
+                assignedSetId      = found.setId;
                 perQuestionAnswers = new Array(questions.length).fill('');
 
                 showFetchBanner(`✓ ${questions.length} questions assigned by your recruiter`, 'ok');
@@ -503,7 +493,6 @@
                 startBtn.disabled = false;
                 startWakeWordListening();
             } else {
-                // No questions assigned yet
                 showFetchBanner('⚠️ No question set assigned yet. Please wait for your recruiter.', 'err');
                 setStatus('AWAITING QUESTIONS', 'idle');
                 questionEl.textContent = 'Your recruiter has not assigned questions yet. Check back shortly.';
@@ -697,6 +686,9 @@
     }
 
     // ── Finish & submit ───────────────────────────────────────────────────────
+    // All Firestore writes are delegated to window.saveInterviewSubmission
+    // (exported by recruit.js), which uses the canonical candlogin.js field names:
+    //   interviewAnswers, interviewStatus:'submitted', answersSubmittedAt
     window.finishInterview = async function() {
         if (!interviewStarted) return;
         interviewStarted = false;
@@ -714,75 +706,39 @@
         // Clean per-question answers
         const cleanAnswers = perQuestionAnswers.map(a => (a||'').trim());
 
-        if (firebaseReady && db) {
+        // Wait for recruit.js module to finish loading its globals (race guard)
+        let attempts = 0;
+        while (!window.saveInterviewSubmission && attempts < 20) {
+            await new Promise(r => setTimeout(r, 200));
+            attempts++;
+        }
+
+        if (window.saveInterviewSubmission) {
             try {
                 setStatus('UPLOADING…', 'loading');
                 showToast('Saving your interview…', 'info');
 
-                // Upload transcript to Storage
-                let transcriptUrl = null;
-                if (storage) {
-                    const blob = new Blob([fullTranscript], { type:'text/plain' });
-                    const fileName = `interview_${candidateId}_${Date.now()}.txt`;
-                    const storageReference = sRef(storage, `transcripts/${fileName}`);
-                    const snap = await uploadBytes(storageReference, blob);
-                    transcriptUrl = await getDownloadURL(snap.ref);
-                }
-
-                const payload = {
+                // Delegate all Firestore + Storage writes to recruit.js
+                await window.saveInterviewSubmission({
                     candidateId,
                     candidateEmail,
-                    answers:       cleanAnswers,
+                    answers:       cleanAnswers,   // → interviewAnswers in Firestore
                     questions,
                     fullTranscript,
-                    transcriptUrl: transcriptUrl || null,
                     setId:         assignedSetId || null,
-                    submittedAt:   serverTimestamp(),
-                    status:        "submitted",
-                };
-
-                // Global submissions collection
-                await addDoc(collection(db, "submissions"), payload);
-
-                // Candidate sub-collection
-                try {
-                    await addDoc(collection(db, "candidates", candidateId, "submissions"), payload);
-                } catch(e) { console.warn("sub-collection write skipped:", e.message); }
-
-                // Update candidate top-level doc
-                try {
-                    await updateDoc(doc(db, "candidates", candidateId), {
-                        status:      "submitted",
-                        answers:     cleanAnswers,
-                        fullTranscript,
-                        transcriptUrl: transcriptUrl||null,
-                        submittedAt: serverTimestamp(),
-                        lastSetId:   assignedSetId||null,
-                    });
-                } catch(e) {
-                    // Create doc if it doesn't exist
-                    await setDoc(doc(db, "candidates", candidateId), {
-                        email:         candidateEmail,
-                        status:        "submitted",
-                        answers:       cleanAnswers,
-                        fullTranscript,
-                        transcriptUrl: transcriptUrl||null,
-                        submittedAt:   serverTimestamp(),
-                        lastSetId:     assignedSetId||null,
-                    }, { merge: true });
-                }
+                });
 
                 showToast('Interview saved & sent to recruiter!', 'success');
                 speak("Thank you. Your interview has been successfully recorded and sent to your recruiter.", showCompletion);
 
             } catch(err) {
-                console.error("[candidate] Upload error:", err);
+                console.error("[candidate] saveInterviewSubmission error:", err);
                 showToast('Upload failed — saving locally.', 'error');
                 downloadLocally();
                 speak("Thank you. Your interview has been completed.", showCompletion);
             }
         } else {
-            // Demo fallback
+            // Demo fallback — recruit.js not loaded
             showToast('Demo mode — downloading transcript.', 'info');
             downloadLocally();
             speak("Thank you. Your interview has been completed.", showCompletion);
@@ -812,5 +768,8 @@
         }
     });
 </script>
+<!-- ── recruit.js: provides window.saveInterviewSubmission and other globals ── -->
+<script type="module" src="./recruit.js"></script>
+
 </body>
 </html>
