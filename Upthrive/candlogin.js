@@ -1,19 +1,6 @@
 // ── candlogin.js ─────────────────────────────────────────────────────────────
 // Firebase Authentication bridge for the candidate voice-auth page.
-// Exposes attemptFirebaseSignIn and attemptFirebaseSignUp to window scope
-// so the non-module voice-auth script in candlogin.html can call them.
-//
-// Schema written to candidates/{uid}:
-//   { email, role:'candidate', createdAt, updatedAt,
-//     interviewStatus:'pending', assignedInterviewSets:[],
-//     interviewAnswers:[], answersSubmittedAt:null }
-//
-// These field names are read by recruit.js — do NOT rename them.
-//
-// Firebase SDK: 11.6.0  (matches recruit.js)
-//
-// 🔧 Replace firebaseConfig values with your real Firebase project credentials.
-//    Firebase Console → Project Settings → General → Your apps
+// Firebase SDK: 11.6.0
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { initializeApp }        from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
@@ -29,28 +16,26 @@ import {
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
-// ─── 🔧 YOUR CONFIG ───────────────────────────────────────────────────────────
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId:             "YOUR_APP_ID",
+  apiKey:            "AIzaSyD3c6gMQt00siR70-B93qBjVqYQAjrM3W4",
+  authDomain:        "titan-fde30.firebaseapp.com",
+  projectId:         "titan-fde30",
+  storageBucket:     "titan-fde30.firebasestorage.app",
+  messagingSenderId: "545954155049",
+  appId:             "1:545954155049:web:59e785904b07cda5a4ea38",
+  measurementId:     "G-4MDFGCVS5H",
 };
-// ─────────────────────────────────────────────────────────────────────────────
 
 let app, auth, db;
-
 try {
-  app  = initializeApp(firebaseConfig, "candlogin"); // named instance avoids clash with recruit.js
+  app  = initializeApp(firebaseConfig, "candlogin");
   auth = getAuth(app);
   db   = getFirestore(app);
+  console.log("[candlogin] Firebase initialised ✓");
 } catch (err) {
   console.error("[candlogin] Firebase init error:", err.message);
 }
 
-// ── Helper: normalise a Firebase error code to a readable string ──────────────
 function fmtError(err) {
   const code = err?.code ?? "";
   if (code.includes("wrong-password") || code.includes("invalid-credential"))
@@ -63,8 +48,6 @@ function fmtError(err) {
   return err?.message ?? "An unexpected error occurred.";
 }
 
-// ── Convert spoken email to typed email ──────────────────────────────────────
-// e.g. "john at example dot com" → "john@example.com"
 function spokenToEmail(spoken) {
   return spoken
     .toLowerCase()
@@ -74,17 +57,10 @@ function spokenToEmail(spoken) {
     .trim();
 }
 
-// ── attemptFirebaseSignIn ─────────────────────────────────────────────────────
-// Called from candlogin.html via window.attemptFirebaseSignIn.
-// spokenEmail    — normalised spoken string e.g. "john at example dot com"
-// spokenPassword — normalised spoken password string
-// Returns Promise<{ success: boolean, error: string|null }>
 async function attemptFirebaseSignIn(spokenEmail, spokenPassword) {
   if (!auth) return { success: false, error: "Auth service unavailable." };
-
   const email    = spokenToEmail(spokenEmail);
   const password = spokenPassword.trim();
-
   try {
     const credential = await signInWithEmailAndPassword(auth, email, password);
     localStorage.setItem("titanRole",  "candidate");
@@ -97,41 +73,26 @@ async function attemptFirebaseSignIn(spokenEmail, spokenPassword) {
   }
 }
 
-// ── attemptFirebaseSignUp ─────────────────────────────────────────────────────
-// Called from candlogin.html via window.attemptFirebaseSignUp.
-// spokenEmail    — normalised spoken string
-// spokenPassword — normalised spoken password string
-// Returns Promise<{ success: boolean, error: string|null }>
 async function attemptFirebaseSignUp(spokenEmail, spokenPassword) {
   if (!auth) return { success: false, error: "Auth service unavailable." };
-
   const email    = spokenToEmail(spokenEmail);
   const password = spokenPassword.trim();
-
   try {
     const credential = await createUserWithEmailAndPassword(auth, email, password);
-    const uid        = credential.user.uid;
-
-    // Write a full candidate profile to Firestore.
-    // Field names MUST match what recruit.js reads.
-    await setDoc(
-      doc(db, "candidates", uid),
-      {
-        email,
-        role:                  "candidate",
-        interviewStatus:       "pending",
-        assignedInterviewSets: [],
-        interviewAnswers:      [],
-        answersSubmittedAt:    null,
-        fullTranscript:        null,
-        transcriptUrl:         null,
-        lastSetId:             null,
-        createdAt:             serverTimestamp(),
-        updatedAt:             serverTimestamp(),
-      },
-      { merge: true },
-    );
-
+    const uid = credential.user.uid;
+    await setDoc(doc(db, "candidates", uid), {
+      email,
+      role:                  "candidate",
+      interviewStatus:       "pending",
+      assignedInterviewSets: [],
+      interviewAnswers:      [],
+      answersSubmittedAt:    null,
+      fullTranscript:        null,
+      transcriptUrl:         null,
+      lastSetId:             null,
+      createdAt:             serverTimestamp(),
+      updatedAt:             serverTimestamp(),
+    }, { merge: true });
     localStorage.setItem("titanRole",  "candidate");
     localStorage.setItem("titanEmail", email);
     localStorage.setItem("titanUID",   uid);
@@ -142,6 +103,6 @@ async function attemptFirebaseSignUp(spokenEmail, spokenPassword) {
   }
 }
 
-// ── Expose to window (non-module scripts can't import) ───────────────────────
 window.attemptFirebaseSignIn  = attemptFirebaseSignIn;
 window.attemptFirebaseSignUp  = attemptFirebaseSignUp;
+console.log("[candlogin] ✓ loaded — window.attemptFirebaseSignIn & SignUp ready");

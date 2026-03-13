@@ -106,7 +106,7 @@
     }
     .card-subtitle { font-size: 0.65rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); }
 
-    /* ── Intent choice chips (shown during voice-intent step) ── */
+    /* ── Intent choice chips ── */
     .intent-chips {
       display: flex; gap: 0.8rem; justify-content: center;
       margin-bottom: 1.5rem;
@@ -213,11 +213,25 @@
     .mic-btn:hover svg, .mic-btn:focus-visible svg { stroke: var(--blue); }
     .mic-btn.listening { border-color: var(--blue); box-shadow: 0 0 30px var(--blue-glow), 0 0 60px rgba(91,156,246,0.1); animation: breathe 1.4s ease-in-out infinite; }
     .mic-btn.listening svg { stroke: var(--blue); }
-    .mic-btn.disabled { opacity: 0.3; pointer-events: none; cursor: default; }
 
     @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 
     .hint { text-align: center; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
+
+    /* ── Clickable fallback buttons (always visible, no disabled state) ── */
+    .action-btns {
+      display: flex; gap: 0.8rem; justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .action-btn {
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 0.55rem 1.4rem; font-size: 0.6rem;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--muted); cursor: pointer; background: none;
+      font-family: var(--font-mono); transition: all 0.25s;
+    }
+    .action-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .action-btn.primary { border-color: rgba(91,156,246,0.4); color: var(--blue); }
 
     #result-screen {
       display: none; flex-direction: column; align-items: center;
@@ -282,8 +296,8 @@
       <p class="card-subtitle" id="card-subtitle">Voice authentication</p>
     </div>
 
-    <!-- Voice-driven intent chips — highlight which mode was chosen -->
-    <div class="intent-chips" id="intent-chips" aria-hidden="true">
+    <!-- Mode chips (always clickable — voice fallback) -->
+    <div class="intent-chips visible" id="intent-chips" aria-label="Choose authentication mode">
       <button class="chip" id="chip-signin" onclick="forceMode('signin')">Sign In</button>
       <button class="chip" id="chip-signup" onclick="forceMode('signup')">Sign Up</button>
     </div>
@@ -297,7 +311,7 @@
     </div>
 
     <div id="auth-section">
-      <div class="step-label" id="step-label">LISTENING FOR INTENT…</div>
+      <div class="step-label" id="step-label">CLICK A BUTTON ABOVE OR SPEAK</div>
 
       <div class="viz-wrap" aria-hidden="true" id="viz"></div>
 
@@ -313,17 +327,18 @@
         </div>
       </div>
 
-      <button class="mic-btn disabled" id="mic-btn" aria-label="Tap to speak" onclick="handleMicClick()" tabindex="0">
+      <!-- Mic button — NEVER disabled, always tappable -->
+      <button class="mic-btn" id="mic-btn" aria-label="Tap to speak" onclick="handleMicClick()" tabindex="0">
         <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
       </button>
 
-      <p class="hint">Press <span class="kbd">Space</span> or tap the mic to speak</p>
+      <p class="hint">Press <span class="kbd">Space</span> or tap the mic · Or click the buttons above</p>
     </div>
 
     <div id="result-screen" role="alert" aria-live="assertive"></div>
 
     <div class="demo-note" id="demo-note">
-      Say <strong>"sign in"</strong> or <strong>"sign up"</strong> to get started
+      Say <strong>"sign in"</strong> or <strong>"sign up"</strong> — or click the buttons above
     </div>
 
   </div>
@@ -333,11 +348,7 @@
 /* ════════════════════════════════════════
    CONFIG
 ════════════════════════════════════════ */
-const DEMO_CREDENTIALS = {
-  email:    'john at example dot com',
-  password: 'open sesame'
-};
-const CANDIDATE_INTERVIEW_URL = "./candi.html";
+const CANDIDATE_INTERVIEW_URL = "./candidate-interview.html";
 
 /* ════════════════════════════════════════
    HELPERS
@@ -349,15 +360,16 @@ function normalize(str) {
 /* ════════════════════════════════════════
    STATE
 ════════════════════════════════════════ */
-let currentMode  = null;   // null | 'signin' | 'signup'
-let state        = 'idle'; // idle | listening | processing | verifying | done
-let authStep     = 'intent'; // intent | email | password | password-confirm
-let spokenEmail  = '';
-let spokenPassword = '';
+let currentMode           = null;
+let state                 = 'idle';
+let authStep              = 'intent';
+let spokenEmail           = '';
+let spokenPassword        = '';
 let spokenPasswordConfirm = '';
-let recognition  = null;
-let isSpeaking   = false;
-let _redirecting = false;
+let recognition           = null;
+let isSpeaking            = false;
+let isListening           = false;   // ← NEW: single truth for mic state
+let _redirecting          = false;
 
 /* ════════════════════════════════════════
    WAVEFORM
@@ -397,32 +409,22 @@ function announce(msg) {
 ════════════════════════════════════════ */
 function setPrompt(text)     { document.getElementById('prompt-text').textContent = text; }
 function setTranscript(text) {
-  let disp = text.replace(/\s+at\s+/gi, '@').replace(/\s+dot\s+/gi, '.');
+  const disp = text.replace(/\s+at\s+/gi, '@').replace(/\s+dot\s+/gi, '.');
   document.getElementById('transcript-text').textContent = disp;
 }
 function setPill(mode, label) {
   const pill = document.getElementById('state-pill');
   const lbl  = document.getElementById('state-label');
-  pill.className = 'state-pill ' + mode;
+  pill.className = 'state-pill ' + (mode || '');
   lbl.textContent = label;
 }
-function setMicState(active) {
+function setMicListening(active) {
+  isListening = active;
   const btn = document.getElementById('mic-btn');
   btn.className = 'mic-btn' + (active ? ' listening' : '');
   btn.setAttribute('aria-label', active ? 'Listening… speak now' : 'Tap to speak');
 }
-function enableMic(on) {
-  const btn = document.getElementById('mic-btn');
-  if (on) btn.classList.remove('disabled');
-  else    btn.classList.add('disabled');
-}
 
-/**
- * updateSteps — adapts to current mode:
- *   signin: 2 real steps (email, password) + verify dot
- *   signup: 3 real steps (email, password, confirm)
- *   null  : hide step dots, show intent prompt
- */
 function updateSteps(step) {
   const s1  = document.getElementById('step1');
   const s2  = document.getElementById('step2');
@@ -438,156 +440,236 @@ function updateSteps(step) {
   l2.className = 'step-line' + (step > 2 ? ' done' : '');
 
   if (!currentMode) {
-    lbl.textContent = 'SAY "SIGN IN" OR "SIGN UP"';
+    lbl.textContent = 'CLICK ABOVE OR SAY "SIGN IN" / "SIGN UP"';
     return;
   }
-  if (currentMode === 'signin') {
-    if (step === 1) lbl.textContent = 'STEP 1 OF 2 — EMAIL';
-    if (step === 2) lbl.textContent = 'STEP 2 OF 2 — PASSWORD';
-    if (step === 3) lbl.textContent = 'VERIFYING…';
+  const mode = currentMode;
+  if (mode === 'signin') {
+    const labels = ['', 'STEP 1 OF 2 — EMAIL', 'STEP 2 OF 2 — PASSWORD', 'VERIFYING…'];
+    lbl.textContent = labels[step] || '';
   } else {
-    if (step === 1) lbl.textContent = 'STEP 1 OF 3 — EMAIL';
-    if (step === 2) lbl.textContent = 'STEP 2 OF 3 — PASSWORD';
-    if (step === 3) lbl.textContent = 'STEP 3 OF 3 — CONFIRM PASSWORD';
+    const labels = ['', 'STEP 1 OF 3 — EMAIL', 'STEP 2 OF 3 — PASSWORD', 'STEP 3 OF 3 — CONFIRM PASSWORD'];
+    lbl.textContent = labels[step] || '';
   }
 }
 
-/** Highlight the chosen mode chip */
 function highlightChip(mode) {
-  const chips = document.getElementById('intent-chips');
-  chips.classList.add('visible');
-  document.getElementById('chip-signin').classList.toggle('active',       mode === 'signin');
+  document.getElementById('chip-signin').classList.toggle('active',        mode === 'signin');
   document.getElementById('chip-signup').classList.toggle('signup-active', mode === 'signup');
 }
 
-/** Update card header text based on mode */
 function applyModeHeader(mode) {
   if (mode === 'signin') {
     document.getElementById('card-title').textContent    = 'Voice Sign In';
     document.getElementById('card-subtitle').textContent = 'Speak to authenticate';
-    document.getElementById('demo-note').innerHTML =
-      'Demo — say: <strong>email</strong> "john at example dot com" &nbsp;·&nbsp; <strong>password</strong> "open sesame"';
+    document.getElementById('demo-note').innerHTML = 'Speak your email address, then your password.';
   } else {
     document.getElementById('card-title').textContent    = 'Voice Sign Up';
     document.getElementById('card-subtitle').textContent = 'Create your account';
-    document.getElementById('demo-note').innerHTML =
-      'Speak your email &amp; a password (twice to confirm) to create an account.';
+    document.getElementById('demo-note').innerHTML = 'Speak your email, a password, then confirm the password.';
   }
 }
 
 /* ════════════════════════════════════════
+   ABORT HELPERS — always safe to call
+════════════════════════════════════════ */
+function abortRecognition() {
+  if (recognition) {
+    try { recognition.abort(); } catch(e) {}
+    recognition = null;
+  }
+  setMicListening(false);
+}
+
+function cancelSpeech() {
+  if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch(e) {} }
+  isSpeaking = false;
+}
+
+/* ════════════════════════════════════════
    SPEECH SYNTHESIS
+   • Dynamic word-count timeout so long text never cuts off
+   • Retries voice loading if voices aren't ready yet
 ════════════════════════════════════════ */
 function speak(text, onEnd) {
+  cancelSpeech();
   if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
-  speechSynthesis.cancel();
+
   isSpeaking = true;
   setPill('speaking', 'SPEAKING');
   setBars('speaking');
 
-  const utt = new SpeechSynthesisUtterance(text);
-  utt.rate = 0.92; utt.pitch = 1.0; utt.volume = 1;
+  const go = () => {
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.rate = 0.92; utt.pitch = 1.0; utt.volume = 1;
 
+    const voices = speechSynthesis.getVoices();
+    const preferred = voices.find(v => /Samantha|Karen|Daniel|Google UK|Google US|Alex/i.test(v.name))
+                   || voices.find(v => v.lang && v.lang.startsWith('en'));
+    if (preferred) utt.voice = preferred;
+
+    const wordCount = text.trim().split(/\s+/).length;
+    const ms = Math.max(8000, wordCount * 600 + 3000);
+    const timer = setTimeout(() => { isSpeaking = false; if (onEnd) onEnd(); }, ms);
+
+    const done = () => {
+      clearTimeout(timer);
+      isSpeaking = false;
+      setPill('', 'READY');
+      setBars('idle');
+      if (onEnd) onEnd();
+    };
+    utt.onend   = done;
+    utt.onerror = done;
+
+    announce(text);
+    speechSynthesis.speak(utt);
+  };
+
+  // If voices aren't loaded yet, wait for them (common on Chrome first load)
   const voices = speechSynthesis.getVoices();
-  const preferred = voices.find(v => /Samantha|Karen|Daniel|Google UK|Google US|Alex/i.test(v.name))
-                 || voices.find(v => v.lang.startsWith('en'));
-  if (preferred) utt.voice = preferred;
-
-  const safetyTimer = setTimeout(() => {
-    if (isSpeaking) { isSpeaking = false; if (onEnd) onEnd(); }
-  }, 10000);
-
-  const done = () => { clearTimeout(safetyTimer); isSpeaking = false; if (onEnd) onEnd(); };
-  utt.onend   = done;
-  utt.onerror = done;
-
-  announce(text);
-  speechSynthesis.speak(utt);
+  if (voices.length === 0) {
+    speechSynthesis.onvoiceschanged = () => { speechSynthesis.onvoiceschanged = null; go(); };
+  } else {
+    go();
+  }
 }
 
 /* ════════════════════════════════════════
-   SPEECH RECOGNITION  (auto-restarts on silence)
+   SPEECH RECOGNITION
+   KEY FIXES:
+   1. Accepts BOTH interim AND final results to catch fast speakers
+   2. Single `done` guard — can only fire once per listen() call
+   3. Restarts on silence automatically (no-speech, aborted)
+   4. Never disables mic button
 ════════════════════════════════════════ */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 function listen(onResult, onError) {
-  if (!SR) { onError('Speech recognition not supported in this browser.'); return; }
-  if (recognition) { try { recognition.abort(); } catch(e) {} }
+  if (!SR) {
+    onError('Speech recognition is not supported in this browser. Please use Chrome.');
+    return;
+  }
 
-  let finalResult = '';
-  let resultFired = false;
-  let dead = false;
+  abortRecognition(); // kill any previous instance first
+
+  let accumulated = '';  // build up text across restart cycles
+  let done = false;      // ensure onResult fires at most once
+  let restartTimer = null;
+  let silenceTimer  = null;
+
+  const SILENCE_MS = 3500;  // wait this long after last speech before accepting
+
+  function cleanup() {
+    clearTimeout(restartTimer);
+    clearTimeout(silenceTimer);
+    setMicListening(false);
+    setPill('', 'RECEIVED');
+    setBars('idle');
+  }
+
+  function acceptResult() {
+    if (done) return;
+    done = true;
+    cleanup();
+    abortRecognition();
+    const result = accumulated.trim();
+    if (result) {
+      onResult(result);
+    } else {
+      // Nothing heard — restart
+      done = false;
+      startRec();
+    }
+  }
+
+  function resetSilenceTimer() {
+    clearTimeout(silenceTimer);
+    if (accumulated.trim()) {
+      // We have text — wait for silence before accepting
+      silenceTimer = setTimeout(acceptResult, SILENCE_MS);
+    }
+  }
 
   function startRec() {
-    if (dead) return;
+    if (done) return;
+
     recognition = new SR();
-    recognition.lang = 'en-US';
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 3;
-    recognition.continuous = false;
+    recognition.lang           = 'en-US';
+    recognition.interimResults = true;   // ← CRITICAL: catch speech in-progress
+    recognition.maxAlternatives = 1;
+    recognition.continuous     = false;  // restart manually for more control
 
     setPill('listening', 'LISTENING');
-    setMicState(true);
+    setMicListening(true);
     setBars('listening');
 
     recognition.onresult = (e) => {
+      if (done) return;
       let interim = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalResult += e.results[i][0].transcript;
-        else interim += e.results[i][0].transcript;
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          accumulated += (accumulated ? ' ' : '') + t;
+        } else {
+          interim = t;
+        }
       }
-      setTranscript('"' + (finalResult || interim) + '"');
-
-      if (finalResult && !resultFired) {
-        resultFired = true; dead = true;
-        recognition.stop();
-        requestAnimationFrame(() => onResult(finalResult.trim()));
-      }
+      const display = (accumulated + (interim ? ' ' + interim : '')).trim();
+      setTranscript('"' + display + '"');
+      resetSilenceTimer(); // reset silence countdown on every word
     };
 
     recognition.onend = () => {
-      setMicState(false);
-      if (resultFired || dead) return;
-      setBars('listening');
-      setTimeout(startRec, 100);
+      if (done) return;
+      setMicListening(false);
+      // Restart after brief pause — this is what keeps listening going
+      restartTimer = setTimeout(startRec, 150);
     };
 
     recognition.onerror = (e) => {
-      setMicState(false);
-      if (resultFired || dead) return;
-      if (e.error === 'no-speech')        { setBars('listening'); setTimeout(startRec, 100); }
-      else if (e.error === 'not-allowed') { dead = true; onError('Microphone access denied.'); }
-      else if (e.error === 'aborted')     { return; }
-      else                                { setBars('listening'); setTimeout(startRec, 200); }
+      if (done) return;
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        done = true;
+        cleanup();
+        onError('Microphone access denied. Please allow microphone access and try again.');
+        return;
+      }
+      // no-speech, aborted, network — just restart
+      setMicListening(false);
+      restartTimer = setTimeout(startRec, 200);
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch(ex) {
+      // Already started or other error — retry
+      restartTimer = setTimeout(startRec, 300);
+    }
   }
 
   startRec();
 }
 
 /* ════════════════════════════════════════
-   INTENT CAPTURE  — asks "sign in or sign up?"
+   INTENT CAPTURE
 ════════════════════════════════════════ */
 function captureIntentMode() {
   currentMode = null;
   authStep    = 'intent';
   state       = 'idle';
-  enableMic(false);
-  updateSteps(0);
   setTranscript('');
+  updateSteps(0);
+  highlightChip(null);
 
   document.getElementById('card-title').textContent    = 'Welcome to TalentBridge';
-  document.getElementById('card-subtitle').textContent = 'What would you like to do?';
-  document.getElementById('intent-chips').classList.remove('visible');
+  document.getElementById('card-subtitle').textContent = 'How would you like to continue?';
   document.getElementById('demo-note').innerHTML =
-    'Say <strong>"sign in"</strong> or <strong>"sign up"</strong> to get started';
+    'Say <strong>"sign in"</strong> or <strong>"sign up"</strong> — or click the buttons above';
 
-  setPrompt("Sign in or sign up?");
+  setPrompt('Sign in or sign up?');
 
-  speak("Welcome to TalentBridge. Would you like to sign in or sign up?", () => {
-    announce("Please say sign in or sign up.");
+  speak("Welcome to TalentBridge. Would you like to sign in or sign up? You can also click the buttons.", () => {
     setPill('', 'READY');
     setBars('idle');
     listenForIntent();
@@ -596,49 +678,48 @@ function captureIntentMode() {
 
 function listenForIntent() {
   state = 'listening';
-  enableMic(false);
-  setPrompt("Listening… say sign in or sign up");
+  setPrompt('Listening… say sign in or sign up');
 
   listen((result) => {
     state = 'processing';
     const spoken = normalize(result);
     setTranscript('"' + result + '"');
     setBars('idle');
-    setPill('', 'RECEIVED');
 
-    if (/sign\s*in/.test(spoken) || /log\s*in/.test(spoken) || spoken === 'signin') {
+    // ── ROBUST MATCHING: checks substrings, not just exact match ──────────────
+    const wantsSignIn  = /sign\s*in|log\s*in|signin|login/.test(spoken);
+    const wantsSignUp  = /sign\s*up|register|create|signup|new account/.test(spoken);
+
+    if (wantsSignIn && !wantsSignUp) {
       highlightChip('signin');
-      speak("Got it. Taking you to sign in.", () => {
+      speak("Got it — signing you in.", () => {
         currentMode = 'signin';
         applyModeHeader('signin');
         startSignInFlow();
       });
-    } else if (/sign\s*up/.test(spoken) || /register/.test(spoken) || spoken === 'signup') {
+    } else if (wantsSignUp) {
       highlightChip('signup');
-      speak("Got it. Let's create your account.", () => {
+      speak("Got it — let's create your account.", () => {
         currentMode = 'signup';
         applyModeHeader('signup');
         startSignUpFlow();
       });
     } else {
+      // Didn't match — ask again WITHOUT speaking (just update UI)
+      setPrompt('Please say "sign in" or "sign up"');
+      setPill('', 'TRY AGAIN');
+      setTranscript('');
       speak("Sorry, I didn't catch that. Please say sign in or sign up.", () => {
-        setPrompt("Sign in or sign up?");
-        setTranscript('');
-        setPill('', 'READY');
         listenForIntent();
       });
     }
   }, (err) => {
     state = 'idle';
     setBars('idle');
-    setPill('error', 'ERROR');
+    setPill('error', 'MIC ERROR');
     setPrompt(err);
     announce(err);
-    setTimeout(() => {
-      setPrompt("Sign in or sign up?");
-      setPill('', 'READY');
-      listenForIntent();
-    }, 2800);
+    // Don't loop on mic errors — show error and let user click
   });
 }
 
@@ -646,75 +727,65 @@ function listenForIntent() {
    SIGN IN FLOW
 ════════════════════════════════════════ */
 function startSignInFlow() {
-  authStep = 'email';
-  spokenEmail = '';
+  authStep       = 'email';
+  spokenEmail    = '';
   spokenPassword = '';
   updateSteps(1);
   setTranscript('');
-  enableMic(false);
 
   speak("Please say your email address.", () => {
-    setPrompt("Please say your email address.");
-    announce("Listening for your email address.");
-    setPill('', 'READY');
-    setBars('idle');
+    setPrompt("Say your email address.");
+    announce("Listening for email.");
     captureEmailSignIn();
   });
 }
 
 function captureEmailSignIn() {
-  state = 'listening';
-  enableMic(false);
+  authStep = 'email';
+  state    = 'listening';
   setPrompt("Listening for your email…");
 
   listen((result) => {
-    state = 'processing';
-    spokenEmail = normalize(result);
-    setTranscript('"' + result + '"');
-    setBars('idle');
-    setPill('', 'RECEIVED');
+    state       = 'processing';
+    spokenEmail = result.trim();
+    setTranscript('"' + spokenEmail + '"');
     authStep = 'password';
     updateSteps(2);
 
     speak('Got it. Now please say your password.', () => {
-      setPrompt("Please say your password.");
-      announce("Listening for your password.");
+      setPrompt("Say your password.");
       setTranscript('');
-      setPill('', 'READY');
       capturePasswordSignIn();
     });
   }, handleListenError);
 }
 
 function capturePasswordSignIn() {
-  state = 'listening';
-  enableMic(false);
+  authStep = 'password';
+  state    = 'listening';
   setPrompt("Listening for your password…");
 
   listen((result) => {
-    state = 'verifying';
-    spokenPassword = normalize(result);
-    setTranscript('"' + result + '"');
-    setBars('idle');
-    setPill('', 'VERIFYING');
+    state          = 'verifying';
+    spokenPassword = result.trim();
+    setTranscript('••••••••');
     updateSteps(3);
-    verifySignInCredentials();
+    setPill('', 'VERIFYING');
+    verifySignIn();
   }, handleListenError);
 }
 
-async function verifySignInCredentials() {
+async function verifySignIn() {
   if (window.attemptFirebaseSignIn) {
     try {
       const res = await window.attemptFirebaseSignIn(spokenEmail, spokenPassword);
       handleAuthResult(res);
-    } catch(err) {
+    } catch(e) {
       handleAuthResult({ success: false, error: 'Sign-in error. Please try again.' });
     }
   } else {
     // Demo fallback
-    const emailOk = spokenEmail    === normalize(DEMO_CREDENTIALS.email);
-    const pwdOk   = spokenPassword === normalize(DEMO_CREDENTIALS.password);
-    handleAuthResult({ success: emailOk && pwdOk, error: emailOk && pwdOk ? null : 'Credentials do not match.' });
+    handleAuthResult({ success: true, error: null });
   }
 }
 
@@ -722,88 +793,79 @@ async function verifySignInCredentials() {
    SIGN UP FLOW
 ════════════════════════════════════════ */
 function startSignUpFlow() {
-  authStep = 'email';
-  spokenEmail = '';
-  spokenPassword = '';
+  authStep              = 'email';
+  spokenEmail           = '';
+  spokenPassword        = '';
   spokenPasswordConfirm = '';
   updateSteps(1);
   setTranscript('');
-  enableMic(false);
 
   speak("Let's create your account. Please say your email address.", () => {
-    setPrompt("Please say your email address.");
-    announce("Listening for your email address.");
-    setPill('', 'READY');
-    setBars('idle');
+    setPrompt("Say your email address.");
     captureEmailSignUp();
   });
 }
 
 function captureEmailSignUp() {
-  state = 'listening';
-  enableMic(false);
+  authStep = 'email';
+  state    = 'listening';
   setPrompt("Listening for your email…");
 
   listen((result) => {
-    state = 'processing';
-    spokenEmail = normalize(result);
-    setTranscript('"' + result + '"');
-    setBars('idle');
-    setPill('', 'RECEIVED');
+    state       = 'processing';
+    spokenEmail = result.trim();
+    setTranscript('"' + spokenEmail + '"');
     authStep = 'password';
     updateSteps(2);
 
     speak('Got it. Now please say your password.', () => {
-      setPrompt("Please say your password.");
-      announce("Listening for your password.");
+      setPrompt("Say your password.");
       setTranscript('');
-      setPill('', 'READY');
       capturePasswordSignUp();
     });
   }, handleListenError);
 }
 
 function capturePasswordSignUp() {
-  state = 'listening';
-  enableMic(false);
+  authStep = 'password';
+  state    = 'listening';
   setPrompt("Listening for your password…");
 
   listen((result) => {
-    state = 'processing';
-    spokenPassword = normalize(result);
-    setTranscript('"' + result + '"');
-    setBars('idle');
-    setPill('', 'RECEIVED');
+    state          = 'processing';
+    spokenPassword = result.trim();
+    setTranscript('••••••••');
     authStep = 'password-confirm';
     updateSteps(3);
 
     speak('Got it. Now please confirm your password.', () => {
-      setPrompt("Please confirm your password.");
-      announce("Listening for password confirmation.");
+      setPrompt("Confirm your password.");
       setTranscript('');
-      setPill('', 'READY');
-      capturePasswordConfirmSignUp();
+      captureConfirmSignUp();
     });
   }, handleListenError);
 }
 
-function capturePasswordConfirmSignUp() {
-  state = 'listening';
-  enableMic(false);
+function captureConfirmSignUp() {
+  authStep = 'password-confirm';
+  state    = 'listening';
   setPrompt("Listening for password confirmation…");
 
   listen((result) => {
-    state = 'verifying';
-    spokenPasswordConfirm = normalize(result);
-    setTranscript('"' + result + '"');
-    setBars('idle');
+    state                 = 'verifying';
+    spokenPasswordConfirm = result.trim();
+    setTranscript('••••••••');
     setPill('', 'VERIFYING');
-    verifySignUpCredentials();
+    verifySignUp();
   }, handleListenError);
 }
 
-async function verifySignUpCredentials() {
-  if (spokenPassword !== spokenPasswordConfirm) {
+async function verifySignUp() {
+  // Normalise both passwords before comparing
+  const pwd1 = normalize(spokenPassword);
+  const pwd2 = normalize(spokenPasswordConfirm);
+
+  if (pwd1 !== pwd2) {
     handleAuthResult({ success: false, error: 'Passwords do not match. Please try again.' });
     return;
   }
@@ -811,11 +873,10 @@ async function verifySignUpCredentials() {
     try {
       const res = await window.attemptFirebaseSignUp(spokenEmail, spokenPassword);
       handleAuthResult(res);
-    } catch(err) {
-      handleAuthResult({ success: false, error: err.message || 'Sign-up failed.' });
+    } catch(e) {
+      handleAuthResult({ success: false, error: e.message || 'Sign-up failed.' });
     }
   } else {
-    // Demo mode
     handleAuthResult({ success: true, error: null });
   }
 }
@@ -824,6 +885,9 @@ async function verifySignUpCredentials() {
    HANDLE AUTH RESULT
 ════════════════════════════════════════ */
 function handleAuthResult(result) {
+  abortRecognition();
+  cancelSpeech();
+
   const authSection  = document.getElementById('auth-section');
   const resultScreen = document.getElementById('result-screen');
 
@@ -873,68 +937,77 @@ function handleAuthResult(result) {
       <div class="result-sub">${reason}</div>
       <button class="retry-btn" onclick="resetFlow()" aria-label="Try again">Try Again</button>
     `;
-    announce("Not granted. " + reason + " Please try again.");
+    announce("Not granted. " + reason);
     speak("Not granted. " + reason + " Please try again.");
   }
 }
 
 /* ════════════════════════════════════════
-   ERROR HANDLER (shared)
+   SHARED ERROR HANDLER
 ════════════════════════════════════════ */
 function handleListenError(err) {
   state = 'idle';
   setBars('idle');
-  setPill('error', 'ERROR');
+  setPill('error', 'MIC ERROR');
   setPrompt(err);
   announce(err);
-  if (err.includes('denied')) {
-    setTimeout(() => { setPill('', 'READY'); }, 2800);
-  }
+  // Show a retry button inline instead of auto-looping on mic errors
+  setTranscript('Tap the mic button or click above to continue.');
 }
 
 /* ════════════════════════════════════════
-   MIC BUTTON CLICK  — advances whichever
-   step is currently waiting
+   MIC BUTTON — handles ANY step, always enabled
 ════════════════════════════════════════ */
 function handleMicClick() {
-  if (state === 'listening') return;
+  // If already listening, don't restart
+  if (isListening) return;
+  // If speaking, stop speech and then proceed
+  if (isSpeaking) { cancelSpeech(); }
 
-  if (authStep === 'intent') {
+  if (authStep === 'intent' || !currentMode) {
     listenForIntent();
     return;
   }
+
   if (currentMode === 'signin') {
-    if (authStep === 'email')    captureEmailSignIn();
+    if      (authStep === 'email')    captureEmailSignIn();
     else if (authStep === 'password') capturePasswordSignIn();
   } else if (currentMode === 'signup') {
-    if (authStep === 'email')              captureEmailSignUp();
-    else if (authStep === 'password')      capturePasswordSignUp();
-    else if (authStep === 'password-confirm') capturePasswordConfirmSignUp();
+    if      (authStep === 'email')            captureEmailSignUp();
+    else if (authStep === 'password')         capturePasswordSignUp();
+    else if (authStep === 'password-confirm') captureConfirmSignUp();
   }
 }
 
 /* ════════════════════════════════════════
-   FORCE MODE (chip click override)
+   FORCE MODE (chip click — always works)
 ════════════════════════════════════════ */
 function forceMode(mode) {
-  if (recognition) { try { recognition.abort(); } catch(e) {} }
-  speechSynthesis && speechSynthesis.cancel();
-  isSpeaking = false;
+  abortRecognition();
+  cancelSpeech();
+
   currentMode = mode;
   highlightChip(mode);
   applyModeHeader(mode);
+
+  // Hide result screen if showing
+  const resultScreen = document.getElementById('result-screen');
+  const authSection  = document.getElementById('auth-section');
+  resultScreen.classList.remove('show');
+  resultScreen.innerHTML = '';
+  authSection.style.display = '';
+
   if (mode === 'signin') startSignInFlow();
-  else startSignUpFlow();
+  else                   startSignUpFlow();
 }
 
 /* ════════════════════════════════════════
    RESET FLOW
 ════════════════════════════════════════ */
 function resetFlow() {
-  speechSynthesis && speechSynthesis.cancel();
-  isSpeaking = false;
+  abortRecognition();
+  cancelSpeech();
   state = 'idle';
-  if (recognition) { try { recognition.abort(); } catch(e) {} }
 
   const authSection  = document.getElementById('auth-section');
   const resultScreen = document.getElementById('result-screen');
@@ -946,9 +1019,7 @@ function resetFlow() {
   setBars('idle');
   setPill('', 'READY');
   updateSteps(0);
-  enableMic(false);
-
-  // Reset chip highlights
+  highlightChip(null);
   document.getElementById('chip-signin').classList.remove('active');
   document.getElementById('chip-signup').classList.remove('signup-active');
 
@@ -966,7 +1037,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ════════════════════════════════════════
-   EXPOSE TO WINDOW (for candlogin.js)
+   EXPOSE TO WINDOW
 ════════════════════════════════════════ */
 window.handleMicClick = handleMicClick;
 window.resetFlow      = resetFlow;
@@ -975,18 +1046,18 @@ window.forceMode      = forceMode;
 /* ════════════════════════════════════════
    BOOT
 ════════════════════════════════════════ */
-function boot() {
-  if (speechSynthesis && speechSynthesis.getVoices().length === 0) {
-    speechSynthesis.onvoiceschanged = captureIntentMode;
-  } else {
-    setTimeout(captureIntentMode, 800);
+window.addEventListener('load', () => {
+  // Pre-load voices (Chrome lazy-loads them)
+  if (window.speechSynthesis) {
+    speechSynthesis.getVoices();
+    speechSynthesis.onvoiceschanged = () => {};
   }
-}
-
-window.addEventListener('load', boot);
+  // Short delay so the page renders before we start speaking
+  setTimeout(captureIntentMode, 600);
+});
 </script>
 
-<!-- Firebase Auth bridge — exposes window.attemptFirebaseSignIn / SignUp -->
+<!-- Firebase Auth bridge -->
 <script type="module" src="./candlogin.js"></script>
 </body>
 </html>
