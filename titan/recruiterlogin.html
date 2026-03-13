@@ -445,15 +445,28 @@
 
 <script>
 
-/* ─────────────────────────────────────────────
-   SINGLE SOURCE OF TRUTH — change once here
-───────────────────────────────────────────── */
 const DASHBOARD_URL = './recruit.html';
 
-let _redirecting = false;
+/*
+ * FIX: Use sessionStorage instead of a plain variable for the redirect flag.
+ * A plain `let _redirecting = false` resets on every page load, so it can
+ * never survive a navigation. sessionStorage persists across the redirect.
+ *
+ * We also expose a helper so the Firebase module block can set it.
+ */
+function isRedirecting() {
+  return sessionStorage.getItem('tb_redirecting') === '1';
+}
+function setRedirecting() {
+  sessionStorage.setItem('tb_redirecting', '1');
+}
+// Clear the flag when this page loads fresh (not mid-redirect)
+// We clear it after a tick so the onAuthChange initial fire can read it.
+setTimeout(() => sessionStorage.removeItem('tb_redirecting'), 100);
 
 function redirectToDashboard() {
-  _redirecting = true;
+  if (isRedirecting()) return;
+  setRedirecting();
   window.location.href = DASHBOARD_URL;
 }
 
@@ -799,6 +812,7 @@ window.handleReset = handleReset; window.handleSaveProfile = handleSaveProfile;
 window.handleUpdateEmail = handleUpdateEmail; window.handleUpdatePassword = handleUpdatePassword;
 window.togglePwd = togglePwd; window.onPwdInput = onPwdInput; window.onNewPwdInput = onNewPwdInput;
 window.clearFieldError = clearFieldError;
+window.redirectToDashboard = redirectToDashboard;
 </script>
 
 <!-- FIREBASE MODULE -->
@@ -815,18 +829,59 @@ window.clearFieldError = clearFieldError;
     saveRecruiterProfile, getCurrentRecruiterProfile,
   };
 
+  /*
+   * FIX: The original onAuthChange had no guard against the initial
+   * auth-state restoration on page load. Firebase ALWAYS calls onAuthChange
+   * once immediately when the page loads if the user has an active session.
+   * That caused an instant redirect back to the login page after the
+   * dashboard sent them here (or caused a loop if the dashboard wasn't
+   * protected).
+   *
+   * THE FIX — two guards:
+   *
+   * 1. isRedirecting() — sessionStorage flag set before we navigate away.
+   *    If it's still '1' when the page loads (meaning we just redirected
+   *    here FROM the dashboard — i.e. a loop), we do NOT redirect again.
+   *    The flag is cleared after 100ms so normal subsequent logins work.
+   *
+   * 2. _authSettled — we skip the very first onAuthChange call if the
+   *    user is NOT logged in (no session to worry about). If the user IS
+   *    logged in on page load (existing session), we redirect them to the
+   *    dashboard immediately — they shouldn't be on the login page.
+   *    After the first call, _authSettled = true and all subsequent calls
+   *    (triggered by actual sign-in/sign-out actions) redirect normally.
+   */
+  let _authSettled = false;
+
   onAuthChange((state) => {
-    if (_redirecting) return;
-    if (!state.isLoggedIn) return;
+    if (isRedirecting()) return;
+
+    if (!_authSettled) {
+      _authSettled = true;
+
+      if (!state.isLoggedIn) {
+        // No active session — user needs to log in. Stay on this page.
+        return;
+      }
+
+      // User has an existing session and landed on the login page.
+      // Redirect them to the dashboard (they're already authenticated).
+      localStorage.setItem('titanRole', 'recruiter');
+      if (state.user?.displayName) {
+        localStorage.setItem('titanName', state.user.displayName);
+      }
+      redirectToDashboard();
+      return;
+    }
+
+    // Subsequent calls: triggered by actual sign-in or sign-out events.
+    if (!state.isLoggedIn) return; // signed out — stay here
 
     localStorage.setItem('titanRole', 'recruiter');
     if (state.user?.displayName) {
       localStorage.setItem('titanName', state.user.displayName);
     }
-
-    /* ✅ Fixed: was './recruiter-dashboard.html', now uses DASHBOARD_URL → './recruit.html' */
-    _redirecting = true;
-    window.location.href = DASHBOARD_URL;
+    redirectToDashboard();
   });
 </script>
 </body>
