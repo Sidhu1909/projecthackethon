@@ -179,7 +179,6 @@
       min-height: 1.2em; transition: opacity 0.3s; font-style: normal;
     }
 
-    /* ── Confidence indicator ── */
     .confidence-bar {
       width: 100%; height: 2px; background: rgba(91,156,246,0.1);
       border-radius: 2px; margin-bottom: 1rem; overflow: hidden;
@@ -330,7 +329,6 @@
         <div class="transcript-text" id="transcript-text"></div>
       </div>
 
-      <!-- Confidence bar -->
       <div class="confidence-bar" id="confidence-bar" style="display:none;">
         <div class="confidence-fill" id="confidence-fill"></div>
       </div>
@@ -364,50 +362,69 @@
 ════════════════════════════════════════ */
 const CANDIDATE_INTERVIEW_URL = "./candidate-interview.html";
 
-/*
- * SENSITIVITY SETTINGS — tweak these to adjust recognition behaviour
- *
- * SILENCE_MS        : ms of silence after last word before result is accepted.
- *                     Lower = snappier (good for short phrases like passwords).
- *                     Higher = waits longer (good if speakers pause mid-sentence).
- *
- * MIN_CONFIDENCE    : 0.0–1.0. Results below this are retried.
- *                     0 = accept everything; 0.4 = only fairly clear speech.
- *
- * MAX_ALTERNATIVES  : How many transcription candidates the engine returns.
- *                     The best-confidence one wins.
- *
- * RESTART_DELAY_MS  : Gap between recognition sessions (keep ≥100ms).
- */
-const SILENCE_MS       = 1200;   // ↓ from 3500 — snappier acceptance
-const MIN_CONFIDENCE   = 0.0;    // accept all confidences (raise to 0.3 to filter mumbles)
-const MAX_ALTERNATIVES = 3;      // engine returns up to 3 guesses; best wins
-const RESTART_DELAY_MS = 100;
+const SILENCE_MS       = 1400;   // ms of silence after last word before accepting
+const MIN_CONFIDENCE   = 0.0;    // 0 = accept all; raise to filter mumbles
+const MAX_ALTERNATIVES = 3;      // engine returns up to N guesses; best wins
+const RESTART_DELAY_MS = 150;
 
 /* ════════════════════════════════════════
    HELPERS
 ════════════════════════════════════════ */
+
+/*
+ * FIX 1 — normalize() no longer strips digits.
+ * Original: .replace(/[^a-z0-9\s]/g, '')  ← kept digits but also stripped
+ *           them when called on intent strings — fine.
+ * Real problem was spokenToEmail stripping spaces which ate digit groups.
+ * Safe to keep digits in normalize for intent detection.
+ */
 function normalize(str) {
-  return str.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+  return str.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-/* spoken email reconstruction — handles more verbal patterns */
+/*
+ * FIX 2 — spokenToEmail: convert digit words AND preserve numeral runs.
+ * e.g. "john 123 at gmail dot com" → "john123@gmail.com"
+ *      "alice dot smith 42 at outlook dot com" → "alice.smith42@outlook.com"
+ */
+const DIGIT_WORDS = {
+  zero:0, one:1, two:2, three:3, four:4, five:5,
+  six:6, seven:7, eight:8, nine:9,
+  // common spoken variants
+  won:1, to:2, too:2, for:4, ate:8
+};
+
+function wordsToDigits(str) {
+  // Replace spoken digit words with their numeral, e.g. "one two three" → "123"
+  return str.replace(/\b(zero|one|won|two|to|too|three|four|for|five|six|seven|eight|ate|nine)\b/gi, m => {
+    return DIGIT_WORDS[m.toLowerCase()] ?? m;
+  });
+}
+
 function spokenToEmail(spoken) {
-  return spoken
-    .toLowerCase()
-    // common spoken separators
-    .replace(/\s+at\s+the\s+rate\s+(of\s+)?/g, '@')
-    .replace(/\s+at\s+/g,   '@')
-    .replace(/\bat\b/g,     '@')
-    .replace(/\s+dot\s+/g,  '.')
-    .replace(/\bdot\b/g,    '.')
-    .replace(/\s+dash\s+/g, '-')
-    .replace(/\bdash\b/g,   '-')
-    .replace(/\s+underscore\s+/g, '_')
-    .replace(/\bunderscore\b/g,   '_')
-    // remove all remaining spaces
-    .replace(/\s+/g, '')
-    .trim();
+  let s = spoken.toLowerCase();
+
+  // spoken separators
+  s = s.replace(/\s+at\s+the\s+rate\s+(of\s+)?/g, '@');
+  s = s.replace(/\s+at\s+/g,   '@');
+  s = s.replace(/\bat\b/g,     '@');
+  s = s.replace(/\s+dot\s+/g,  '.');
+  s = s.replace(/\bdot\b/g,    '.');
+  s = s.replace(/\s+dash\s+/g, '-');
+  s = s.replace(/\bdash\b/g,   '-');
+  s = s.replace(/\s+underscore\s+/g, '_');
+  s = s.replace(/\bunderscore\b/g,   '_');
+
+  // convert digit words → numerals BEFORE stripping spaces
+  s = wordsToDigits(s);
+
+  // collapse all remaining spaces (joins adjacent words/digits)
+  s = s.replace(/\s+/g, '').trim();
+
+  return s;
 }
 
 /* ════════════════════════════════════════
@@ -598,16 +615,21 @@ function speak(text, onEnd) {
 }
 
 /* ════════════════════════════════════════
-   SPEECH RECOGNITION — HIGH SENSITIVITY
+   SPEECH RECOGNITION
    ─────────────────────────────────────
-   KEY IMPROVEMENTS vs original:
-   1. continuous: true  → engine stays open; we get more results per breath
-   2. maxAlternatives: 3 → pick highest-confidence candidate
-   3. Interim results show live transcript immediately
-   4. SILENCE_MS = 1200ms — accepts fast without cutting off long phrases
-   5. Confidence displayed on-screen via the confidence bar
-   6. Best-of-N selection: among all final results, pick highest confidence
-   7. onend restart only if !done, keeps session alive through pauses
+   FIX 3 — DUPLICATE RESULTS ROOT CAUSE & SOLUTION:
+   
+   The original used continuous:true + onend restart. When the browser
+   fires onend and we restart(), the NEW session re-delivers already-seen
+   final results as fresh ones (Chrome bug with continuous:true + restart).
+   
+   Solution: Use continuous:false (single-shot per session).
+   Restart on onend ONLY if no final result was captured yet (user paused
+   mid-sentence). Once we have at least one final segment, stop restarting.
+   This eliminates duplicate accumulation entirely.
+   
+   We still get interim results for live display and SILENCE_MS timer
+   for snappy acceptance.
 ════════════════════════════════════════ */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -619,11 +641,13 @@ function listen(onResult, onError) {
 
   abortRecognition();
 
-  let finalSegments = [];   // [{text, confidence}] — accumulate all final results
-  let interimText   = '';   // live interim display
-  let done          = false;
-  let silenceTimer  = null;
-  let restartTimer  = null;
+  let finalText      = '';     // FIX: single string, not an array — no accumulation across restarts
+  let finalConf      = 0;
+  let interimText    = '';
+  let done           = false;
+  let silenceTimer   = null;
+  let restartTimer   = null;
+  let hasFinalResult = false;  // FIX: once we have a final, don't restart
 
   function cleanup() {
     clearTimeout(silenceTimer);
@@ -633,43 +657,29 @@ function listen(onResult, onError) {
     setConfidence(null);
   }
 
-  function bestText() {
-    // Join all final segments by space
-    return finalSegments.map(s => s.text).join(' ').trim();
-  }
-
-  function bestConfidence() {
-    if (!finalSegments.length) return 0;
-    return finalSegments.reduce((sum, s) => sum + s.confidence, 0) / finalSegments.length;
-  }
-
   function acceptResult() {
     if (done) return;
     done = true;
     cleanup();
     abortRecognition();
-    const text = bestText();
-    const conf = bestConfidence();
+
+    const text = (finalText + (interimText ? ' ' + interimText : '')).trim();
 
     if (!text) {
+      // Nothing captured at all — restart one more time
       done = false;
+      hasFinalResult = false;
       startRec();
       return;
     }
 
-    // Below minimum confidence — show warning but still accept
-    // (don't silently discard — better to let the user see what was heard)
-    if (conf > 0 && conf < MIN_CONFIDENCE) {
-      setPill('', 'LOW CONFIDENCE — CHECK BELOW');
-    }
-
-    setConfidence(conf || null);
-    onResult(text, conf);
+    setConfidence(finalConf || null);
+    onResult(text, finalConf);
   }
 
   function resetSilenceTimer() {
     clearTimeout(silenceTimer);
-    const hasText = bestText() || interimText.trim();
+    const hasText = finalText || interimText.trim();
     if (hasText) {
       silenceTimer = setTimeout(acceptResult, SILENCE_MS);
     }
@@ -680,9 +690,9 @@ function listen(onResult, onError) {
 
     recognition = new SR();
     recognition.lang            = 'en-US';
-    recognition.interimResults  = true;     // live transcript
+    recognition.interimResults  = true;
     recognition.maxAlternatives = MAX_ALTERNATIVES;
-    recognition.continuous      = true;     // stay open through pauses
+    recognition.continuous      = false;   // FIX: single-shot prevents duplicate accumulation
 
     setPill('listening', 'LISTENING');
     setMicListening(true);
@@ -697,15 +707,21 @@ function listen(onResult, onError) {
         const result = e.results[i];
 
         if (result.isFinal) {
+          hasFinalResult = true;
           // Pick the highest-confidence alternative
           let best = result[0];
           for (let j = 1; j < result.length; j++) {
             if (result[j].confidence > best.confidence) best = result[j];
           }
-          finalSegments.push({ text: best.transcript.trim(), confidence: best.confidence });
+          // FIX: append to finalText with a space separator (handles multi-sentence)
+          // but only if the new segment isn't already at the end (dedup guard)
+          const newSeg = best.transcript.trim();
+          if (!finalText.endsWith(newSeg)) {
+            finalText = (finalText + ' ' + newSeg).trim();
+          }
+          finalConf = best.confidence;
           setConfidence(best.confidence);
         } else {
-          // Show best interim alternative
           let bestInterim = result[0];
           for (let j = 1; j < result.length; j++) {
             if (result[j].confidence > bestInterim.confidence) bestInterim = result[j];
@@ -714,7 +730,7 @@ function listen(onResult, onError) {
         }
       }
 
-      const display = (bestText() + (interimText ? ' ' + interimText : '')).trim();
+      const display = (finalText + (interimText ? ' ' + interimText : '')).trim();
       if (display) setTranscript('"' + display + '"');
 
       resetSilenceTimer();
@@ -723,8 +739,16 @@ function listen(onResult, onError) {
     recognition.onend = () => {
       if (done) return;
       setMicListening(false);
-      // Restart quickly to keep session alive
-      restartTimer = setTimeout(startRec, RESTART_DELAY_MS);
+
+      // FIX: only restart if we haven't captured a final result yet.
+      // If we have a final result, accept it (don't keep listening for more,
+      // which caused the restart-accumulation duplicate bug).
+      if (hasFinalResult) {
+        acceptResult();
+      } else {
+        // User may have paused before speaking — restart to keep listening
+        restartTimer = setTimeout(startRec, RESTART_DELAY_MS);
+      }
     };
 
     recognition.onerror = (e) => {
@@ -735,9 +759,13 @@ function listen(onResult, onError) {
         onError('Microphone access denied. Please allow microphone access and try again.');
         return;
       }
-      // no-speech, aborted, network — restart
+      // no-speech, aborted, network — restart only if no final yet
       setMicListening(false);
-      restartTimer = setTimeout(startRec, RESTART_DELAY_MS + 100);
+      if (!hasFinalResult) {
+        restartTimer = setTimeout(startRec, RESTART_DELAY_MS + 100);
+      } else {
+        acceptResult();
+      }
     };
 
     try {
