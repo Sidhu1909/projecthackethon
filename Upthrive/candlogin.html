@@ -106,6 +106,23 @@
     }
     .card-subtitle { font-size: 0.65rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); }
 
+    /* ── Intent choice chips (shown during voice-intent step) ── */
+    .intent-chips {
+      display: flex; gap: 0.8rem; justify-content: center;
+      margin-bottom: 1.5rem;
+      opacity: 0; transition: opacity 0.4s;
+    }
+    .intent-chips.visible { opacity: 1; }
+    .chip {
+      border: 1px solid var(--border); border-radius: 99px;
+      padding: 0.45rem 1.1rem; font-size: 0.6rem;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--muted); cursor: pointer; background: none;
+      font-family: var(--font-mono); transition: all 0.25s;
+    }
+    .chip:hover, .chip.active { border-color: var(--blue); color: var(--blue); box-shadow: 0 0 10px var(--blue-glow); }
+    .chip.signup-active { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 10px rgba(56,217,245,0.25); }
+
     .steps {
       display: flex; align-items: center; justify-content: center;
       gap: 0; margin-bottom: 2.5rem;
@@ -146,6 +163,7 @@
     }
     .bar.success { background: var(--green); }
     .bar.error   { background: var(--red); }
+    .bar.cyan    { background: var(--cyan); }
 
     @keyframes wave { from { height: 6px; } to { height: var(--h, 40px); } }
 
@@ -198,15 +216,6 @@
     .mic-btn.disabled { opacity: 0.3; pointer-events: none; cursor: default; }
 
     @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
-
-    .auth-tab {
-      background: none; border: none; border-bottom: 2px solid transparent;
-      color: var(--muted); font-family: var(--font-mono); font-size: 0.6rem;
-      letter-spacing: 0.25em; text-transform: uppercase;
-      padding: 0.65rem 1.2rem; cursor: pointer; transition: all 0.3s;
-    }
-    .auth-tab:hover { color: var(--blue); }
-    .auth-tab.active { color: var(--blue); border-bottom-color: var(--blue); text-shadow: 0 0 8px rgba(91,156,246,0.3); }
 
     .hint { text-align: center; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
 
@@ -269,13 +278,14 @@
       <div class="logo-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5z"/><path d="M3 11a9 9 0 0 0 18 0"/><line x1="12" y1="20" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       </div>
-      <h1 class="card-title" id="card-title">Voice Sign In</h1>
-      <p class="card-subtitle" id="card-subtitle">Speak to authenticate</p>
+      <h1 class="card-title" id="card-title">Welcome</h1>
+      <p class="card-subtitle" id="card-subtitle">Voice authentication</p>
     </div>
 
-    <div style="display:flex; gap:0.8rem; margin-bottom:1.5rem; border-bottom:1px solid var(--border); justify-content:center;">
-      <button id="tab-signin" class="auth-tab active" onclick="switchTab('signin')" aria-selected="true">SIGN IN</button>
-      <button id="tab-signup" class="auth-tab"        onclick="switchTab('signup')" aria-selected="false">SIGN UP</button>
+    <!-- Voice-driven intent chips — highlight which mode was chosen -->
+    <div class="intent-chips" id="intent-chips" aria-hidden="true">
+      <button class="chip" id="chip-signin" onclick="forceMode('signin')">Sign In</button>
+      <button class="chip" id="chip-signup" onclick="forceMode('signup')">Sign Up</button>
     </div>
 
     <div class="steps" id="steps-bar" aria-label="Authentication progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="2">
@@ -287,7 +297,7 @@
     </div>
 
     <div id="auth-section">
-      <div class="step-label" id="step-label">STEP 1 OF 2 — EMAIL</div>
+      <div class="step-label" id="step-label">LISTENING FOR INTENT…</div>
 
       <div class="viz-wrap" aria-hidden="true" id="viz"></div>
 
@@ -312,22 +322,26 @@
 
     <div id="result-screen" role="alert" aria-live="assertive"></div>
 
-    <div class="demo-note">
-      Demo credentials — say: <strong>email</strong> "john at example dot com" &nbsp;·&nbsp; <strong>password</strong> "open sesame"
+    <div class="demo-note" id="demo-note">
+      Say <strong>"sign in"</strong> or <strong>"sign up"</strong> to get started
     </div>
 
   </div>
 </div>
 
-
+<script>
+/* ════════════════════════════════════════
+   CONFIG
 ════════════════════════════════════════ */
 const DEMO_CREDENTIALS = {
   email:    'john at example dot com',
   password: 'open sesame'
 };
-
 const CANDIDATE_INTERVIEW_URL = "./candi.html";
 
+/* ════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════ */
 function normalize(str) {
   return str.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
 }
@@ -335,14 +349,14 @@ function normalize(str) {
 /* ════════════════════════════════════════
    STATE
 ════════════════════════════════════════ */
-let currentMode = 'signin';
-let state       = 'idle';
-let authStep    = 'email';
-let spokenEmail = '';
+let currentMode  = null;   // null | 'signin' | 'signup'
+let state        = 'idle'; // idle | listening | processing | verifying | done
+let authStep     = 'intent'; // intent | email | password | password-confirm
+let spokenEmail  = '';
 let spokenPassword = '';
 let spokenPasswordConfirm = '';
-let recognition = null;
-let isSpeaking  = false;
+let recognition  = null;
+let isSpeaking   = false;
 let _redirecting = false;
 
 /* ════════════════════════════════════════
@@ -359,12 +373,13 @@ for (let i = 0; i < BAR_COUNT; i++) {
   b.style.setProperty('--del', (i / BAR_COUNT * 0.5).toFixed(2) + 's');
   viz.appendChild(b);
 }
+
 function setBars(mode) {
   viz.querySelectorAll('.bar').forEach(b => {
     b.className = 'bar';
     if (mode === 'listening' || mode === 'speaking') b.classList.add('active');
-    else if (mode === 'success') b.classList.add('active','success');
-    else if (mode === 'error')   b.classList.add('active','error');
+    else if (mode === 'success') b.classList.add('active', 'success');
+    else if (mode === 'error')   b.classList.add('active', 'error');
   });
 }
 
@@ -382,7 +397,7 @@ function announce(msg) {
 ════════════════════════════════════════ */
 function setPrompt(text)     { document.getElementById('prompt-text').textContent = text; }
 function setTranscript(text) {
-  let disp = text.replace(/\s+at\s+/gi,'@').replace(/\s+dot\s+/gi,'.');
+  let disp = text.replace(/\s+at\s+/gi, '@').replace(/\s+dot\s+/gi, '.');
   document.getElementById('transcript-text').textContent = disp;
 }
 function setPill(mode, label) {
@@ -401,20 +416,31 @@ function enableMic(on) {
   if (on) btn.classList.remove('disabled');
   else    btn.classList.add('disabled');
 }
+
+/**
+ * updateSteps — adapts to current mode:
+ *   signin: 2 real steps (email, password) + verify dot
+ *   signup: 3 real steps (email, password, confirm)
+ *   null  : hide step dots, show intent prompt
+ */
 function updateSteps(step) {
-  const s1 = document.getElementById('step1');
-  const s2 = document.getElementById('step2');
-  const s3 = document.getElementById('step3');
-  const l1 = document.getElementById('line1');
-  const l2 = document.getElementById('line2');
-  const lbl= document.getElementById('step-label');
+  const s1  = document.getElementById('step1');
+  const s2  = document.getElementById('step2');
+  const s3  = document.getElementById('step3');
+  const l1  = document.getElementById('line1');
+  const l2  = document.getElementById('line2');
+  const lbl = document.getElementById('step-label');
 
   s1.className = 'step-dot' + (step > 1 ? ' done' : step === 1 ? ' active' : '');
   s2.className = 'step-dot' + (step > 2 ? ' done' : step === 2 ? ' active' : '');
-  s3.className = 'step-dot' + (step === 3 ? ' active' : '');
+  s3.className = 'step-dot' + (step >= 3 ? ' active' : '');
   l1.className = 'step-line' + (step > 1 ? ' done' : '');
   l2.className = 'step-line' + (step > 2 ? ' done' : '');
 
+  if (!currentMode) {
+    lbl.textContent = 'SAY "SIGN IN" OR "SIGN UP"';
+    return;
+  }
   if (currentMode === 'signin') {
     if (step === 1) lbl.textContent = 'STEP 1 OF 2 — EMAIL';
     if (step === 2) lbl.textContent = 'STEP 2 OF 2 — PASSWORD';
@@ -423,6 +449,29 @@ function updateSteps(step) {
     if (step === 1) lbl.textContent = 'STEP 1 OF 3 — EMAIL';
     if (step === 2) lbl.textContent = 'STEP 2 OF 3 — PASSWORD';
     if (step === 3) lbl.textContent = 'STEP 3 OF 3 — CONFIRM PASSWORD';
+  }
+}
+
+/** Highlight the chosen mode chip */
+function highlightChip(mode) {
+  const chips = document.getElementById('intent-chips');
+  chips.classList.add('visible');
+  document.getElementById('chip-signin').classList.toggle('active',       mode === 'signin');
+  document.getElementById('chip-signup').classList.toggle('signup-active', mode === 'signup');
+}
+
+/** Update card header text based on mode */
+function applyModeHeader(mode) {
+  if (mode === 'signin') {
+    document.getElementById('card-title').textContent    = 'Voice Sign In';
+    document.getElementById('card-subtitle').textContent = 'Speak to authenticate';
+    document.getElementById('demo-note').innerHTML =
+      'Demo — say: <strong>email</strong> "john at example dot com" &nbsp;·&nbsp; <strong>password</strong> "open sesame"';
+  } else {
+    document.getElementById('card-title').textContent    = 'Voice Sign Up';
+    document.getElementById('card-subtitle').textContent = 'Create your account';
+    document.getElementById('demo-note').innerHTML =
+      'Speak your email &amp; a password (twice to confirm) to create an account.';
   }
 }
 
@@ -446,7 +495,7 @@ function speak(text, onEnd) {
 
   const safetyTimer = setTimeout(() => {
     if (isSpeaking) { isSpeaking = false; if (onEnd) onEnd(); }
-  }, 8000);
+  }, 10000);
 
   const done = () => { clearTimeout(safetyTimer); isSpeaking = false; if (onEnd) onEnd(); };
   utt.onend   = done;
@@ -457,7 +506,7 @@ function speak(text, onEnd) {
 }
 
 /* ════════════════════════════════════════
-   SPEECH RECOGNITION
+   SPEECH RECOGNITION  (auto-restarts on silence)
 ════════════════════════════════════════ */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -492,9 +541,7 @@ function listen(onResult, onError) {
       if (finalResult && !resultFired) {
         resultFired = true; dead = true;
         recognition.stop();
-        const text = finalResult.trim();
-        if (text.toLowerCase().includes('try again')) { resetFlow(); return; }
-        requestAnimationFrame(() => onResult(text));
+        requestAnimationFrame(() => onResult(finalResult.trim()));
       }
     };
 
@@ -508,10 +555,10 @@ function listen(onResult, onError) {
     recognition.onerror = (e) => {
       setMicState(false);
       if (resultFired || dead) return;
-      if (e.error === 'no-speech')    { setBars('listening'); setTimeout(startRec, 100); }
-      else if (e.error === 'not-allowed') { dead = true; onError('Microphone access denied. Please allow mic access.'); }
-      else if (e.error === 'aborted') { return; }
-      else { setBars('listening'); setTimeout(startRec, 200); }
+      if (e.error === 'no-speech')        { setBars('listening'); setTimeout(startRec, 100); }
+      else if (e.error === 'not-allowed') { dead = true; onError('Microphone access denied.'); }
+      else if (e.error === 'aborted')     { return; }
+      else                                { setBars('listening'); setTimeout(startRec, 200); }
     };
 
     recognition.start();
@@ -521,69 +568,77 @@ function listen(onResult, onError) {
 }
 
 /* ════════════════════════════════════════
-   AUTH FLOW — TAB SWITCH
-════════════════════════════════════════ */
-function switchTab(mode) {
-  speechSynthesis && speechSynthesis.cancel();
-  isSpeaking = false;
-  if (recognition) { try { recognition.abort(); } catch(e) {} }
-
-  currentMode = mode;
-  document.getElementById('tab-signin').classList.toggle('active', mode === 'signin');
-  document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
-  document.getElementById('tab-signin').setAttribute('aria-selected', mode === 'signin');
-  document.getElementById('tab-signup').setAttribute('aria-selected', mode === 'signup');
-
-  if (mode === 'signin') {
-    document.getElementById('card-title').textContent = 'Voice Sign In';
-    document.getElementById('card-subtitle').textContent = 'Speak to authenticate';
-  } else {
-    document.getElementById('card-title').textContent = 'Voice Sign Up';
-    document.getElementById('card-subtitle').textContent = 'Create your account';
-  }
-
-  resetFlow(true);
-}
-
-/* ════════════════════════════════════════
-   INTENT MODE (first boot)
+   INTENT CAPTURE  — asks "sign in or sign up?"
 ════════════════════════════════════════ */
 function captureIntentMode() {
-  state = 'idle'; authStep = 'intent'; enableMic(false);
+  currentMode = null;
+  authStep    = 'intent';
+  state       = 'idle';
+  enableMic(false);
+  updateSteps(0);
+  setTranscript('');
+
   document.getElementById('card-title').textContent    = 'Welcome to TalentBridge';
   document.getElementById('card-subtitle').textContent = 'What would you like to do?';
+  document.getElementById('intent-chips').classList.remove('visible');
+  document.getElementById('demo-note').innerHTML =
+    'Say <strong>"sign in"</strong> or <strong>"sign up"</strong> to get started';
+
   setPrompt("Sign in or sign up?");
 
   speak("Welcome to TalentBridge. Would you like to sign in or sign up?", () => {
-    announce("Listening. Please say sign in or sign up.");
-    setPill('', 'READY'); setBars('idle');
+    announce("Please say sign in or sign up.");
+    setPill('', 'READY');
+    setBars('idle');
     listenForIntent();
   });
 }
 
 function listenForIntent() {
-  state = 'listening'; enableMic(false);
-  setPrompt("Listening for your choice…");
+  state = 'listening';
+  enableMic(false);
+  setPrompt("Listening… say sign in or sign up");
 
   listen((result) => {
     state = 'processing';
     const spoken = normalize(result);
     setTranscript('"' + result + '"');
-    setBars('idle'); setPill('', 'RECEIVED');
+    setBars('idle');
+    setPill('', 'RECEIVED');
 
-    if (/sign\s*in/.test(spoken)) {
-      speak("Taking you to sign in.", () => switchTab('signin'));
-    } else if (/sign\s*up/.test(spoken)) {
-      speak("Taking you to sign up.", () => switchTab('signup'));
+    if (/sign\s*in/.test(spoken) || /log\s*in/.test(spoken) || spoken === 'signin') {
+      highlightChip('signin');
+      speak("Got it. Taking you to sign in.", () => {
+        currentMode = 'signin';
+        applyModeHeader('signin');
+        startSignInFlow();
+      });
+    } else if (/sign\s*up/.test(spoken) || /register/.test(spoken) || spoken === 'signup') {
+      highlightChip('signup');
+      speak("Got it. Let's create your account.", () => {
+        currentMode = 'signup';
+        applyModeHeader('signup');
+        startSignUpFlow();
+      });
     } else {
       speak("Sorry, I didn't catch that. Please say sign in or sign up.", () => {
-        setPrompt("Sign in or sign up?"); setTranscript(''); setPill('', 'READY');
+        setPrompt("Sign in or sign up?");
+        setTranscript('');
+        setPill('', 'READY');
         listenForIntent();
       });
     }
   }, (err) => {
-    state = 'idle'; setBars('idle'); setPill('error', 'ERROR'); setPrompt(err);
-    setTimeout(() => { setPrompt("Sign in or sign up?"); setPill('', 'READY'); listenForIntent(); }, 2800);
+    state = 'idle';
+    setBars('idle');
+    setPill('error', 'ERROR');
+    setPrompt(err);
+    announce(err);
+    setTimeout(() => {
+      setPrompt("Sign in or sign up?");
+      setPill('', 'READY');
+      listenForIntent();
+    }, 2800);
   });
 }
 
@@ -591,52 +646,63 @@ function listenForIntent() {
    SIGN IN FLOW
 ════════════════════════════════════════ */
 function startSignInFlow() {
-  authStep = 'email'; spokenEmail = ''; spokenPassword = '';
-  updateSteps(1); setTranscript(''); enableMic(false);
-  setPrompt("Welcome to TalentBridge voice sign-in.");
+  authStep = 'email';
+  spokenEmail = '';
+  spokenPassword = '';
+  updateSteps(1);
+  setTranscript('');
+  enableMic(false);
 
-  speak("Welcome. Please say your email address.", () => {
+  speak("Please say your email address.", () => {
     setPrompt("Please say your email address.");
     announce("Listening for your email address.");
-    setPill('', 'READY'); setBars('idle');
+    setPill('', 'READY');
+    setBars('idle');
     captureEmailSignIn();
   });
 }
 
 function captureEmailSignIn() {
-  state = 'listening'; enableMic(false);
+  state = 'listening';
+  enableMic(false);
   setPrompt("Listening for your email…");
 
   listen((result) => {
-    state = 'processing'; spokenEmail = normalize(result);
+    state = 'processing';
+    spokenEmail = normalize(result);
     setTranscript('"' + result + '"');
-    setBars('idle'); setPill('', 'RECEIVED');
-    authStep = 'password'; updateSteps(2);
+    setBars('idle');
+    setPill('', 'RECEIVED');
+    authStep = 'password';
+    updateSteps(2);
 
     speak('Got it. Now please say your password.', () => {
       setPrompt("Please say your password.");
       announce("Listening for your password.");
-      setTranscript(''); setPill('', 'READY');
+      setTranscript('');
+      setPill('', 'READY');
       capturePasswordSignIn();
     });
   }, handleListenError);
 }
 
 function capturePasswordSignIn() {
-  state = 'listening'; enableMic(false);
+  state = 'listening';
+  enableMic(false);
   setPrompt("Listening for your password…");
 
   listen((result) => {
-    state = 'verifying'; spokenPassword = normalize(result);
+    state = 'verifying';
+    spokenPassword = normalize(result);
     setTranscript('"' + result + '"');
-    setBars('idle'); setPill('', 'VERIFYING');
+    setBars('idle');
+    setPill('', 'VERIFYING');
     updateSteps(3);
     verifySignInCredentials();
   }, handleListenError);
 }
 
 async function verifySignInCredentials() {
-  // Try Firebase first (exposed by candlogin.js module)
   if (window.attemptFirebaseSignIn) {
     try {
       const res = await window.attemptFirebaseSignIn(spokenEmail, spokenPassword);
@@ -645,7 +711,7 @@ async function verifySignInCredentials() {
       handleAuthResult({ success: false, error: 'Sign-in error. Please try again.' });
     }
   } else {
-    // Demo fallback — no Firebase configured
+    // Demo fallback
     const emailOk = spokenEmail    === normalize(DEMO_CREDENTIALS.email);
     const pwdOk   = spokenPassword === normalize(DEMO_CREDENTIALS.password);
     handleAuthResult({ success: emailOk && pwdOk, error: emailOk && pwdOk ? null : 'Credentials do not match.' });
@@ -656,64 +722,82 @@ async function verifySignInCredentials() {
    SIGN UP FLOW
 ════════════════════════════════════════ */
 function startSignUpFlow() {
-  authStep = 'email'; spokenEmail = ''; spokenPassword = ''; spokenPasswordConfirm = '';
-  updateSteps(1); setTranscript(''); enableMic(false);
-  setPrompt("Let's create your TalentBridge voice account.");
+  authStep = 'email';
+  spokenEmail = '';
+  spokenPassword = '';
+  spokenPasswordConfirm = '';
+  updateSteps(1);
+  setTranscript('');
+  enableMic(false);
 
-  speak("Welcome. Let's create your account. Please say your email address.", () => {
+  speak("Let's create your account. Please say your email address.", () => {
     setPrompt("Please say your email address.");
     announce("Listening for your email address.");
-    setPill('', 'READY'); setBars('idle');
+    setPill('', 'READY');
+    setBars('idle');
     captureEmailSignUp();
   });
 }
 
 function captureEmailSignUp() {
-  state = 'listening'; enableMic(false);
+  state = 'listening';
+  enableMic(false);
   setPrompt("Listening for your email…");
 
   listen((result) => {
-    state = 'processing'; spokenEmail = normalize(result);
+    state = 'processing';
+    spokenEmail = normalize(result);
     setTranscript('"' + result + '"');
-    setBars('idle'); setPill('', 'RECEIVED');
-    authStep = 'password'; updateSteps(2);
+    setBars('idle');
+    setPill('', 'RECEIVED');
+    authStep = 'password';
+    updateSteps(2);
 
     speak('Got it. Now please say your password.', () => {
       setPrompt("Please say your password.");
       announce("Listening for your password.");
-      setTranscript(''); setPill('', 'READY');
+      setTranscript('');
+      setPill('', 'READY');
       capturePasswordSignUp();
     });
   }, handleListenError);
 }
 
 function capturePasswordSignUp() {
-  state = 'listening'; enableMic(false);
+  state = 'listening';
+  enableMic(false);
   setPrompt("Listening for your password…");
 
   listen((result) => {
-    state = 'processing'; spokenPassword = normalize(result);
+    state = 'processing';
+    spokenPassword = normalize(result);
     setTranscript('"' + result + '"');
-    setBars('idle'); setPill('', 'RECEIVED');
-    authStep = 'password-confirm'; updateSteps(3);
+    setBars('idle');
+    setPill('', 'RECEIVED');
+    authStep = 'password-confirm';
+    updateSteps(3);
 
     speak('Got it. Now please confirm your password.', () => {
       setPrompt("Please confirm your password.");
       announce("Listening for password confirmation.");
-      setTranscript(''); setPill('', 'READY');
+      setTranscript('');
+      setPill('', 'READY');
       capturePasswordConfirmSignUp();
     });
   }, handleListenError);
 }
 
 function capturePasswordConfirmSignUp() {
-  state = 'listening'; enableMic(false);
+  state = 'listening';
+  enableMic(false);
   setPrompt("Listening for password confirmation…");
 
   listen((result) => {
-    state = 'verifying'; spokenPasswordConfirm = normalize(result);
+    state = 'verifying';
+    spokenPasswordConfirm = normalize(result);
     setTranscript('"' + result + '"');
-    setBars('idle'); setPill('', 'VERIFYING');
+    setBars('idle');
+    setPill('', 'VERIFYING');
     verifySignUpCredentials();
   }, handleListenError);
 }
@@ -723,7 +807,6 @@ async function verifySignUpCredentials() {
     handleAuthResult({ success: false, error: 'Passwords do not match. Please try again.' });
     return;
   }
-
   if (window.attemptFirebaseSignUp) {
     try {
       const res = await window.attemptFirebaseSignUp(spokenEmail, spokenPassword);
@@ -732,13 +815,13 @@ async function verifySignUpCredentials() {
       handleAuthResult({ success: false, error: err.message || 'Sign-up failed.' });
     }
   } else {
-    // Demo mode — no Firebase
+    // Demo mode
     handleAuthResult({ success: true, error: null });
   }
 }
 
 /* ════════════════════════════════════════
-   HANDLE AUTH RESULT — redirects on success
+   HANDLE AUTH RESULT
 ════════════════════════════════════════ */
 function handleAuthResult(result) {
   const authSection  = document.getElementById('auth-section');
@@ -748,7 +831,8 @@ function handleAuthResult(result) {
   resultScreen.classList.add('show');
 
   if (result.success) {
-    setBars('success'); setPill('success', 'GRANTED');
+    setBars('success');
+    setPill('success', 'GRANTED');
 
     const isSignUp     = currentMode === 'signup';
     const titleText    = isSignUp ? 'Account Created' : 'Access Granted';
@@ -767,18 +851,16 @@ function handleAuthResult(result) {
       ? "Account created. Redirecting you to your interview."
       : "Access granted. Welcome back. Redirecting now.";
     announce(msg);
-
-    // Save role to localStorage so interview page can read it
     localStorage.setItem('titanRole', 'candidate');
 
-    // Speak success then redirect
     speak(msg, () => {
       _redirecting = true;
       window.location.href = CANDIDATE_INTERVIEW_URL;
     });
 
   } else {
-    setBars('error'); setPill('error', 'DENIED');
+    setBars('error');
+    setPill('error', 'DENIED');
     const reason = result.error || (currentMode === 'signup'
       ? 'Sign-up failed. Please try again.'
       : 'Credentials did not match.');
@@ -800,21 +882,31 @@ function handleAuthResult(result) {
    ERROR HANDLER (shared)
 ════════════════════════════════════════ */
 function handleListenError(err) {
-  state = 'idle'; setBars('idle'); setPill('error', 'ERROR'); setPrompt(err);
+  state = 'idle';
+  setBars('idle');
+  setPill('error', 'ERROR');
+  setPrompt(err);
+  announce(err);
   if (err.includes('denied')) {
     setTimeout(() => { setPill('', 'READY'); }, 2800);
   }
 }
 
 /* ════════════════════════════════════════
-   MIC BUTTON CLICK
+   MIC BUTTON CLICK  — advances whichever
+   step is currently waiting
 ════════════════════════════════════════ */
 function handleMicClick() {
   if (state === 'listening') return;
+
+  if (authStep === 'intent') {
+    listenForIntent();
+    return;
+  }
   if (currentMode === 'signin') {
     if (authStep === 'email')    captureEmailSignIn();
     else if (authStep === 'password') capturePasswordSignIn();
-  } else {
+  } else if (currentMode === 'signup') {
     if (authStep === 'email')              captureEmailSignUp();
     else if (authStep === 'password')      capturePasswordSignUp();
     else if (authStep === 'password-confirm') capturePasswordConfirmSignUp();
@@ -822,11 +914,26 @@ function handleMicClick() {
 }
 
 /* ════════════════════════════════════════
+   FORCE MODE (chip click override)
+════════════════════════════════════════ */
+function forceMode(mode) {
+  if (recognition) { try { recognition.abort(); } catch(e) {} }
+  speechSynthesis && speechSynthesis.cancel();
+  isSpeaking = false;
+  currentMode = mode;
+  highlightChip(mode);
+  applyModeHeader(mode);
+  if (mode === 'signin') startSignInFlow();
+  else startSignUpFlow();
+}
+
+/* ════════════════════════════════════════
    RESET FLOW
 ════════════════════════════════════════ */
-function resetFlow(skipIntent = false) {
+function resetFlow() {
   speechSynthesis && speechSynthesis.cancel();
-  isSpeaking = false; state = 'idle';
+  isSpeaking = false;
+  state = 'idle';
   if (recognition) { try { recognition.abort(); } catch(e) {} }
 
   const authSection  = document.getElementById('auth-section');
@@ -835,35 +942,39 @@ function resetFlow(skipIntent = false) {
   resultScreen.innerHTML = '';
   authSection.style.display = '';
 
-  setTranscript(''); setBars('idle'); setPill('', 'READY');
-  updateSteps(1); enableMic(false);
+  setTranscript('');
+  setBars('idle');
+  setPill('', 'READY');
+  updateSteps(0);
+  enableMic(false);
 
-  setTimeout(() => {
-    if (skipIntent) {
-      if (currentMode === 'signin') startSignInFlow();
-      else startSignUpFlow();
-    } else {
-      captureIntentMode();
-    }
-  }, 300);
+  // Reset chip highlights
+  document.getElementById('chip-signin').classList.remove('active');
+  document.getElementById('chip-signup').classList.remove('signup-active');
+
+  setTimeout(captureIntentMode, 300);
 }
 
 /* ════════════════════════════════════════
-   KEYBOARD
+   KEYBOARD  (Space = mic)
 ════════════════════════════════════════ */
 document.addEventListener('keydown', (e) => {
   if (e.code === 'Space' && e.target === document.body) {
-    e.preventDefault(); handleMicClick();
+    e.preventDefault();
+    handleMicClick();
   }
 });
 
 /* ════════════════════════════════════════
-   BOOT — wait for voices to load
+   EXPOSE TO WINDOW (for candlogin.js)
 ════════════════════════════════════════ */
-window.switchTab     = switchTab;
 window.handleMicClick = handleMicClick;
-window.resetFlow     = resetFlow;
+window.resetFlow      = resetFlow;
+window.forceMode      = forceMode;
 
+/* ════════════════════════════════════════
+   BOOT
+════════════════════════════════════════ */
 function boot() {
   if (speechSynthesis && speechSynthesis.getVoices().length === 0) {
     speechSynthesis.onvoiceschanged = captureIntentMode;
@@ -875,7 +986,7 @@ function boot() {
 window.addEventListener('load', boot);
 </script>
 
-<!-- ── Firebase Auth bridge (loads candlogin.js which exposes window.attemptFirebaseSignIn / SignUp) ── -->
+<!-- Firebase Auth bridge — exposes window.attemptFirebaseSignIn / SignUp -->
 <script type="module" src="./candlogin.js"></script>
 </body>
 </html>
