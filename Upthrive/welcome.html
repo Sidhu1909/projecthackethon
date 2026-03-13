@@ -434,7 +434,6 @@
 
   function speakIntro() {
     if (!window.speechSynthesis) {
-      // No TTS — auto-start mic after a short delay instead
       setTimeout(startListening, 1800);
       return;
     }
@@ -462,11 +461,9 @@
       orb.classList.remove('speaking');
       status.textContent = 'Listening…';
       ttsReady = true;
-      // ── AUTO-START MIC after intro finishes ──
       startListening();
     };
 
-    // Safety net: if onend never fires (some browsers are buggy), start anyway
     msg.onerror = () => {
       orb.classList.remove('speaking');
       ttsReady = true;
@@ -483,7 +480,6 @@
       speechSynthesis.onvoiceschanged = () => setTimeout(speakIntro, 600);
     }
   } else {
-    // No TTS support at all — auto-start mic after a brief delay
     setTimeout(startListening, 1800);
   }
 
@@ -582,7 +578,7 @@
         const retry = new SpeechSynthesisUtterance(
           "Sorry, I didn't quite get that. Please say — I'm a recruiter — or — I'm a candidate."
         );
-        retry.onend = () => startListening(); // auto-restart mic after retry prompt
+        retry.onend = () => startListening();
         speechSynthesis.speak(retry);
       }
     }
@@ -635,8 +631,10 @@
       speechSynthesis.speak(confirm);
     }
 
+    // ── REDIRECT after overlay animation completes ──
     setTimeout(() => {
       if (type === 'recruiter') {
+        window.location.href = './recruitlogin.html';  // ← fixed: was bare return
         return;
       }
       if (type === 'candidate') {
