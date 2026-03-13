@@ -18,99 +18,6 @@
 
 import { initializeApp }        from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {
-<<<<<<< HEAD
-  onAuthChange,
-  signInWithEmail,
-  signInWithGoogle,
-  signUpWithEmail,
-  resetPassword,
-} from './index.js';
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyD3c6gMQt00siR70-B93qBjVqYQAjrM3W4",
-  authDomain: "titan-fde30.firebaseapp.com",
-  projectId: "titan-fde30",
-  storageBucket: "titan-fde30.firebasestorage.app",
-  messagingSenderId: "545954155049",
-  appId: "1:545954155049:web:59e785904b07cda5a4ea38",
-  measurementId: "G-4MDFGCVS5H"
-};
-// expose a function that the HTML can call to attempt firebase sign-in
-// with the spoken credentials. this replaces the dummy credential check.
-export async function attemptFirebaseSignIn(spokenEmail, spokenPassword) {
-  try {
-    // normalize inputs (remove spaces, handle common speech errors)
-    let email = spokenEmail.toLowerCase()
-      .replace(/\s+at\s+/gi, '@')
-      .replace(/\s+dot\s+/gi, '.')
-      .replace(/\s+/g, '');
-    const password = spokenPassword.trim();
-
-    // basic validation
-    if (!email.includes('@') || password.length < 6) {
-      const msg = 'Invalid email or password format';
-      window.speak && window.speak(msg);
-      return { success: false, error: msg };
-    }
-
-    // attempt firebase sign-in
-    const result = await signInWithEmail(email, password);
-
-    if (result.error) {
-      window.speak && window.speak('Sign in failed: ' + result.error);
-      return { success: false, error: result.error };
-    }
-
-    // success: persist role and return user
-    localStorage.setItem('titanRole', 'candidate');
-    window.speak && window.speak('Sign in successful. Welcome back.');
-    return { success: true, user: result.user };
-
-  } catch (err) {
-    console.error('firebase sign-in error:', err);
-    const msg = err.message || 'Sign-in failed';
-    window.speak && window.speak(msg);
-    return { success: false, error: msg };
-  }
-}
-
-// handle candidate voice-based sign-up
-export async function attemptFirebaseSignUp(spokenEmail, spokenPassword) {
-  try {
-    // normalize inputs (remove spaces, handle common speech errors)
-    let email = spokenEmail.toLowerCase()
-      .replace(/\s+at\s+/gi, '@')
-      .replace(/\s+dot\s+/gi, '.')
-      .replace(/\s+/g, '');
-    const password = spokenPassword.trim();
-
-    // basic validation
-    if (!email.includes('@') || password.length < 6) {
-      const msg = 'Invalid email or password format';
-      window.speak && window.speak(msg);
-      return { success: false, error: msg };
-    }
-
-    // attempt firebase sign-up
-    const result = await signUpWithEmail(email, password);
-
-    if (result.error) {
-      window.speak && window.speak('Sign up failed: ' + result.error);
-      return { success: false, error: result.error };
-    }
-
-    // success: persist role and candidate identifier
-    localStorage.setItem('titanRole', 'candidate');
-    localStorage.setItem('candidateEmail', email);
-    window.speak && window.speak('Account created successfully.');
-    return { success: true, user: result.user };
-
-  } catch (err) {
-    console.error('firebase sign-up error:', err);
-    const msg = err.message || 'Sign-up failed';
-    window.speak && window.speak(msg);
-    return { success: false, error: msg };
-=======
   getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -193,7 +100,6 @@ async function attemptFirebaseSignIn(spokenEmail, spokenPassword) {
   } catch (err) {
     console.error("[candlogin] signIn error:", err.code, err.message);
     return { success: false, error: fmtError(err) };
->>>>>>> 81d43c0 (Add to new file)
   }
 }
 
@@ -249,28 +155,8 @@ async function attemptFirebaseSignUp(spokenEmail, spokenPassword) {
 window.attemptFirebaseSignIn  = attemptFirebaseSignIn;
 window.attemptFirebaseSignUp  = attemptFirebaseSignUp;
 
-// ── Auth-state guard ─────────────────────────────────────────────────────────
-// If a candidate is already signed in when this page loads, skip auth entirely.
-let _redirecting = false;
-
-onAuthStateChanged(auth, (user) => {
-  if (_redirecting) return;
-  if (!user) return; // not signed in — stay on the auth page
-
-  // Already authenticated — go straight to the interview portal
-  _redirecting = true;
-  localStorage.setItem("titanRole",  "candidate");
-  localStorage.setItem("titanEmail", user.email ?? "");
-  localStorage.setItem("titanUID",   user.uid);
-  window.location.href = CANDIDATE_DASHBOARD_URL;
-});
-
-// Export for any ES-module consumers (optional)
-export { attemptFirebaseSignIn, attemptFirebaseSignUp };
-
 /* ───────────────────────────────────────────────────────────────────────────
    Voice-auth UI & state from candlogin.html (moved inline script here)
-   This section drives the microphone flow, animations, and UI updates.
 ────────────────────────────────────────────────────────────────────────────*/
 
 /* ════════════════════════════════════════
@@ -576,13 +462,6 @@ function verifyCredentials() {
   }
 }
 
-<<<<<<< HEAD
-// expose to global scope for HTML access
-window.attemptFirebaseSignIn = attemptFirebaseSignIn;
-window.signUpWithEmail = attemptFirebaseSignUp;  // alias for HTML use
-window.handleGoogleSignIn = handleGoogleSignIn;
-setupCandidateAuthRedirect();
-=======
 function handleFirebaseResult(result) {
   const authSection  = document.getElementById('auth-section');
   const resultScreen = document.getElementById('result-screen');
@@ -664,4 +543,3 @@ function boot() {
 }
 
 window.addEventListener('load', boot);
->>>>>>> 81d43c0 (Add to new file)

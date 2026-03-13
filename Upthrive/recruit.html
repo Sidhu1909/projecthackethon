@@ -260,6 +260,7 @@ let uploadedQuestions    = [];
 let uploadedAnswers      = [];
 let candidateTranscript  = "";
 let currentQuestionFile  = null;
+let uploadedFileUrl      = null;
 let selectedCandidateId  = null;
 let selectedCandidateObj = null;
 
@@ -291,8 +292,21 @@ async function handleQuestionsUpload(event) {
   }
   try {
     showStatus('questionsStatus', '<span class="loading"></span> Parsing…', 'info');
+
+    // parse the questions text
     uploadedQuestions = await parseTextFile(file);
     currentQuestionFile = file;
+
+    // also upload the original .txt file to Storage so candidate can download it
+    if (window.uploadQuestionFile) {
+      showStatus('questionsStatus', '<span class="loading"></span> Uploading file…', 'info');
+      try {
+        uploadedFileUrl = await window.uploadQuestionFile(file);
+      } catch (uploadErr) {
+        console.warn('file upload failed', uploadErr);
+        uploadedFileUrl = null;
+      }
+    }
 
     showStatus('questionsStatus', `✓ ${uploadedQuestions.length} questions loaded`, 'success');
     document.getElementById('questionsFileList').style.display = 'block';
@@ -414,15 +428,16 @@ async function loadCandidateAnswers(id) {
   if (!window.getCandidateAnswersById) return;
   try {
     const data = await window.getCandidateAnswersById(id);
-<<<<<<< HEAD
-    uploadedAnswers = data.answers || [];
-=======
     // recruit.js getCandidateAnswersById maps interviewAnswers → answers for us
     uploadedAnswers    = data.answers        || [];
->>>>>>> 81d43c0 (Add to new file)
     candidateTranscript = data.fullTranscript || '';
+    let transcriptLinkHtml = '';
+    if (data.transcriptUrl) {
+      transcriptLinkHtml = `\n<p style="margin-top:0.5rem;"><a href="${data.transcriptUrl}" target="_blank">Download transcript file</a></p>`;
+    }
 
     if (uploadedAnswers.length === 0) {
+      document.getElementById('transcriptDisplay').innerHTML = transcriptLinkHtml || 'No transcript available.';
       showStatus('answersStatus', 'ℹ️ Candidate has not submitted answers yet.', 'info');
       return;
     }
@@ -436,6 +451,7 @@ async function loadCandidateAnswers(id) {
       d.innerHTML = `<div class="answer-label">Answer ${i+1}</div>${qRef}<div class="answer-text">${ans || '<em style="color:var(--muted)">No response recorded</em>'}</div>`;
       container.appendChild(d);
     });
+    if (transcriptLinkHtml) container.insertAdjacentHTML('beforeend', transcriptLinkHtml);
 
     // Transcript tab
     if (candidateTranscript) {
@@ -528,7 +544,7 @@ async function saveQuestionsToFirebase() {
   }
 
   try {
-    const setId = await window.saveInterviewQuestions(uploadedQuestions, selectedCandidateId||null, null);
+    const setId = await window.saveInterviewQuestions(uploadedQuestions, selectedCandidateId||null, uploadedFileUrl);
     const cname = selectedCandidateObj ? (selectedCandidateObj.name||selectedCandidateObj.email) : '—';
     showStatus('firebaseStatus',
       `✅ ${uploadedQuestions.length} questions saved (set: <code>${setId}</code>)`

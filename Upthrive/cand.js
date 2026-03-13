@@ -257,6 +257,23 @@ async function fetchAssignedQuestions() {
             assignedSetId      = found.setId;
             perQuestionAnswers = new Array(questions.length).fill('');
 
+            // show any attached file link
+            if (found.fileUrl) {
+              const existing = document.getElementById('attached-file-link');
+              if (!existing) {
+                const link = document.createElement('a');
+                link.id = 'attached-file-link';
+                link.href = found.fileUrl;
+                link.target = '_blank';
+                link.textContent = 'Download attached file';
+                link.style.display = 'block';
+                link.style.margin = '0.75rem 0';
+                questionCard.parentNode.insertBefore(link, questionCard.nextSibling);
+              } else {
+                existing.href = found.fileUrl;
+              }
+            }
+
             showFetchBanner(`✓ ${questions.length} questions assigned by your recruiter`, 'ok');
             setTimeout(hideFetchBanner, 4000);
             setStatus('READY — SAY "START INTERVIEW"', 'idle');
