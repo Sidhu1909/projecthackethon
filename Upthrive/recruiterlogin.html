@@ -149,7 +149,6 @@
     .strength-bar { flex: 1; height: 1px; background: var(--border); transition: background 0.3s; }
     .strength-label { font-size: 9px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; }
 
-    /* ── Account Settings Panel ── */
     #formSettings { display: none; }
     .settings-section { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
     .settings-section:last-of-type { border-bottom: none; margin-bottom: 0; }
@@ -238,7 +237,7 @@
         <button class="tab-btn"        id="tabUp"  onclick="switchTab('signup')"  role="tab" aria-selected="false">Sign Up</button>
       </div>
 
-      <!-- ── SIGN IN ── -->
+      <!-- SIGN IN -->
       <div id="formSignIn">
         <div class="form-header">
           <div class="form-title">Welcome Back</div>
@@ -280,7 +279,7 @@
         </button>
       </div>
 
-      <!-- ── SIGN UP ── -->
+      <!-- SIGN UP -->
       <div id="formSignUp" style="display:none;" class="fade-in">
         <div class="form-header">
           <div class="form-title">Join Us</div>
@@ -340,7 +339,7 @@
         </button>
       </div>
 
-      <!-- ── RESET PASSWORD ── -->
+      <!-- RESET PASSWORD -->
       <div id="formReset" class="fade-in">
         <div class="form-header">
           <div class="form-title">Reset</div>
@@ -359,14 +358,12 @@
         </div>
       </div>
 
-      <!-- ── ACCOUNT SETTINGS (shown post-login if navigated here) ── -->
+      <!-- ACCOUNT SETTINGS -->
       <div id="formSettings" class="fade-in">
         <div class="form-header">
           <div class="form-title">Settings</div>
           <div class="form-sub">Manage your <span>Account</span></div>
         </div>
-
-        <!-- Profile Info -->
         <div class="settings-section">
           <div class="settings-section-title">Profile</div>
           <div class="field">
@@ -387,11 +384,9 @@
           </div>
           <button class="submit-btn" id="saveProfileBtn" onclick="handleSaveProfile()"><span>Save Profile</span></button>
         </div>
-
-        <!-- Email Update -->
         <div class="settings-section">
           <div class="settings-section-title">Email Address</div>
-          <p class="settings-note">A verification link will be sent to the new address. The change takes effect after you click it.</p>
+          <p class="settings-note">A verification link will be sent to the new address.</p>
           <div class="field">
             <label for="setEmail">New Email</label>
             <div class="input-wrap">
@@ -410,8 +405,6 @@
           </div>
           <button class="submit-btn" id="updateEmailBtn" onclick="handleUpdateEmail()"><span>Update Email</span></button>
         </div>
-
-        <!-- Password Update -->
         <div class="settings-section">
           <div class="settings-section-title">Change Password</div>
           <div class="field">
@@ -439,7 +432,6 @@
           </div>
           <button class="submit-btn" id="updatePwdBtn" onclick="handleUpdatePassword()"><span>Change Password</span></button>
         </div>
-
         <div style="text-align:center; margin-top: 8px;">
           <button class="back-link" onclick="switchTab('signin')">← Back to Sign In</button>
         </div>
@@ -451,20 +443,13 @@
 
 <div class="toast" id="toast" role="alert" aria-live="assertive"></div>
 
-<!-- ── CORE SCRIPT (non-module, runs sync) ── -->
 <script>
 
 /* ─────────────────────────────────────────────
-   SINGLE SOURCE OF TRUTH for the dashboard URL
-   Change this one constant to update everywhere.
+   SINGLE SOURCE OF TRUTH — change once here
 ───────────────────────────────────────────── */
 const DASHBOARD_URL = './recruit.html';
 
-/* ─────────────────────────────────────────────
-   Flag: set to true once we intentionally
-   trigger a redirect so onAuthChange doesn't
-   fight us on the way out.
-───────────────────────────────────────────── */
 let _redirecting = false;
 
 function redirectToDashboard() {
@@ -537,10 +522,8 @@ function switchToSettings() {
   ['formSignIn','formSignUp','formReset'].forEach(id => document.getElementById(id).style.display = 'none');
   const el = document.getElementById('formSettings');
   el.style.display = ''; el.classList.remove('fade-in'); void el.offsetWidth; el.classList.add('fade-in');
-  const name    = localStorage.getItem('titanName')    || '';
-  const company = localStorage.getItem('titanCompany') || '';
-  document.getElementById('setName').value    = name;
-  document.getElementById('setCompany').value = company;
+  document.getElementById('setName').value    = localStorage.getItem('titanName')    || '';
+  document.getElementById('setCompany').value = localStorage.getItem('titanCompany') || '';
 }
 
 /* TOAST */
@@ -614,9 +597,7 @@ function setLoading(id, loading, label) {
 }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-/* ─────────────────────────────────────────────
-   SIGN IN
-───────────────────────────────────────────── */
+/* SIGN IN */
 async function handleSignIn() {
   const email = document.getElementById('siEmail').value.trim();
   const pwd   = document.getElementById('siPwd').value;
@@ -627,7 +608,6 @@ async function handleSignIn() {
   if (!valid) return;
 
   setLoading('signInBtn', true, 'Sign In');
-
   let res = { user: null, error: null };
   if (window._firebase) {
     res = await window._firebase.signInWithEmail(email, pwd);
@@ -641,7 +621,6 @@ async function handleSignIn() {
     return showToast(formatError(res.error), 'error');
   }
 
-  /* Fetch Firestore profile */
   if (window._firebase && res.user) {
     const profile = await window._firebase.getCurrentRecruiterProfile();
     if (profile?.data) {
@@ -656,10 +635,7 @@ async function handleSignIn() {
   setTimeout(redirectToDashboard, 1400);
 }
 
-/* ─────────────────────────────────────────────
-   SIGN UP  (key fix: await profile save before
-   redirecting so Firestore write completes)
-───────────────────────────────────────────── */
+/* SIGN UP */
 async function handleSignUp() {
   const name    = document.getElementById('suName').value.trim();
   const company = document.getElementById('suCompany').value.trim();
@@ -674,46 +650,30 @@ async function handleSignUp() {
   if (!valid) return;
 
   setLoading('signUpBtn', true, 'Create Account');
-
   let res = { user: null, error: null };
 
   if (window._firebase) {
     res = await window._firebase.signUpWithEmail(email, pwd);
-
     if (res.error) {
       setLoading('signUpBtn', false, 'Create Account');
       return showToast(formatError(res.error), 'error');
     }
-
-    /* Save profile BEFORE redirecting */
     if (res.user) {
-      await window._firebase.saveRecruiterProfile(res.user.uid, {
-        name, company, email, role: 'recruiter'
-      });
+      await window._firebase.saveRecruiterProfile(res.user.uid, { name, company, email, role: 'recruiter' });
     }
   } else {
-    /* Demo mode — simulate network delay */
     await sleep(1200);
-    if (res.error) {
-      setLoading('signUpBtn', false, 'Create Account');
-      return showToast(formatError(res.error), 'error');
-    }
   }
 
   localStorage.setItem('titanRole',    'recruiter');
   localStorage.setItem('titanName',    name);
   localStorage.setItem('titanCompany', company);
-
   setLoading('signUpBtn', false, 'Create Account');
   showToast('Account created. Welcome to TalentBridge.', 'success');
-
-  /* Small delay so the toast is visible, then navigate */
   setTimeout(redirectToDashboard, 1400);
 }
 
-/* ─────────────────────────────────────────────
-   GOOGLE
-───────────────────────────────────────────── */
+/* GOOGLE */
 async function handleGoogle() {
   if (!window._firebase) return showToast('Google sign-in requires Firebase integration.', 'info');
   const res = await window._firebase.signInWithGoogle();
@@ -730,9 +690,7 @@ async function handleGoogle() {
   setTimeout(redirectToDashboard, 1400);
 }
 
-/* ─────────────────────────────────────────────
-   RESET PASSWORD
-───────────────────────────────────────────── */
+/* RESET PASSWORD */
 async function handleReset() {
   const email = document.getElementById('resetEmail').value.trim();
   if (!email) return showToast('Please enter your email address.', 'error');
@@ -744,9 +702,7 @@ async function handleReset() {
   setTimeout(() => switchTab('signin'), 2200);
 }
 
-/* ─────────────────────────────────────────────
-   ACCOUNT SETTINGS HANDLERS
-───────────────────────────────────────────── */
+/* SETTINGS */
 async function handleSaveProfile() {
   const name    = document.getElementById('setName').value.trim();
   const company = document.getElementById('setCompany').value.trim();
@@ -754,7 +710,6 @@ async function handleSaveProfile() {
   if (!name)    { showFieldError('setNameErr',    'Name is required'); valid = false; }
   if (!company) { showFieldError('setCompanyErr', 'Company is required'); valid = false; }
   if (!valid) return;
-
   setLoading('saveProfileBtn', true, 'Save Profile');
   if (window._firebase) {
     const res = await window._firebase.updateRecruiterProfile({ name, company });
@@ -762,7 +717,7 @@ async function handleSaveProfile() {
     if (res.error) return showToast(formatError(res.error), 'error');
   } else {
     await sleep(800);
-    localStorage.setItem('titanName',    name);
+    localStorage.setItem('titanName', name);
     localStorage.setItem('titanCompany', company);
     setLoading('saveProfileBtn', false, 'Save Profile');
   }
@@ -776,7 +731,6 @@ async function handleUpdateEmail() {
   if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) { showFieldError('setEmailErr', 'Enter a valid email'); valid = false; }
   if (!pwd) { showFieldError('setEmailPwdErr', 'Current password is required'); valid = false; }
   if (!valid) return;
-
   setLoading('updateEmailBtn', true, 'Update Email');
   if (window._firebase) {
     const res = await window._firebase.updateUserEmail(newEmail, pwd);
@@ -799,7 +753,6 @@ async function handleUpdatePassword() {
   if (!currPwd) { showFieldError('setCurrPwdErr', 'Current password is required'); valid = false; }
   if (!newPwd || newPwd.length < 8) { showFieldError('setNewPwdErr', 'Minimum 8 characters'); valid = false; }
   if (!valid) return;
-
   setLoading('updatePwdBtn', true, 'Change Password');
   if (window._firebase) {
     const res = await window._firebase.updateUserPassword(currPwd, newPwd);
@@ -816,9 +769,7 @@ async function handleUpdatePassword() {
   }
 }
 
-/* ─────────────────────────────────────────────
-   ERROR FORMATTER
-───────────────────────────────────────────── */
+/* ERROR FORMATTER */
 function formatError(msg) {
   if (!msg) return 'Something went wrong.';
   if (msg.includes('email-already-in-use'))   return 'This email is already registered.';
@@ -833,9 +784,6 @@ function formatError(msg) {
   return 'Something went wrong. Please try again.';
 }
 
-/* ─────────────────────────────────────────────
-   KEYBOARD SHORTCUTS
-───────────────────────────────────────────── */
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (document.getElementById('formReset').style.display    !== 'none') switchTab('signin');
@@ -843,76 +791,42 @@ document.addEventListener('keydown', e => {
   }
 });
 
-window.addEventListener('load', () => {
-  document.getElementById('siEmail').focus();
-});
+window.addEventListener('load', () => { document.getElementById('siEmail').focus(); });
 
-/* Expose to global scope */
-window.switchTab            = switchTab;
-window.switchToReset        = switchToReset;
-window.switchToSettings     = switchToSettings;
-window.handleSignIn         = handleSignIn;
-window.handleSignUp         = handleSignUp;
-window.handleGoogle         = handleGoogle;
-window.handleReset          = handleReset;
-window.handleSaveProfile    = handleSaveProfile;
-window.handleUpdateEmail    = handleUpdateEmail;
-window.handleUpdatePassword = handleUpdatePassword;
-window.togglePwd            = togglePwd;
-window.onPwdInput           = onPwdInput;
-window.onNewPwdInput        = onNewPwdInput;
-window.clearFieldError      = clearFieldError;
+window.switchTab = switchTab; window.switchToReset = switchToReset; window.switchToSettings = switchToSettings;
+window.handleSignIn = handleSignIn; window.handleSignUp = handleSignUp; window.handleGoogle = handleGoogle;
+window.handleReset = handleReset; window.handleSaveProfile = handleSaveProfile;
+window.handleUpdateEmail = handleUpdateEmail; window.handleUpdatePassword = handleUpdatePassword;
+window.togglePwd = togglePwd; window.onPwdInput = onPwdInput; window.onNewPwdInput = onNewPwdInput;
+window.clearFieldError = clearFieldError;
 </script>
 
-<!-- ── FIREBASE MODULE SCRIPT ── -->
+<!-- FIREBASE MODULE -->
 <script type="module">
   import {
-    signUpWithEmail,
-    signInWithEmail,
-    signInWithGoogle,
-    resetPassword,
-    onAuthChange,
-    updateUserEmail,
-    updateUserPassword,
-    updateRecruiterProfile,
-    saveRecruiterProfile,
-    getCurrentRecruiterProfile,
+    signUpWithEmail, signInWithEmail, signInWithGoogle, resetPassword,
+    onAuthChange, updateUserEmail, updateUserPassword,
+    updateRecruiterProfile, saveRecruiterProfile, getCurrentRecruiterProfile,
   } from "./firebase.js";
 
-  /* Expose all Firebase functions to the global (non-module) scope */
   window._firebase = {
-    signUpWithEmail,
-    signInWithEmail,
-    signInWithGoogle,
-    resetPassword,
-    updateUserEmail,
-    updateUserPassword,
-    updateRecruiterProfile,
-    saveRecruiterProfile,
-    getCurrentRecruiterProfile,
+    signUpWithEmail, signInWithEmail, signInWithGoogle, resetPassword,
+    updateUserEmail, updateUserPassword, updateRecruiterProfile,
+    saveRecruiterProfile, getCurrentRecruiterProfile,
   };
 
-  /*
-   * onAuthChange: redirect already-authenticated users to the dashboard.
-   *
-   * Key guards:
-   *  1. _redirecting — we set this flag ourselves before navigating away,
-   *     so a Firebase auth-state event fired mid-redirect doesn't loop us back.
-   *  2. Only fires when isLoggedIn is true — unauthenticated users stay on
-   *     the login page.
-   */
   onAuthChange((state) => {
-    if (_redirecting) return;          /* already heading out, ignore */
-    if (!state.isLoggedIn) return;     /* not signed in — stay here   */
+    if (_redirecting) return;
+    if (!state.isLoggedIn) return;
 
     localStorage.setItem('titanRole', 'recruiter');
     if (state.user?.displayName) {
       localStorage.setItem('titanName', state.user.displayName);
     }
 
-    /* Use the same constant as the rest of the page */
+    /* ✅ Fixed: was './recruiter-dashboard.html', now uses DASHBOARD_URL → './recruit.html' */
     _redirecting = true;
-    window.location.href = './recruiter-dashboard.html';
+    window.location.href = DASHBOARD_URL;
   });
 </script>
 </body>
