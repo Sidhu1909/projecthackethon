@@ -5,14 +5,18 @@
 //   • Auth guard   — reads titanRole/titanUID/titanEmail from localStorage
 //                    OR listens to onAuthStateChanged for a live Firebase session
 //   • Question fetch — reads interviewSets/{setId} mirror written by recruit.js
+//   • Briefing fetch — reads textFileContent sent by recruiter, reads it aloud
 //   • Speech Recognition — wake-word + per-question answer capture
-//   • Text-to-Speech    — reads each question aloud via Web Speech API
+//   • Text-to-Speech    — reads briefing + each question aloud via Web Speech API
 //   • Submission        — delegates all Firestore/Storage writes to
 //                         window.saveInterviewSubmission (exported by recruit.js)
 //
 // Schema contracts (must match candlogin.js + recruit.js):
 //   candidates/{uid}.assignedInterviewSets[]  → array of set IDs
+//   candidates/{uid}.textFileContent           → briefing text sent by recruiter
+//   candidates/{uid}.textFileName              → original filename
 //   interviewSets/{setId}.questions[]          → string array of questions
+//   interviewSets/{setId}.textFileContent      → briefing mirror
 //   saveInterviewSubmission writes:
 //     candidates/{uid}.interviewAnswers[]
 //     candidates/{uid}.interviewStatus = 'submitted'
@@ -29,15 +33,15 @@ import {
     query, where, orderBy,
 } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
-// ─── 🔧  Same config as recruit.js / candlogin.js ────────────────────────────
-// Firebase Console → Project Settings → General → Your apps
+// ─── Firebase config ──────────────────────────────────────────────────────────
 const firebaseConfig = {
-    apiKey:            "YOUR_API_KEY",
-    authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId:         "YOUR_PROJECT_ID",
-    storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId:             "YOUR_APP_ID",
+    apiKey:            "AIzaSyD3c6gMQt00siR70-B93qBjVqYQAjrM3W4",
+    authDomain:        "titan-fde30.firebaseapp.com",
+    projectId:         "titan-fde30",
+    storageBucket:     "titan-fde30.firebasestorage.app",
+    messagingSenderId: "545954155049",
+    appId:             "1:545954155049:web:59e785904b07cda5a4ea38",
+    measurementId:     "G-4MDFGCVS5H",
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -71,6 +75,10 @@ let assignedSetId        = null;
 let candidateId          = null;
 let candidateEmail       = "";
 
+// ── NEW: briefing text file ───────────────────────────────────────────────────
+let briefingContent  = null;   // string — plain text sent by recruiter
+let briefingFileName = "";     // original filename e.g. "job-spec.txt"
+
 const SILENCE_THRESHOLD = 6000; // ms of silence before advancing to next question
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -82,6 +90,9 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let statusBadge, statusText, micViz, transcriptEl, questionCard, questionNum,
     questionEl, progressWrap, progressFill, progressLbl, startBtn, finishBtn,
     retryBtn, fetchBanner, candStrip, guard, mainContent;
+
+// ── NEW briefing DOM refs ─────────────────────────────────────────────────────
+let briefingCard, briefingBody, briefingFileNm, briefingReading, briefingDone;
 
 function resolveDOM() {
     statusBadge  = document.getElementById('status-badge');
@@ -101,6 +112,13 @@ function resolveDOM() {
     candStrip    = document.getElementById('candStrip');
     guard        = document.getElementById('auth-guard');
     mainContent  = document.getElementById('main-content');
+
+    // Briefing elements (may be absent in older HTML — guard with ?.)
+    briefingCard    = document.getElementById('briefingCard');
+    briefingBody    = document.getElementById('briefingBody');
+    briefingFileNm  = document.getElementById('briefingFileName');
+    briefingReading = document.getElementById('briefingReading');
+    briefingDone    = document.getElementById('briefingDone');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -116,16 +134,13 @@ function showToast(msg, type = 'info') {
     setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-/**
- * @param {string} text
- * @param {'idle'|'active'|'loading'} mode
- */
 function setStatus(text, mode = 'idle') {
     if (!statusText) return;
     statusText.textContent = text;
-    statusBadge.classList.remove('active', 'loading');
-    if (mode === 'active')  statusBadge.classList.add('active');
-    if (mode === 'loading') statusBadge.classList.add('loading');
+    statusBadge.classList.remove('active', 'loading', 'briefing');
+    if (mode === 'active')   statusBadge.classList.add('active');
+    if (mode === 'loading')  statusBadge.classList.add('loading');
+    if (mode === 'briefing') statusBadge.classList.add('briefing');
 }
 
 function showFetchBanner(msg, cls = '') {
@@ -143,10 +158,16 @@ function updateProgress() {
     progressLbl.textContent  = `${done} / ${total}`;
 }
 
+// ── NEW: render the briefing card ─────────────────────────────────────────────
+function showBriefingCard() {
+    if (!briefingCard || !briefingContent) return;
+    if (briefingBody)   briefingBody.textContent   = briefingContent;
+    if (briefingFileNm) briefingFileNm.textContent = briefingFileName ? `· ${briefingFileName}` : '';
+    briefingCard.classList.add('show');
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // AUTH GUARD
-// Reveals main content only after confirming a valid candidate session.
-// Priority: Firebase onAuthStateChanged → localStorage fallback (demo mode).
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function revealPage() {
@@ -155,14 +176,13 @@ function revealPage() {
     candStrip.style.display   = 'block';
     document.getElementById('candEmail').textContent = candidateEmail || 'candidate';
     startStarfield();
-    fetchAssignedQuestions();   // pull questions from Firebase immediately
+    fetchAssignedQuestions();
 }
 
 function bootAuth() {
     if (firebaseReady) {
         onAuthStateChanged(auth, user => {
             if (user) {
-                // Live Firebase session — candlogin.js set this up
                 candidateId    = user.uid;
                 candidateEmail = user.email || '';
                 localStorage.setItem('titanRole',  'candidate');
@@ -170,19 +190,17 @@ function bootAuth() {
                 localStorage.setItem('titanUID',   candidateId);
                 revealPage();
             } else {
-                // No live session — check localStorage (page reload / demo mode)
                 candidateEmail = localStorage.getItem('titanEmail') || '';
                 candidateId    = localStorage.getItem('titanUID')   ||
                                  localStorage.getItem('titanEmail') || 'demo';
                 if (localStorage.getItem('titanRole') === 'candidate') {
                     revealPage();
                 } else {
-                    guard.style.display = 'flex'; // stay on guard screen
+                    guard.style.display = 'flex';
                 }
             }
         });
     } else {
-        // Firebase completely unavailable — demo mode
         candidateEmail = localStorage.getItem('titanEmail') || 'demo@talentbridge.ai';
         candidateId    = localStorage.getItem('titanUID')   || candidateEmail || 'demo';
         if (localStorage.getItem('titanRole') === 'candidate') {
@@ -194,17 +212,9 @@ function bootAuth() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUESTION FETCH
-// Reads from the top-level `interviewSets/{setId}` mirror written by
-// recruit.js > saveInterviewQuestions().
-// Candidate's assignedInterviewSets[] (written by candlogin.js + recruit.js)
-// is used as the primary lookup key.
+// QUESTION FETCH  (+ briefing text file)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Fetches the recruiter-assigned question set for the current candidate.
- * Exposed on window so the HTML retry button can call it directly.
- */
 async function fetchAssignedQuestions() {
     retryBtn.style.display = 'none';
     micViz.classList.add('loading-q');
@@ -224,12 +234,25 @@ async function fetchAssignedQuestions() {
         // ── 1. Candidate doc → assignedInterviewSets[] → interviewSets mirror ──
         const candSnap = await getDoc(doc(db, "candidates", candidateId));
         if (candSnap.exists()) {
-            const assignedSets = candSnap.data().assignedInterviewSets || [];
+            const data         = candSnap.data();
+            const assignedSets = data.assignedInterviewSets || [];
+
+            // ── NEW: grab briefing from candidate doc first ───────────────────
+            if (data.textFileContent) {
+                briefingContent  = data.textFileContent;
+                briefingFileName = data.textFileName || 'briefing.txt';
+            }
+
             if (assignedSets.length > 0) {
                 const latestSetId = assignedSets[assignedSets.length - 1];
                 const setSnap     = await getDoc(doc(db, "interviewSets", latestSetId));
                 if (setSnap.exists() && setSnap.data().questions?.length) {
-                    found = { questions: setSnap.data().questions, setId: latestSetId };
+                    found = { questions: setSnap.data().questions, setId: latestSetId, fileUrl: setSnap.data().fileUrl || null };
+                    // ── NEW: fallback to set-level briefing if not on cand doc ─
+                    if (!briefingContent && setSnap.data().textFileContent) {
+                        briefingContent  = setSnap.data().textFileContent;
+                        briefingFileName = setSnap.data().textFileName || 'briefing.txt';
+                    }
                 }
             }
         }
@@ -245,7 +268,11 @@ async function fetchAssignedQuestions() {
             if (!snap.empty) {
                 const latest = snap.docs[0];
                 if (latest.data().questions?.length) {
-                    found = { questions: latest.data().questions, setId: latest.id };
+                    found = { questions: latest.data().questions, setId: latest.id, fileUrl: latest.data().fileUrl || null };
+                    if (!briefingContent && latest.data().textFileContent) {
+                        briefingContent  = latest.data().textFileContent;
+                        briefingFileName = latest.data().textFileName || 'briefing.txt';
+                    }
                 }
             }
         }
@@ -257,32 +284,37 @@ async function fetchAssignedQuestions() {
             assignedSetId      = found.setId;
             perQuestionAnswers = new Array(questions.length).fill('');
 
-            // show any attached file link
+            // Legacy fileUrl download link support
             if (found.fileUrl) {
-              const existing = document.getElementById('attached-file-link');
-              if (!existing) {
-                const link = document.createElement('a');
-                link.id = 'attached-file-link';
-                link.href = found.fileUrl;
-                link.target = '_blank';
-                link.textContent = 'Download attached file';
-                link.style.display = 'block';
-                link.style.margin = '0.75rem 0';
-                questionCard.parentNode.insertBefore(link, questionCard.nextSibling);
-              } else {
-                existing.href = found.fileUrl;
-              }
+                const existing = document.getElementById('attached-file-link');
+                if (!existing) {
+                    const link    = document.createElement('a');
+                    link.id       = 'attached-file-link';
+                    link.href     = found.fileUrl;
+                    link.target   = '_blank';
+                    link.textContent = 'Download attached file';
+                    link.style.cssText = 'display:block;margin:0.75rem 0;color:#7090c9;font-size:0.8rem;letter-spacing:1px;';
+                    questionCard.parentNode.insertBefore(link, questionCard.nextSibling);
+                } else {
+                    existing.href = found.fileUrl;
+                }
+            }
+
+            // ── NEW: show briefing card if text file was sent ─────────────────
+            if (briefingContent) {
+                showBriefingCard();
             }
 
             showFetchBanner(`✓ ${questions.length} questions assigned by your recruiter`, 'ok');
             setTimeout(hideFetchBanner, 4000);
             setStatus('READY — SAY "START INTERVIEW"', 'idle');
-            questionEl.textContent = 'Say "Start Interview" or press the button to begin.';
+            questionEl.textContent = briefingContent
+                ? 'Your recruiter briefing is shown above. It will be read aloud when you start.'
+                : 'Say "Start Interview" or press the button to begin.';
             questionCard.classList.add('waiting');
             startBtn.disabled = false;
             startWakeWordListening();
         } else {
-            // Recruiter hasn't sent questions yet
             showFetchBanner('⚠️ No question set assigned yet. Please wait for your recruiter.', 'err');
             setStatus('AWAITING QUESTIONS', 'idle');
             questionEl.textContent = 'Your recruiter has not assigned questions yet. Check back shortly.';
@@ -296,7 +328,6 @@ async function fetchAssignedQuestions() {
     }
 }
 
-/** Fallback questions used when Firebase is unreachable or no set is assigned. */
 function useDemoQuestions() {
     questions = [
         "Please introduce yourself and walk us through your professional background.",
@@ -324,12 +355,7 @@ function useDemoQuestions() {
 
 /**
  * Speaks `text` via the Web Speech API and calls `onEnd` when done.
- * Falls back silently if speechSynthesis is unavailable.
- * A 15-second safety timer ensures `onEnd` always fires even if the
- * utterance event never triggers (common bug in some browsers/OS combos).
- *
- * @param {string}   text
- * @param {Function} [onEnd]
+ * Dynamic timeout scales with word count so long briefings never cut off.
  */
 function speak(text, onEnd) {
     if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
@@ -339,23 +365,25 @@ function speak(text, onEnd) {
     utt.pitch   = 0.85;
     utt.volume  = 1;
 
-    // Prefer a natural-sounding English voice if available
     const voices = speechSynthesis.getVoices();
     const voice  = voices.find(v => /Samantha|Karen|Daniel|Google UK|Google US/i.test(v.name))
                 || voices.find(v => v.lang.startsWith('en'));
     if (voice) utt.voice = voice;
 
-    // Safety timer in case onend never fires
-    const safetyTimer = setTimeout(() => { if (onEnd) onEnd(); }, 15000);
+    // Dynamic timeout: ~0.55 s per word + 5 s buffer, minimum 15 s
+    const wordCount    = text.trim().split(/\s+/).length;
+    const safetyMs     = Math.max(15000, wordCount * 550 + 5000);
+    const safetyTimer  = setTimeout(() => { if (onEnd) onEnd(); }, safetyMs);
+
     utt.onend   = () => { clearTimeout(safetyTimer); if (onEnd) onEnd(); };
     utt.onerror = () => { clearTimeout(safetyTimer); if (onEnd) onEnd(); };
 
-    speechSynthesis.cancel(); // stop any current utterance
+    speechSynthesis.cancel();
     speechSynthesis.speak(utt);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SILENCE TIMER  — advances to the next question after SILENCE_THRESHOLD ms
+// SILENCE TIMER
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function resetSilenceTimer() {
@@ -367,7 +395,6 @@ function resetSilenceTimer() {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // WAKE-WORD LISTENER
-// Listens continuously for "start interview" before the interview begins.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function startWakeWordListening() {
@@ -401,13 +428,48 @@ function startWakeWordListening() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// NEW: READ BRIEFING ALOUD
+// Plays intro + full briefing text via TTS, updates briefing card UI,
+// then calls onDone to hand off to the interview questions.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function readBriefingAloud(onDone) {
+    if (!briefingContent) { onDone(); return; }
+
+    // Switch mic icon and status while reading briefing
+    micViz.classList.remove('active');
+    micViz.classList.add('briefing');
+    const micIcon = document.getElementById('mic-icon');
+    if (micIcon) micIcon.textContent = '📋';
+    setStatus('READING BRIEFING…', 'briefing');
+
+    if (briefingReading) briefingReading.style.display = 'block';
+    if (briefingDone)    briefingDone.style.display    = 'none';
+
+    const intro = 'Your recruiter has sent the following briefing. Please listen carefully.';
+
+    speak(intro, () => {
+        speak(briefingContent, () => {
+            // Mark briefing as done in the UI
+            if (briefingReading) briefingReading.style.display = 'none';
+            if (briefingDone)    briefingDone.style.display    = 'block';
+
+            // Restore mic to active state
+            micViz.classList.remove('briefing');
+            micViz.classList.add('active');
+            if (micIcon) micIcon.textContent = '🎤';
+            setStatus('INTERVIEW IN PROGRESS', 'active');
+
+            // Short pause before questions begin
+            setTimeout(onDone, 1500);
+        });
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // INTERVIEW FLOW
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Starts the interview session.
- * Exposed on window so the HTML button onclick can call it.
- */
 function startInterview() {
     if (interviewStarted || questions.length === 0) return;
     interviewStarted = true;
@@ -416,9 +478,10 @@ function startInterview() {
 
     fullTranscript = [
         '=== TALENTBRIDGE VOICE INTERVIEW ===',
-        `Candidate:  ${candidateEmail}`,
-        `Date:       ${new Date().toISOString()}`,
-        `Set ID:     ${assignedSetId || 'N/A'}`,
+        `Candidate:     ${candidateEmail}`,
+        `Date:          ${new Date().toISOString()}`,
+        `Set ID:        ${assignedSetId || 'N/A'}`,
+        `Briefing file: ${briefingFileName || 'none'}`,
         '',
     ].join('\n');
 
@@ -431,19 +494,26 @@ function startInterview() {
     questionCard.classList.remove('waiting');
     hideFetchBanner();
 
-    speak(
-        `Welcome to TalentBridge. Your recruiter has assigned ${questions.length} questions for today's interview. ` +
-        `Please answer each question clearly. I will move to the next question after a brief pause. Let's begin.`,
-        () => {
-            currentQuestionIndex = -1;
-            nextQuestion();
-        },
-    );
+    // ── NEW: read briefing first (if present), then begin questions ──────────
+    const beginQuestions = () => {
+        speak(
+            `Welcome to TalentBridge. Your recruiter has assigned ${questions.length} question${questions.length !== 1 ? 's' : ''} for today's interview. ` +
+            `Please answer each question clearly. I will move to the next question after a brief pause. Let's begin.`,
+            () => {
+                currentQuestionIndex = -1;
+                nextQuestion();
+            },
+        );
+    };
+
+    if (briefingContent) {
+        micViz.classList.remove('active'); // pause gold pulse during briefing TTS
+        readBriefingAloud(beginQuestions);
+    } else {
+        beginQuestions();
+    }
 }
 
-/**
- * Advances to the next question, or calls finishInterview when all are done.
- */
 function nextQuestion() {
     currentQuestionIndex++;
     updateProgress();
@@ -460,23 +530,18 @@ function nextQuestion() {
     questionEl.textContent  = q;
 
     fullTranscript += `\nQuestion ${currentQuestionIndex + 1}: ${q}\nAnswer: `;
-    perQuestionAnswers[currentQuestionIndex] = ''; // reset slot for this question
+    perQuestionAnswers[currentQuestionIndex] = '';
 
     speak(q, () => startAnswerListening());
 }
 
 // ── Answer listening ──────────────────────────────────────────────────────────
 
-/**
- * Starts continuous speech recognition for the current question.
- * Final transcript chunks are appended to perQuestionAnswers[qIdx] and
- * fullTranscript. The silence timer advances the interview when speech stops.
- */
 function startAnswerListening() {
     if (!SR) return;
     setStatus(`LISTENING — Q${currentQuestionIndex + 1}`, 'active');
 
-    const qIdx = currentQuestionIndex; // capture index for this closure
+    const qIdx = currentQuestionIndex;
 
     function startRec() {
         interviewRecognition                = new SR();
@@ -494,18 +559,16 @@ function startAnswerListening() {
             }
 
             if (final) {
-                fullTranscript              += final;
-                perQuestionAnswers[qIdx]     = (perQuestionAnswers[qIdx] || '') + final;
+                fullTranscript           += final;
+                perQuestionAnswers[qIdx]  = (perQuestionAnswers[qIdx] || '') + final;
             }
 
-            // Show live transcript for current answer
             transcriptEl.textContent = ((perQuestionAnswers[qIdx] || '') + interim).trim();
             transcriptEl.scrollTop   = transcriptEl.scrollHeight;
 
-            resetSilenceTimer(); // user is speaking — reset the advance timer
+            resetSilenceTimer();
         };
 
-        // Auto-restart if recognition ends before interview is done
         interviewRecognition.onend = () => {
             if (interviewStarted && currentQuestionIndex < questions.length) {
                 setTimeout(startRec, 150);
@@ -522,20 +585,13 @@ function startAnswerListening() {
     }
 
     startRec();
-    resetSilenceTimer(); // start the silence countdown
+    resetSilenceTimer();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SUBMISSION
-// All Firestore + Storage writes are delegated to window.saveInterviewSubmission
-// exported by recruit.js.  This avoids duplicate Firebase app instances and
-// keeps field names canonical (interviewAnswers, interviewStatus, etc.).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Ends the interview, cleans up recognition, and saves answers via recruit.js.
- * Exposed on window so the HTML "Finish Early" button can call it.
- */
 async function finishInterview() {
     if (!interviewStarted) return;
     interviewStarted = false;
@@ -552,7 +608,7 @@ async function finishInterview() {
 
     const cleanAnswers = perQuestionAnswers.map(a => (a || '').trim());
 
-    // Race guard: recruit.js loads as a separate module — wait for its globals
+    // Race guard: recruit.js loads as a separate module — wait for globals
     let attempts = 0;
     while (!window.saveInterviewSubmission && attempts < 20) {
         await new Promise(r => setTimeout(r, 200));
@@ -567,7 +623,7 @@ async function finishInterview() {
             await window.saveInterviewSubmission({
                 candidateId,
                 candidateEmail,
-                answers:       cleanAnswers,   // recruit.js maps this → interviewAnswers
+                answers:       cleanAnswers,
                 questions,
                 fullTranscript,
                 setId: assignedSetId || null,
@@ -585,14 +641,11 @@ async function finishInterview() {
             speak("Thank you. Your interview has been completed.", showCompletion);
         }
     } else {
-        // recruit.js didn't load — demo fallback
         showToast('Demo mode — downloading transcript.', 'info');
         downloadLocally();
         speak("Thank you. Your interview has been completed.", showCompletion);
     }
 }
-
-// ── Local download fallback ───────────────────────────────────────────────────
 
 function downloadLocally() {
     const blob = new Blob([fullTranscript], { type: 'text/plain' });
@@ -606,10 +659,9 @@ function downloadLocally() {
     URL.revokeObjectURL(url);
 }
 
-// ── Completion screen ─────────────────────────────────────────────────────────
-
 function showCompletion() {
     document.getElementById('interview-ui').style.display = 'none';
+    if (briefingCard) briefingCard.style.display = 'none';
     document.getElementById('completion-screen').classList.add('show');
     setStatus('COMPLETED', 'idle');
     if (progressFill) progressFill.style.width = '100%';
@@ -668,11 +720,10 @@ function startStarfield() {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GLOBAL EXPOSURE
-// The HTML file's inline onclick attributes and retry button call these.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-window.startInterview        = startInterview;
-window.finishInterview       = finishInterview;
+window.startInterview         = startInterview;
+window.finishInterview        = finishInterview;
 window.fetchAssignedQuestions = fetchAssignedQuestions;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -687,7 +738,7 @@ document.addEventListener('keydown', e => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// BOOT — runs when the module is parsed (after DOM is ready via defer / type=module)
+// BOOT
 // ═══════════════════════════════════════════════════════════════════════════════
 
 resolveDOM();

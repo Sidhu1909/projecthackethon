@@ -2,7 +2,8 @@
 // Matches candlogin.js schema exactly:
 //   • candidates/{uid}  →  { email, name, role:'candidate', interviewStatus,
 //                            assignedInterviewSets[], interviewAnswers[],
-//                            answersSubmittedAt, createdAt }
+//                            answersSubmittedAt, createdAt,
+//                            textFileUrl, textFileContent }   ← NEW
 //   • recruiters/{uid}/interviewSets/{setId}  →  question sets (source of truth)
 //   • interviewSets/{setId}  →  mirror copy for candidate reads (no recruiter UID needed)
 //   • recruiters/{uid}/evaluations/{id}  →  evaluation results
@@ -39,14 +40,14 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-storage.js';
 
 // ─── 🔧  Replace with your Firebase project credentials ──────────────────────
-// Firebase Console → Project Settings → General → Your apps
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId:             "YOUR_APP_ID",
+  apiKey: "AIzaSyD3c6gMQt00siR70-B93qBjVqYQAjrM3W4",
+  authDomain: "titan-fde30.firebaseapp.com",
+  projectId: "titan-fde30",
+  storageBucket: "titan-fde30.firebasestorage.app",
+  messagingSenderId: "545954155049",
+  appId: "1:545954155049:web:59e785904b07cda5a4ea38",
+  measurementId: "G-4MDFGCVS5H",
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -59,10 +60,6 @@ const storage = getStorage(app);
 // AUTH HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Redirects to recruiterlogin.html if the current user is not a recruiter.
- * Also called automatically at module load (bottom of file).
- */
 export function checkRecruiterAuth() {
   onAuthStateChanged(auth, user => {
     if (!user) {
@@ -75,9 +72,6 @@ export function checkRecruiterAuth() {
   });
 }
 
-/**
- * Signs the recruiter out and returns them to the login page.
- */
 export async function logoutRecruiter() {
   try {
     await signOut(auth);
@@ -94,17 +88,8 @@ export async function logoutRecruiter() {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CANDIDATE RETRIEVAL
-// Reads from `candidates` collection — written by candlogin.js on sign-up.
-// Field names match candlogin.js exactly:
-//   interviewStatus, assignedInterviewSets, interviewAnswers, answersSubmittedAt
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Returns all candidates (role === 'candidate') ordered by sign-up date (desc).
- * Each entry is shaped to match what recruiter.html expects.
- *
- * @returns {Promise<Array>}
- */
 export async function getCandidatesWithAnswers() {
   const q = query(
     collection(db, 'candidates'),
@@ -120,25 +105,20 @@ export async function getCandidatesWithAnswers() {
       id:           snap.id,
       email:        d.email  || 'Unknown',
       name:         d.name   || d.email || 'Unknown',
-      // interviewAnswers is the canonical field name from candlogin.js
       answerCount:  Array.isArray(d.interviewAnswers) ? d.interviewAnswers.length : 0,
       submittedAt:  d.answersSubmittedAt || null,
-      // interviewStatus: 'pending' | 'invited' | 'submitted'
       status:       d.interviewStatus || 'pending',
       assignedSets: d.assignedInterviewSets || [],
+      // ── NEW: text file fields ─────────────────────────────────────────────
+      textFileUrl:     d.textFileUrl     || null,
+      textFileContent: d.textFileContent || null,
+      textFileName:    d.textFileName    || null,
     });
   });
 
   return list;
 }
 
-/**
- * Returns a single candidate's answers by their Firestore UID.
- * Also returns fullTranscript if present.
- *
- * @param {string} candidateId
- * @returns {Promise<{ id, email, name, answers: string[], fullTranscript: string, status }>}
- */
 export async function getCandidateAnswersById(candidateId) {
   const snap = await getDoc(doc(db, 'candidates', candidateId));
   if (!snap.exists()) throw new Error('Candidate not found');
@@ -147,36 +127,141 @@ export async function getCandidateAnswersById(candidateId) {
     id:             candidateId,
     email:          d.email             || 'Unknown',
     name:           d.name              || d.email || 'Unknown',
-    answers:        d.interviewAnswers  || [],   // canonical field from candlogin schema
+    answers:        d.interviewAnswers  || [],
     fullTranscript: d.fullTranscript    || '',
     transcriptUrl:  d.transcriptUrl     || null,
     submittedAt:    d.answersSubmittedAt || null,
     status:         d.interviewStatus   || 'pending',
     assignedSets:   d.assignedInterviewSets || [],
+    // ── NEW ──────────────────────────────────────────────────────────────────
+    textFileUrl:     d.textFileUrl     || null,
+    textFileContent: d.textFileContent || null,
+    textFileName:    d.textFileName    || null,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEXT FILE DELIVERY  ← NEW
+// Recruiter uploads a .txt file; its content is stored on the candidate doc and
+// on the interviewSets mirror so candidate-voice.html can read it without
+// needing a Storage download URL (avoids CORS on first load).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Upload a plain-text file and attach it to a candidate.
+ *
+ * Writes to:
+ *   candidates/{candidateId}      → textFileUrl, textFileContent, textFileName
+ *   interviewSets/{setId}         → same fields (if setId provided)
+ *   Storage: textFiles/{uid}_{ts}.txt
+ *
+ * @param {File}        file          A File object (must be text/plain or .txt)
+ * @param {string}      candidateId   Firestore UID of the target candidate
+ * @param {string|null} setId         Optional: the interviewSets doc to also update
+ * @returns {Promise<{ textFileUrl: string, textFileContent: string }>}
+ */
+export async function sendTextFileToCandidate(file, candidateId, setId = null) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+  if (!file)         throw new Error('No file provided');
+  if (!candidateId)  throw new Error('No candidateId provided');
+
+  // 1. Read file contents as plain text (client-side)
+  const textFileContent = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = e => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsText(file, 'UTF-8');
+  });
+
+  // 2. Upload to Firebase Storage
+  let textFileUrl = null;
+  try {
+    const sRef = storageRef(
+      storage,
+      `textFiles/${candidateId}_${Date.now()}.txt`,
+    );
+    const uploadSnap = await uploadBytes(sRef, file);
+    textFileUrl = await getDownloadURL(uploadSnap.ref);
+  } catch (e) {
+    console.warn('[recruit.js] Text file Storage upload failed:', e.message);
+    // Continue — textFileContent alone is enough for TTS playback
+  }
+
+  const textFilePayload = {
+    textFileUrl:     textFileUrl || null,
+    textFileContent,
+    textFileName:    file.name,
+    textFileSentAt:  serverTimestamp(),
+    textFileSentBy:  user.uid,
+  };
+
+  // 3. Update candidate doc
+  await updateDoc(doc(db, 'candidates', candidateId), textFilePayload)
+    .catch(async () => {
+      await setDoc(doc(db, 'candidates', candidateId), textFilePayload, { merge: true });
+    });
+
+  // 4. Mirror onto interviewSets doc if a setId is provided
+  if (setId) {
+    await updateDoc(doc(db, 'interviewSets', setId), textFilePayload)
+      .catch(() => {}); // non-fatal
+  }
+
+  console.log('[recruit.js] ✓ Text file sent to candidate', candidateId);
+  return { textFileUrl, textFileContent };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEXT FILE RETRIEVAL — for candidate side  ← NEW
+// candidate-voice.html calls this to get the text content before the interview.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Returns the text file content sent by the recruiter for a given candidate.
+ *
+ * Lookup order:
+ *   1. candidates/{candidateId}.textFileContent  (fastest, always fresh)
+ *   2. interviewSets/{latestSetId}.textFileContent  (fallback)
+ *
+ * @param {string} candidateId
+ * @returns {Promise<{ textFileContent: string, textFileName: string } | null>}
+ */
+export async function getTextFileForCandidate(candidateId) {
+  // 1. Primary: candidate doc
+  const candSnap = await getDoc(doc(db, 'candidates', candidateId));
+  if (candSnap.exists()) {
+    const d = candSnap.data();
+    if (d.textFileContent) {
+      return {
+        textFileContent: d.textFileContent,
+        textFileName:    d.textFileName || 'briefing.txt',
+      };
+    }
+  }
+
+  // 2. Fallback: latest assigned interviewSet mirror
+  if (candSnap.exists()) {
+    const sets = candSnap.data().assignedInterviewSets || [];
+    if (sets.length > 0) {
+      const setSnap = await getDoc(doc(db, 'interviewSets', sets[sets.length - 1]));
+      if (setSnap.exists() && setSnap.data().textFileContent) {
+        const d = setSnap.data();
+        return {
+          textFileContent: d.textFileContent,
+          textFileName:    d.textFileName || 'briefing.txt',
+        };
+      }
+    }
+  }
+
+  return null; // No text file assigned yet
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // QUESTION MANAGEMENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Saves interview questions to Firestore and optionally assigns them to a candidate.
- *
- * Storage layout:
- *   recruiters/{uid}/interviewSets/{setId}   ← source of truth, secured to recruiter
- *   interviewSets/{setId}                    ← mirror, readable by candidate without recruiter UID
- *
- * On the candidate doc it updates:
- *   assignedInterviewSets  (arrayUnion)
- *   interviewStatus        → 'invited'
- *   invitedAt, invitedBy, recruiterEmail
- *
- * @param {string[]} questions
- * @param {string|null} candidateId   Firestore UID of the candidate
- * @param {string|null} fileUrl       Optional Storage download URL for job spec
- * @returns {Promise<string>}         Created set document ID
- */
 export async function saveInterviewQuestions(questions, candidateId = null, fileUrl = null) {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
@@ -195,21 +280,18 @@ export async function saveInterviewQuestions(questions, candidateId = null, file
     fileUrl:        fileUrl     || null,
   };
 
-  // 1. Write to recruiter's own subcollection (secured)
   const setRef = await addDoc(
     collection(db, 'recruiters', user.uid, 'interviewSets'),
     setData,
   );
 
   if (candidateId) {
-    // 2. Mirror to top-level interviewSets — candidate reads from here
     await setDoc(doc(db, 'interviewSets', setRef.id), {
       ...setData,
       recruiterUid: user.uid,
       setId:        setRef.id,
     });
 
-    // 3. Update candidate doc: mark invited, append set ID
     await updateDoc(doc(db, 'candidates', candidateId), {
       assignedInterviewSets: arrayUnion(setRef.id),
       interviewStatus:       'invited',
@@ -217,7 +299,6 @@ export async function saveInterviewQuestions(questions, candidateId = null, file
       invitedBy:             user.uid,
       recruiterEmail:        user.email,
     }).catch(async () => {
-      // Candidate doc may not exist yet — create with merge
       await setDoc(doc(db, 'candidates', candidateId), {
         assignedInterviewSets: [setRef.id],
         interviewStatus:       'invited',
@@ -231,11 +312,6 @@ export async function saveInterviewQuestions(questions, candidateId = null, file
   return setRef.id;
 }
 
-/**
- * Returns all active question sets created by the currently signed-in recruiter.
- *
- * @returns {Promise<Array>}
- */
 export async function getRecruiterQuestionSets() {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
@@ -252,22 +328,9 @@ export async function getRecruiterQuestionSets() {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ASSIGNED QUESTIONS — FETCH FOR CANDIDATE
-// Used by candidate-voice.html to retrieve the recruiter-sent question set.
-// Reads from the top-level `interviewSets` mirror (no recruiter UID required).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Fetches the most recently assigned question set for a given candidate UID.
- *
- * Lookup order:
- *   1. candidate doc → assignedInterviewSets[] → interviewSets/{setId}
- *   2. query interviewSets where candidateId == uid (fallback)
- *
- * @param {string} candidateId  Firebase Auth UID
- * @returns {Promise<{ questions: string[], setId: string } | null>}
- */
 export async function getAssignedQuestionsForCandidate(candidateId) {
-  // 1. Read candidate doc for assigned set IDs
   const candDoc = await getDoc(doc(db, 'candidates', candidateId));
   if (candDoc.exists()) {
     const assignedSets = candDoc.data().assignedInterviewSets || [];
@@ -280,7 +343,6 @@ export async function getAssignedQuestionsForCandidate(candidateId) {
     }
   }
 
-  // 2. Fallback: query the mirror collection directly by candidateId
   const q = query(
     collection(db, 'interviewSets'),
     where('candidateId', '==', candidateId),
@@ -294,28 +356,13 @@ export async function getAssignedQuestionsForCandidate(candidateId) {
     }
   }
 
-  return null; // No questions assigned yet
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // INTERVIEW SUBMISSION — CANDIDATE SAVES ANSWERS
-// Writes to candidate doc using candlogin.js field names:
-//   interviewAnswers, interviewStatus:'submitted', answersSubmittedAt
-// Also uploads transcript to Storage and records in global submissions collection.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Called by candidate-voice.html when the interview is finished.
- *
- * @param {object} payload
- *   candidateId     string   Firebase Auth UID
- *   candidateEmail  string
- *   answers         string[] per-question answers array
- *   questions       string[] original questions (for recruiter context)
- *   fullTranscript  string   raw text of the full interview
- *   setId           string|null
- * @returns {Promise<{ transcriptUrl: string|null }>}
- */
 export async function saveInterviewSubmission({
   candidateId,
   candidateEmail,
@@ -324,7 +371,6 @@ export async function saveInterviewSubmission({
   fullTranscript,
   setId,
 }) {
-  // 1. Upload transcript text to Firebase Storage
   let transcriptUrl = null;
   try {
     const blob  = new Blob([fullTranscript], { type: 'text/plain' });
@@ -347,13 +393,13 @@ export async function saveInterviewSubmission({
     status:         'submitted',
   };
 
-  // 2. Global submissions collection (recruiter can query without candidate UID)
+  // Global submissions collection
   await addDoc(collection(db, 'submissions'), submissionPayload);
 
-  // 3. Update candidate top-level doc — use candlogin.js field names
+  // Update candidate doc
   const candUpdate = {
-    interviewAnswers:   answers,       // ← candlogin.js canonical field
-    interviewStatus:    'submitted',   // ← candlogin.js canonical field
+    interviewAnswers:   answers,
+    interviewStatus:    'submitted',
     answersSubmittedAt: serverTimestamp(),
     fullTranscript,
     transcriptUrl:      transcriptUrl || null,
@@ -362,7 +408,6 @@ export async function saveInterviewSubmission({
 
   await updateDoc(doc(db, 'candidates', candidateId), candUpdate)
     .catch(async () => {
-      // Create the doc if it doesn't exist
       await setDoc(doc(db, 'candidates', candidateId), {
         email:        candidateEmail,
         role:         'candidate',
@@ -370,12 +415,22 @@ export async function saveInterviewSubmission({
       }, { merge: true });
     });
 
+  // ── NEW: also update the interviewSets mirror with submission status ────────
+  if (setId) {
+    await updateDoc(doc(db, 'interviewSets', setId), {
+      submissionStatus:   'submitted',
+      submittedAt:        serverTimestamp(),
+      candidateAnswers:   answers,
+      fullTranscript,
+      transcriptUrl:      transcriptUrl || null,
+    }).catch(() => {}); // non-fatal
+  }
+
   return { transcriptUrl };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ANSWER EVALUATION
-// Full scoring logic from the uploaded recruit.js — preserved intact.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export async function evaluateCandidateAnswers(questions, answers) {
@@ -408,14 +463,11 @@ export async function evaluateCandidateAnswers(questions, answers) {
 function _scoreSingleAnswer(question, answer, num) {
   const s = { questionNumber: num, question, answer, score: 0, details: [] };
   if (!answer.trim()) { s.details.push('No answer provided'); return s; }
-
   const wc          = answer.trim().split(/\s+/).length;
   const lengthScore = Math.min(100, (wc / 50) * 100);
   s.details.push(`Words: ${wc}`);
-
   const completeness = _calcCompleteness(answer);
   const relevance    = _calcRelevance(answer, question);
-
   s.score = Math.round((lengthScore + completeness + relevance) / 3);
   s.details.push(
     `Completeness: ${completeness.toFixed(0)}%`,
@@ -476,8 +528,6 @@ async function _saveEvaluationToFirebase(questions, answers, results) {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GLOBAL EXPOSURE
-// All functions bound to window so inline <script> blocks in recruiter.html
-// and candidate-voice.html can call them without ES-module imports.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 window.checkRecruiterAuth               = checkRecruiterAuth;
@@ -489,6 +539,9 @@ window.getRecruiterQuestionSets         = getRecruiterQuestionSets;
 window.getAssignedQuestionsForCandidate = getAssignedQuestionsForCandidate;
 window.saveInterviewSubmission          = saveInterviewSubmission;
 window.evaluateCandidateAnswers         = evaluateCandidateAnswers;
+// ── NEW ────────────────────────────────────────────────────────────────────────
+window.sendTextFileToCandidate          = sendTextFileToCandidate;
+window.getTextFileForCandidate          = getTextFileForCandidate;
 
 // Auto-run auth guard when loaded on recruiter pages
 checkRecruiterAuth();

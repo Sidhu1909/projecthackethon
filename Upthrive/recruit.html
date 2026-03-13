@@ -1,599 +1,621 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Interview Management — TalentBridge Recruiter</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TalentBridge | Recruiter Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #c5a059;
+            --gold-dim: rgba(197,160,89,0.15);
+            --gold-glow: rgba(197,160,89,0.3);
+            --dark-bg: #050505;
+            --surface: #0c0c0c;
+            --card: #0f0f0f;
+            --text-white: #e0e0e0;
+            --text-muted: #666;
+            --glass: rgba(255,255,255,0.04);
+            --border: rgba(197,160,89,0.15);
+            --error: #c97070;
+            --success: #70c9a8;
+            --info: #7090c9;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--dark-bg);
+            color: var(--text-white);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
 
-    :root {
-      --bg: #0a0e27;
-      --surface: #141829;
-      --border: rgba(100,150,255,0.15);
-      --blue: #6495ed;
-      --blue-glow: rgba(100,149,237,0.3);
-      --cyan: #00d4ff;
-      --green: #00ff88;
-      --green-glow: rgba(0,255,136,0.3);
-      --red: #ff4757;
-      --amber: #ffd700;
-      --white: #e8edf7;
-      --muted: #8b96b8;
-      --font-sans: 'Syne', sans-serif;
-      --font-display: 'Bebas Neue', cursive;
-    }
+        /* ── Starfield ── */
+        .stars { position: fixed; inset: 0; z-index: 0; }
+        .stars canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+        body::after {
+            content: '';
+            position: fixed; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none; z-index: 998; opacity: 0.6;
+        }
 
-    html, body { height: 100%; background: linear-gradient(135deg, var(--bg) 0%, #1a1f3a 100%); color: var(--white); font-family: var(--font-sans); overflow-x: hidden; }
-    :focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }
+        /* ── Layout ── */
+        .page-wrap { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 40px 20px 80px; }
 
-    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        /* ── Header ── */
+        .header { text-align: center; margin-bottom: 40px; }
+        .logo { font-family: 'Cinzel', serif; font-size: clamp(1.4rem,3vw,2rem); letter-spacing: 10px; text-transform: uppercase; }
+        .logo em { color: var(--gold); font-style: normal; }
+        .tagline { font-size: 0.6rem; letter-spacing: 5px; color: var(--text-muted); margin-top: 6px; text-transform: uppercase; }
+        .recruiter-strip { display: inline-block; margin-top: 10px; padding: 6px 16px; background: var(--glass); border: 1px solid var(--border); border-radius: 4px; font-size: 0.7rem; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; }
+        .recruiter-strip span { color: var(--gold); }
 
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
-    header h1 { font-family: var(--font-display); font-size: 2.5rem; letter-spacing: 3px; color: var(--cyan); text-transform: uppercase; }
-    .header-right { display: flex; align-items: center; gap: 1rem; }
-    .recruiter-badge { padding: 0.35rem 0.9rem; background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); border-radius: 20px; font-size: 0.75rem; color: var(--cyan); letter-spacing: 1px; }
+        /* ── Section titles ── */
+        .section-title {
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
 
-    .logout-btn { padding: 0.75rem 1.5rem; background: rgba(255,71,87,0.1); border: 1px solid var(--red); color: var(--red); border-radius: 6px; cursor: pointer; font-family: var(--font-sans); font-size: 0.9rem; transition: all 0.3s; }
-    .logout-btn:hover { background: var(--red); color: var(--white); }
+        /* ── Cards ── */
+        .card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 24px;
+            margin-bottom: 28px;
+        }
+        .card.accent { border-left: 3px solid var(--gold); }
 
-    /* Live connection indicator */
-    .live-dot { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--green); }
-    .live-dot::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: liveBlink 1.5s ease infinite; }
-    @keyframes liveBlink { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
+        /* ── Form elements ── */
+        label { display: block; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+        input[type="text"], input[type="email"], textarea, select {
+            width: 100%;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            color: var(--text-white);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            padding: 10px 14px;
+            border-radius: 4px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input:focus, textarea:focus, select:focus { border-color: var(--gold); }
+        textarea { min-height: 90px; resize: vertical; }
+        .form-row { margin-bottom: 16px; }
 
-    .sections-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; margin-bottom: 3rem; }
-    @media (max-width: 900px) { .sections-grid { grid-template-columns: 1fr; } }
+        /* ── File drop zone ── */
+        .drop-zone {
+            border: 1.5px dashed var(--border);
+            border-radius: 6px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s, background 0.3s;
+            position: relative;
+        }
+        .drop-zone:hover, .drop-zone.drag-over { border-color: var(--gold); background: var(--gold-dim); }
+        .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+        .drop-zone-icon { font-size: 2rem; margin-bottom: 8px; }
+        .drop-zone-label { font-size: 0.75rem; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; }
+        .drop-zone-label em { color: var(--gold); font-style: normal; }
+        .drop-zone-hint { font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; }
+        .file-selected { margin-top: 12px; font-size: 0.75rem; color: var(--success); letter-spacing: 1px; display: none; }
 
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; transition: all 0.3s; }
-    .card:hover { border-color: rgba(0,212,255,0.3); box-shadow: 0 0 24px rgba(0,212,255,0.08); }
-    .card h2 { font-family: var(--font-display); font-size: 1.8rem; letter-spacing: 2px; color: var(--blue); margin-bottom: 1.5rem; text-transform: uppercase; }
+        /* ── Buttons ── */
+        .btn { background: transparent; border: 1px solid; font-family: 'Inter', sans-serif; letter-spacing: 3px; font-size: 0.65rem; cursor: pointer; transition: all 0.3s; text-transform: uppercase; padding: 12px 24px; border-radius: 2px; }
+        .btn-gold  { border-color: var(--gold); color: var(--gold); }
+        .btn-info  { border-color: rgba(112,144,201,0.5); color: var(--info); }
+        .btn-error { border-color: rgba(201,112,112,0.5); color: var(--error); }
+        .btn-sm    { padding: 8px 16px; font-size: 0.6rem; }
+        .btn:hover:not(:disabled) { background: currentColor; color: var(--dark-bg); }
+        .btn:disabled { opacity: 0.3; pointer-events: none; }
 
-    .upload-area { border: 2px dashed var(--border); border-radius: 10px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(100,149,237,0.05); margin-bottom: 1.5rem; }
-    .upload-area:hover { border-color: var(--cyan); background: rgba(0,212,255,0.1); }
-    .upload-area.drag-over { border-color: var(--green); background: rgba(0,255,136,0.15); }
-    .upload-icon { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
-    .upload-area p { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0; }
-    input[type="file"] { display: none; }
+        /* ── Candidate table ── */
+        .cand-table { width: 100%; border-collapse: collapse; }
+        .cand-table th {
+            font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase;
+            color: var(--text-muted); padding: 8px 10px; text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .cand-table td { padding: 12px 10px; border-bottom: 1px solid rgba(197,160,89,0.06); font-size: 0.82rem; vertical-align: middle; }
+        .cand-table tr:hover td { background: var(--gold-dim); }
+        .status-pill {
+            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: 0.58rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 500;
+        }
+        .status-pill.pending   { background: rgba(102,102,102,0.15); color: var(--text-muted); border: 1px solid rgba(102,102,102,0.3); }
+        .status-pill.invited   { background: rgba(112,144,201,0.12); color: var(--info);       border: 1px solid rgba(112,144,201,0.3); }
+        .status-pill.submitted { background: rgba(112,201,168,0.12); color: var(--success);    border: 1px solid rgba(112,201,168,0.3); }
 
-    .btn { padding: 0.75rem 1.5rem; background: linear-gradient(135deg, var(--blue) 0%, var(--cyan) 100%); color: var(--bg); border: none; border-radius: 6px; cursor: pointer; font-family: var(--font-sans); font-size: 0.9rem; font-weight: 600; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px; }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,212,255,0.3); }
-    .btn:active { transform: translateY(0); }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-    .btn-danger { background: rgba(255,71,87,0.2); color: var(--red); border: 1px solid var(--red); padding: 0.5rem 1rem; font-size: 0.8rem; }
-    .btn-danger:hover { background: var(--red); color: var(--white); }
-    .btn-outline { background: transparent; border: 1px solid var(--cyan); color: var(--cyan); }
-    .btn-outline:hover { background: var(--cyan); color: var(--bg); box-shadow: 0 0 16px rgba(0,212,255,0.4); }
+        /* ── Answers panel ── */
+        .answers-panel {
+            display: none;
+            margin-top: 8px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 16px;
+        }
+        .answers-panel.open { display: block; animation: fadeUp 0.3s ease both; }
+        .answer-item { margin-bottom: 14px; }
+        .answer-q { font-size: 0.68rem; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; margin-bottom: 4px; }
+        .answer-a { font-size: 0.88rem; line-height: 1.6; color: var(--text-white); font-style: italic; opacity: 0.85; }
+        .answer-empty { font-size: 0.78rem; color: var(--text-muted); font-style: italic; }
+        .transcript-link { font-size: 0.68rem; color: var(--info); letter-spacing: 1px; text-decoration: none; }
+        .transcript-link:hover { text-decoration: underline; }
 
-    .question { background: rgba(100,149,237,0.05); border-left: 3px solid var(--blue); border-radius: 6px; padding: 1.5rem; margin-bottom: 1rem; }
-    .question-text { color: var(--white); margin-bottom: 0.5rem; line-height: 1.6; }
-    .question-number { color: var(--blue); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
+        /* ── File preview strip ── */
+        .file-preview-strip {
+            display: none;
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: rgba(112,201,168,0.07);
+            border: 1px solid rgba(112,201,168,0.25);
+            border-radius: 4px;
+            font-size: 0.72rem;
+            color: var(--success);
+            letter-spacing: 1px;
+        }
+        .file-preview-strip.show { display: flex; align-items: center; gap: 10px; }
 
-    .evaluation-result { background: rgba(0,255,136,0.05); border: 1px solid var(--green); border-radius: 8px; padding: 1.5rem; margin-top: 1.5rem; }
-    .score-display { font-size: 2.5rem; font-family: var(--font-display); margin: 1rem 0; text-align: center; }
-    .score-display.low    { color: var(--red); }
-    .score-display.medium { color: var(--amber); }
-    .score-display.high   { color: var(--green); }
-    .evaluation-feedback { color: var(--muted); font-size: 0.95rem; line-height: 1.6; margin-top: 1rem; }
+        /* ── Toast ── */
+        .toast {
+            position: fixed; bottom: 28px; left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: #0c0c18; border: 1px solid var(--border);
+            padding: 10px 20px; font-size: 0.7rem; letter-spacing: 2px;
+            text-transform: uppercase; z-index: 9999;
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            white-space: nowrap; pointer-events: none;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.success { border-color: rgba(112,201,168,0.4); color: var(--success); }
+        .toast.error   { border-color: rgba(201,112,112,0.4); color: var(--error); }
+        .toast.info    { border-color: rgba(197,160,89,0.3);  color: var(--gold); }
 
-    .loading { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(100,149,237,0.3); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+        /* ── Spinner ── */
+        .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(197,160,89,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spinner 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+        @keyframes spinner { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 
-    .status-message { padding: 1rem; border-radius: 6px; margin-bottom: 1rem; animation: slideIn 0.3s ease; font-size: 0.9rem; }
-    .status-message.success { background: rgba(0,255,136,0.1); border: 1px solid var(--green); color: var(--green); }
-    .status-message.error   { background: rgba(255,71,87,0.1);  border: 1px solid var(--red);   color: var(--red);   }
-    .status-message.info    { background: rgba(100,149,237,0.1); border: 1px solid var(--blue);  color: var(--blue);  }
-    @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        /* ── Empty state ── */
+        .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 0.8rem; letter-spacing: 2px; }
 
-    .select-wrap { position: relative; margin-bottom: 1rem; }
-    .select-wrap select { width: 100%; padding: 0.75rem 2.5rem 0.75rem 1rem; background: rgba(100,149,237,0.07); border: 1px solid var(--border); color: var(--white); border-radius: 8px; font-family: var(--font-sans); font-size: 0.95rem; appearance: none; cursor: pointer; transition: border-color 0.25s; }
-    .select-wrap select:focus { border-color: var(--cyan); outline: none; }
-    .select-wrap::after { content: '▾'; position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
-    .select-wrap select option { background: var(--surface); color: var(--white); }
+        /* ── Tabs ── */
+        .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+        .tab { padding: 10px 24px; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.3s; background: none; border-top: none; border-left: none; border-right: none; font-family: 'Inter', sans-serif; }
+        .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; animation: fadeUp 0.3s ease both; }
 
-    .candidate-badge { display: inline-flex; align-items: center; gap: 8px; padding: 0.35rem 0.9rem; border-radius: 20px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
-    .badge-pending   { background: rgba(100,149,237,0.15); color: var(--blue);  border: 1px solid var(--blue); }
-    .badge-invited   { background: rgba(255,215,0,0.12);   color: var(--amber); border: 1px solid var(--amber); }
-    .badge-submitted { background: rgba(0,255,136,0.12);   color: var(--green); border: 1px solid var(--green); }
+        .score-bar { display: inline-block; height: 4px; background: var(--gold); border-radius: 2px; vertical-align: middle; margin-left: 8px; }
 
-    .cand-meta { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
-    .cand-meta:last-child { border-bottom: none; }
-    .cand-name  { color: var(--white); font-weight: 600; font-size: 0.9rem; }
-    .cand-email { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
-
-    .refresh-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.4rem 0.9rem; font-size: 0.8rem; cursor: pointer; font-family: var(--font-sans); transition: all 0.2s; }
-    .refresh-btn:hover { border-color: var(--cyan); color: var(--cyan); }
-
-    .section-divider { width: 100%; height: 1px; background: var(--border); margin: 3rem 0; }
-
-    .file-item { background: rgba(100,149,237,0.05); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; }
-    .file-name { color: var(--cyan); font-weight: 600; margin-bottom: 0.25rem; }
-    .file-meta { color: var(--muted); font-size: 0.85rem; }
-
-    /* Answer viewer */
-    .answer-block { background: rgba(0,255,136,0.04); border-left: 3px solid var(--green); border-radius: 6px; padding: 1.2rem 1.5rem; margin-bottom: 1rem; }
-    .answer-label { color: var(--green); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; font-weight: 700; }
-    .answer-text  { color: var(--white); font-size: 0.95rem; line-height: 1.65; }
-    .q-ref        { color: var(--muted); font-size: 0.82rem; margin-bottom: 0.5rem; font-style: italic; }
-
-    /* Notification badge */
-    .notif-badge { background: var(--red); color: #fff; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; margin-left: 6px; animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
-    @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
-
-    .transcript-viewer { max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; font-size: 0.82rem; color: var(--muted); line-height: 1.7; white-space: pre-wrap; font-family: 'Courier New', monospace; margin-top: 1rem; }
-
-    /* Tabs */
-    .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
-    .tab { padding: 0.6rem 1.2rem; background: none; border: none; color: var(--muted); cursor: pointer; font-family: var(--font-sans); font-size: 0.85rem; letter-spacing: 0.5px; border-bottom: 2px solid transparent; transition: all 0.2s; }
-    .tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-  </style>
+        @media (max-width: 600px) {
+            .cand-table th:nth-child(3), .cand-table td:nth-child(3) { display: none; }
+        }
+    </style>
 </head>
 <body>
-<div class="container">
 
-  <header>
-    <h1>📋 Interview Manager</h1>
-    <div class="header-right">
-      <span class="live-dot">Firebase Live</span>
-      <span class="recruiter-badge" id="recruiterBadge">RECRUITER</span>
-      <button class="logout-btn" onclick="handleLogout()">Logout</button>
-    </div>
-  </header>
+<div class="stars"><canvas id="starCanvas"></canvas></div>
 
-  <div class="sections-grid">
+<div class="page-wrap">
+    <!-- Header -->
+    <header class="header">
+        <h1 class="logo"><em>Talent</em>Bridge</h1>
+        <p class="tagline">Recruiter Portal</p>
+        <div class="recruiter-strip">Signed in as: <span id="recruiterEmail">—</span></div>
+    </header>
 
-    <!-- ── LEFT: Upload & Send Questions ── -->
-    <div class="card">
-      <h2>📤 Upload &amp; Send Questions</h2>
-      <p style="color:var(--muted);margin-bottom:1rem;">Upload a <strong>.txt</strong> file — one question per line. Then select a candidate and send.</p>
-
-      <div class="upload-area" id="questionsUploadArea" onclick="document.getElementById('questionsFile').click()">
-        <span class="upload-icon">📎</span>
-        <p><strong>Click to upload or drag &amp; drop</strong></p>
-        <p style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;">Supported: .txt files only</p>
-      </div>
-      <input type="file" id="questionsFile" accept=".txt" onchange="handleQuestionsUpload(event)"/>
-
-      <div id="questionsStatus"></div>
-
-      <div id="questionsFileList" style="display:none; margin-bottom:1rem;">
-        <div class="file-item">
-          <div>
-            <div class="file-name" id="uploadedFileName">—</div>
-            <div class="file-meta" id="uploadedFileMeta">—</div>
-          </div>
-          <button class="btn-danger btn" onclick="clearQuestions()">✕ Clear</button>
-        </div>
-      </div>
-
-      <div id="questionsDisplay"></div>
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('send')">Send Briefing & Questions</button>
+        <button class="tab" onclick="switchTab('inbox')">Candidate Answers</button>
     </div>
 
-    <!-- ── RIGHT: Candidates ── -->
-    <div class="card">
-      <h2>👥 Candidates</h2>
+    <!-- ═══ TAB 1 — Send Briefing ═══════════════════════════════════════════ -->
+    <div class="tab-panel active" id="tab-send">
 
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-        <label style="color:var(--muted);font-size:0.85rem;">📍 Registered Candidates</label>
-        <button class="refresh-btn" onclick="loadCandidatesFromDatabase()">↻ Refresh</button>
-      </div>
-
-      <div class="select-wrap">
-        <select id="candidateSelect" onchange="onCandidateSelected(this.value)">
-          <option value="">— Loading candidates… —</option>
-        </select>
-      </div>
-
-      <!-- Selected candidate info -->
-      <div id="candidateInfoStrip" style="display:none;margin-bottom:1rem;padding:0.75rem 1rem;background:rgba(100,149,237,0.07);border:1px solid var(--border);border-radius:8px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-          <div>
-            <div class="cand-name"  id="stripName">—</div>
-            <div class="cand-email" id="stripEmail">—</div>
-          </div>
-          <span id="stripBadge" class="candidate-badge badge-pending">Pending</span>
-        </div>
-        <div style="margin-top:0.6rem;font-size:0.82rem;color:var(--muted);" id="stripMeta"></div>
-      </div>
-
-      <div id="answersStatus"></div>
-
-      <!-- Tabs: Answers | Transcript | Evaluate -->
-      <div id="answersTabSection" style="display:none;">
-        <div class="tabs">
-          <button class="tab active" onclick="switchTab('answers',this)">📝 Answers</button>
-          <button class="tab" onclick="switchTab('transcript',this)">📄 Transcript</button>
-          <button class="tab" onclick="switchTab('evaluate',this)">⚡ Evaluate</button>
+        <!-- Step 1 · Target candidate -->
+        <div class="card accent">
+            <div class="section-title">① Select Candidate</div>
+            <div class="form-row">
+                <label for="candidateEmailInput">Candidate Email or UID</label>
+                <input type="email" id="candidateEmailInput" placeholder="candidate@email.com">
+            </div>
+            <div class="form-row">
+                <label for="candidateSelect">Or pick from existing candidates</label>
+                <select id="candidateSelect" onchange="fillCandidateFromSelect()">
+                    <option value="">— Loading candidates… —</option>
+                </select>
+            </div>
         </div>
 
-        <div class="tab-panel active" id="tab-answers">
-          <div id="candidateAnswersDisplay"></div>
+        <!-- Step 2 · Text file (briefing) -->
+        <div class="card accent">
+            <div class="section-title">② Upload Briefing (.txt)</div>
+            <div class="drop-zone" id="dropZone">
+                <input type="file" id="txtFileInput" accept=".txt,text/plain" onchange="handleFileSelect(this)">
+                <div class="drop-zone-icon">📄</div>
+                <div class="drop-zone-label">Drop your <em>.txt</em> file here or click to browse</div>
+                <div class="drop-zone-hint">Plain text only · The file will be read aloud to the candidate before the interview</div>
+            </div>
+            <div class="file-selected" id="fileSelectedLabel"></div>
+            <div class="file-preview-strip" id="filePreviewStrip">
+                <span>📋</span>
+                <span id="filePreviewText" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+            </div>
         </div>
 
-        <div class="tab-panel" id="tab-transcript">
-          <div id="transcriptDisplay" class="transcript-viewer">No transcript available.</div>
+        <!-- Step 3 · Questions -->
+        <div class="card accent">
+            <div class="section-title">③ Interview Questions</div>
+            <div class="form-row">
+                <label>Enter questions (one per line)</label>
+                <textarea id="questionsInput" placeholder="Tell me about yourself.&#10;What are your key strengths?&#10;Why do you want this role?"></textarea>
+            </div>
         </div>
 
-        <div class="tab-panel" id="tab-evaluate">
-          <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem;">AI-powered scoring based on question coverage and response depth.</p>
-          <button class="btn" id="evaluateBtn" onclick="evaluateAnswers()" style="width:100%;">⚡ Run Evaluation</button>
-          <div id="evaluationResults" style="margin-top:1.5rem;"></div>
+        <!-- Send button -->
+        <div style="text-align:center; margin-top:8px;">
+            <button class="btn btn-gold" id="sendBtn" onclick="sendBriefingAndQuestions()">Send to Candidate →</button>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- ── Save / Send to Candidate ── -->
-  <div class="section-divider"></div>
-
-  <div class="card">
-    <h2>🚀 Assign &amp; Send Questions to Candidate</h2>
-    <p style="color:var(--muted);margin-bottom:1.5rem;">
-      Saves the question set to Firebase and assigns it to the selected candidate.
-      The candidate will see and hear the questions <strong>immediately</strong> on their interview portal.
-    </p>
-
-    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-      <button class="btn" id="saveQuestionsBtn" onclick="saveQuestionsToFirebase()" disabled style="flex:1;min-width:220px;">
-        🚀 Send Questions to Candidate
-      </button>
-      <div id="assignTarget" style="color:var(--muted);font-size:0.85rem;flex:1;">
-        Upload questions &amp; select a candidate to enable.
-      </div>
+        <!-- Status -->
+        <div id="sendStatus" style="margin-top:20px; text-align:center; font-size:0.75rem; letter-spacing:2px; color:var(--text-muted); display:none;"></div>
     </div>
 
-    <div id="firebaseStatus" style="margin-top:1rem;"></div>
-  </div>
+    <!-- ═══ TAB 2 — Candidate Answers ══════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-inbox">
+        <div class="card">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <div class="section-title" style="margin-bottom:0; border:none; padding:0;">Submitted Interviews</div>
+                <button class="btn btn-info btn-sm" onclick="loadCandidates()">↻ Refresh</button>
+            </div>
 
+            <div id="candidatesTableWrap">
+                <div class="empty-state"><span class="spin"></span> Loading…</div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- ── recruit.js module ── -->
+<div class="toast" id="toast" role="alert"></div>
+
 <script type="module" src="./recruit.js"></script>
 
 <script>
-/* ── global state ─────────────────────────────────────────────────────────── */
-let uploadedQuestions    = [];
-let uploadedAnswers      = [];
-let candidateTranscript  = "";
-let currentQuestionFile  = null;
-let uploadedFileUrl      = null;
-let selectedCandidateId  = null;
-let selectedCandidateObj = null;
+// ── State ────────────────────────────────────────────────────────────────────
+let selectedFile     = null;
+let candidatesCache  = [];
+let openAnswerRow    = null;
 
-/* ── Drag and drop ────────────────────────────────────────────────────────── */
-const qArea = document.getElementById('questionsUploadArea');
-qArea.addEventListener('dragover',  e => { e.preventDefault(); qArea.classList.add('drag-over'); });
-qArea.addEventListener('dragleave', ()  => qArea.classList.remove('drag-over'));
-qArea.addEventListener('drop', e => {
-  e.preventDefault(); qArea.classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) handleQuestionsUpload({ target: { files: e.dataTransfer.files } });
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['send','inbox'][i] === tab));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    if (tab === 'inbox') loadCandidates();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type='info') {
+    const t = document.getElementById('toast');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ── Init page ─────────────────────────────────────────────────────────────────
+function initPage() {
+    const email = localStorage.getItem('titanEmail') || '—';
+    document.getElementById('recruiterEmail').textContent = email;
+    startStarfield();
+    populateCandidateDropdown();
+}
+
+// ── Populate dropdown ─────────────────────────────────────────────────────────
+async function populateCandidateDropdown() {
+    const sel = document.getElementById('candidateSelect');
+    // Wait for recruit.js globals
+    let tries = 0;
+    while (!window.getCandidatesWithAnswers && tries < 30) {
+        await new Promise(r => setTimeout(r, 200)); tries++;
+    }
+    if (!window.getCandidatesWithAnswers) return;
+
+    try {
+        candidatesCache = await window.getCandidatesWithAnswers();
+        sel.innerHTML = '<option value="">— Select a candidate —</option>';
+        candidatesCache.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value       = c.id;
+            opt.textContent = `${c.email} (${c.status})`;
+            opt.dataset.email = c.email;
+            sel.appendChild(opt);
+        });
+    } catch(e) {
+        sel.innerHTML = '<option value="">— Error loading candidates —</option>';
+    }
+}
+
+function fillCandidateFromSelect() {
+    const sel  = document.getElementById('candidateSelect');
+    const opt  = sel.options[sel.selectedIndex];
+    if (opt && opt.dataset.email) {
+        document.getElementById('candidateEmailInput').value = opt.dataset.email;
+    }
+}
+
+// ── File handling ─────────────────────────────────────────────────────────────
+function handleFileSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (!file.name.endsWith('.txt') && file.type !== 'text/plain') {
+        showToast('Please select a .txt file only.', 'error'); return;
+    }
+    selectedFile = file;
+
+    const label = document.getElementById('fileSelectedLabel');
+    label.textContent = `✓ Selected: ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+    label.style.display = 'block';
+
+    // Preview first 120 chars
+    const reader = new FileReader();
+    reader.onload = e => {
+        const preview = e.target.result.replace(/\n/g,' ').trim().slice(0,120);
+        const strip   = document.getElementById('filePreviewStrip');
+        document.getElementById('filePreviewText').textContent = preview + (preview.length >= 120 ? '…' : '');
+        strip.classList.add('show');
+    };
+    reader.readAsText(file);
+}
+
+// Drag & drop
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) { document.getElementById('txtFileInput').files = e.dataTransfer.files; handleFileSelect({ files: [f] }); }
 });
 
-/* ── Parse text file ──────────────────────────────────────────────────────── */
-function parseTextFile(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload  = e => resolve(e.target.result.split('\n').map(l=>l.trim()).filter(Boolean));
-    r.onerror = reject;
-    r.readAsText(file);
-  });
-}
+// ── Send briefing + questions ─────────────────────────────────────────────────
+async function sendBriefingAndQuestions() {
+    // Resolve candidate ID
+    const sel         = document.getElementById('candidateSelect');
+    const emailInput  = document.getElementById('candidateEmailInput').value.trim();
+    let   candidateId = sel.value || '';
 
-/* ── Handle questions file ────────────────────────────────────────────────── */
-async function handleQuestionsUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  if (!file.name.endsWith('.txt')) {
-    showStatus('questionsStatus', '⚠️ Please upload a .txt file', 'error'); return;
-  }
-  try {
-    showStatus('questionsStatus', '<span class="loading"></span> Parsing…', 'info');
-
-    // parse the questions text
-    uploadedQuestions = await parseTextFile(file);
-    currentQuestionFile = file;
-
-    // also upload the original .txt file to Storage so candidate can download it
-    if (window.uploadQuestionFile) {
-      showStatus('questionsStatus', '<span class="loading"></span> Uploading file…', 'info');
-      try {
-        uploadedFileUrl = await window.uploadQuestionFile(file);
-      } catch (uploadErr) {
-        console.warn('file upload failed', uploadErr);
-        uploadedFileUrl = null;
-      }
+    // If a candidateId isn't selected from the dropdown, try to match by email
+    if (!candidateId && emailInput) {
+        const match = candidatesCache.find(c => c.email === emailInput);
+        if (match) candidateId = match.id;
+    }
+    if (!candidateId && emailInput) {
+        // Last resort: use email as UID (useful for manually-created accounts)
+        candidateId = emailInput;
     }
 
-    showStatus('questionsStatus', `✓ ${uploadedQuestions.length} questions loaded`, 'success');
-    document.getElementById('questionsFileList').style.display = 'block';
-    document.getElementById('uploadedFileName').textContent = file.name;
-    document.getElementById('uploadedFileMeta').textContent =
-      `${uploadedQuestions.length} questions · ${(file.size/1024).toFixed(1)} KB`;
-
-    displayQuestions();
-    updateSaveButton();
-  } catch (err) {
-    showStatus('questionsStatus', 'Error reading file: ' + err.message, 'error');
-  }
-}
-
-function clearQuestions() {
-  uploadedQuestions = []; currentQuestionFile = null;
-  document.getElementById('questionsFileList').style.display = 'none';
-  document.getElementById('questionsDisplay').innerHTML = '';
-  document.getElementById('questionsStatus').innerHTML = '';
-  document.getElementById('questionsFile').value = '';
-  updateSaveButton();
-}
-
-function displayQuestions() {
-  const el = document.getElementById('questionsDisplay');
-  el.innerHTML = `<h3 style="color:var(--blue);margin-bottom:1rem;font-size:0.9rem;letter-spacing:1px;text-transform:uppercase;">Questions Preview (${uploadedQuestions.length})</h3>`;
-  uploadedQuestions.forEach((q, i) => {
-    const d = document.createElement('div');
-    d.className = 'question';
-    d.innerHTML = `<div class="question-number">Q${i+1}</div><div class="question-text">${q}</div>`;
-    el.appendChild(d);
-  });
-}
-
-/* ── Load candidates ──────────────────────────────────────────────────────── */
-async function loadCandidatesFromDatabase() {
-  const sel = document.getElementById('candidateSelect');
-  sel.innerHTML = '<option value="">— Loading… —</option>';
-  showStatus('answersStatus', '<span class="loading"></span> Fetching candidates…', 'info');
-
-  let attempts = 0;
-  while (!window.getCandidatesWithAnswers && attempts < 30) {
-    await delay(250); attempts++;
-  }
-  if (!window.getCandidatesWithAnswers) {
-    showStatus('answersStatus', '⚠️ Firebase module not ready. Refresh.', 'error');
-    sel.innerHTML = '<option value="">— Error —</option>';
-    return;
-  }
-
-  try {
-    const candidates = await window.getCandidatesWithAnswers();
-    sel.innerHTML = '<option value="">— Choose a candidate —</option>';
-    if (candidates.length === 0) {
-      showStatus('answersStatus', '⚠️ No candidates registered yet.', 'error'); return;
-    }
-    candidates.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.id;
-      const icon = c.status === 'submitted' ? '✅' : c.status === 'invited' ? '📨' : '🔵';
-      opt.textContent = `${icon}  ${c.name || c.email}`;
-      if (c.email && c.name) opt.textContent += `  —  ${c.email}`;
-      opt.dataset.candidateJson = JSON.stringify(c);
-      sel.appendChild(opt);
-    });
-    const newCount = candidates.filter(c => c.status === 'submitted').length;
-    const h2 = document.querySelector('.card:nth-child(2) h2');
-    if (h2) {
-      h2.innerHTML = `👥 Candidates${newCount ? `<span class="notif-badge">${newCount}</span>` : ''}`;
-    }
-    showStatus('answersStatus', `✓ ${candidates.length} candidate${candidates.length!==1?'s':''} found`, 'success');
-  } catch (err) {
-    showStatus('answersStatus', 'Error: ' + err.message, 'error');
-    sel.innerHTML = '<option value="">— Error —</option>';
-  }
-}
-
-/* ── Candidate selected ───────────────────────────────────────────────────── */
-async function onCandidateSelected(id) {
-  selectedCandidateId  = id || null;
-  selectedCandidateObj = null;
-  uploadedAnswers = []; candidateTranscript = '';
-  document.getElementById('candidateAnswersDisplay').innerHTML = '';
-  document.getElementById('evaluationResults').innerHTML = '';
-  document.getElementById('transcriptDisplay').textContent = 'No transcript available.';
-  document.getElementById('answersTabSection').style.display = 'none';
-  updateSaveButton();
-
-  if (!id) { document.getElementById('candidateInfoStrip').style.display = 'none'; return; }
-
-  const opt = document.querySelector(`#candidateSelect option[value="${id}"]`);
-  if (opt?.dataset.candidateJson) {
-    selectedCandidateObj = JSON.parse(opt.dataset.candidateJson);
-    showCandidateInfoStrip(selectedCandidateObj);
-  }
-  await loadCandidateAnswers(id);
-  updateSaveButton();
-}
-
-function showCandidateInfoStrip(c) {
-  document.getElementById('stripName').textContent  = c.name  || c.email || '—';
-  document.getElementById('stripEmail').textContent = c.email || '—';
-  const badge = document.getElementById('stripBadge');
-  badge.className = 'candidate-badge';
-  if (c.status === 'submitted') { badge.classList.add('badge-submitted'); badge.textContent = '✅ Submitted'; }
-  else if (c.status === 'invited') { badge.classList.add('badge-invited'); badge.textContent = '📨 Invited'; }
-  else { badge.classList.add('badge-pending'); badge.textContent = '🔵 Pending'; }
-
-  const meta = [];
-  if (c.answerCount) meta.push(`${c.answerCount} answer${c.answerCount!==1?'s':''} on file`);
-  if (c.submittedAt)  meta.push(`Submitted: ${new Date(c.submittedAt?.seconds ? c.submittedAt.seconds*1000 : c.submittedAt).toLocaleDateString()}`);
-  if (c.assignedSets?.length) meta.push(`${c.assignedSets.length} set${c.assignedSets.length!==1?'s':''} assigned`);
-  document.getElementById('stripMeta').textContent = meta.join('  ·  ');
-  document.getElementById('candidateInfoStrip').style.display = 'block';
-}
-
-/* ── Load answers ─────────────────────────────────────────────────────────── */
-async function loadCandidateAnswers(id) {
-  if (!window.getCandidateAnswersById) return;
-  try {
-    const data = await window.getCandidateAnswersById(id);
-    // recruit.js getCandidateAnswersById maps interviewAnswers → answers for us
-    uploadedAnswers    = data.answers        || [];
-    candidateTranscript = data.fullTranscript || '';
-    let transcriptLinkHtml = '';
-    if (data.transcriptUrl) {
-      transcriptLinkHtml = `\n<p style="margin-top:0.5rem;"><a href="${data.transcriptUrl}" target="_blank">Download transcript file</a></p>`;
+    if (!candidateId) {
+        showToast('Please select or enter a candidate.', 'error'); return;
     }
 
-    if (uploadedAnswers.length === 0) {
-      document.getElementById('transcriptDisplay').innerHTML = transcriptLinkHtml || 'No transcript available.';
-      showStatus('answersStatus', 'ℹ️ Candidate has not submitted answers yet.', 'info');
-      return;
+    // Parse questions
+    const raw = document.getElementById('questionsInput').value.trim();
+    const questions = raw.split('\n').map(q => q.trim()).filter(Boolean);
+    if (questions.length === 0) {
+        showToast('Please enter at least one question.', 'error'); return;
     }
 
-    const container = document.getElementById('candidateAnswersDisplay');
-    container.innerHTML = `<p style="color:var(--green);font-size:0.85rem;margin-bottom:1rem;">✅ ${uploadedAnswers.length} answers received</p>`;
-    uploadedAnswers.forEach((ans, i) => {
-      const d = document.createElement('div');
-      d.className = 'answer-block';
-      const qRef = uploadedQuestions[i] ? `<div class="q-ref">Q: ${uploadedQuestions[i]}</div>` : '';
-      d.innerHTML = `<div class="answer-label">Answer ${i+1}</div>${qRef}<div class="answer-text">${ans || '<em style="color:var(--muted)">No response recorded</em>'}</div>`;
-      container.appendChild(d);
-    });
-    if (transcriptLinkHtml) container.insertAdjacentHTML('beforeend', transcriptLinkHtml);
+    const sendBtn  = document.getElementById('sendBtn');
+    const statusEl = document.getElementById('sendStatus');
+    sendBtn.disabled = true;
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<span class="spin"></span> Saving questions…';
 
-    // Transcript tab
-    if (candidateTranscript) {
-      document.getElementById('transcriptDisplay').textContent = candidateTranscript;
+    // Wait for recruit.js
+    let tries = 0;
+    while ((!window.saveInterviewQuestions || !window.sendTextFileToCandidate) && tries < 30) {
+        await new Promise(r => setTimeout(r, 200)); tries++;
     }
 
-    showStatus('answersStatus', `✅ ${uploadedAnswers.length} answers loaded from Firebase`, 'success');
-    document.getElementById('answersTabSection').style.display = 'block';
-  } catch (err) {
-    showStatus('answersStatus', 'Could not load answers: ' + err.message, 'error');
-  }
-}
+    try {
+        // 1. Save questions → returns setId
+        statusEl.innerHTML = '<span class="spin"></span> Saving interview questions…';
+        const setId = await window.saveInterviewQuestions(questions, candidateId);
 
-/* ── Evaluate ─────────────────────────────────────────────────────────────── */
-async function evaluateAnswers() {
-  const btn = document.getElementById('evaluateBtn');
-  btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Evaluating…';
-  const rc = document.getElementById('evaluationResults');
-  rc.innerHTML = '<div style="text-align:center;padding:2rem;"><span class="loading"></span></div>';
-  try {
-    let result;
-    const qs = uploadedQuestions.length ? uploadedQuestions : uploadedAnswers.map((_,i)=>`Question ${i+1}`);
-    if (window.evaluateCandidateAnswers) {
-      result = await window.evaluateCandidateAnswers(qs, uploadedAnswers);
-    } else {
-      result = basicScore(qs);
+        // 2. Send text file (if selected)
+        if (selectedFile) {
+            statusEl.innerHTML = '<span class="spin"></span> Uploading briefing file…';
+            await window.sendTextFileToCandidate(selectedFile, candidateId, setId);
+        }
+
+        statusEl.innerHTML = '✓ Sent successfully!';
+        statusEl.style.color = 'var(--success)';
+        showToast('Briefing & questions sent!', 'success');
+
+        // Reset
+        document.getElementById('questionsInput').value = '';
+        document.getElementById('candidateEmailInput').value = '';
+        document.getElementById('candidateSelect').value = '';
+        document.getElementById('fileSelectedLabel').style.display = 'none';
+        document.getElementById('filePreviewStrip').classList.remove('show');
+        document.getElementById('txtFileInput').value = '';
+        selectedFile = null;
+
+        setTimeout(() => { statusEl.style.display = 'none'; statusEl.style.color = ''; }, 4000);
+    } catch(err) {
+        console.error(err);
+        statusEl.innerHTML = '✕ Error: ' + err.message;
+        statusEl.style.color = 'var(--error)';
+        showToast('Send failed — ' + err.message, 'error');
+    } finally {
+        sendBtn.disabled = false;
     }
-    displayEvalResults(result, qs);
-  } catch (err) {
-    showStatus('evaluationResults','Evaluation error: '+err.message,'error');
-  } finally {
-    btn.disabled = false; btn.innerHTML = '⚡ Run Evaluation';
-  }
 }
 
-function basicScore(qs) {
-  const wc = uploadedAnswers.join(' ').split(/\s+/).filter(Boolean).length;
-  const avg = Math.round(wc / Math.max(1, uploadedAnswers.length));
-  return {
-    overallScore: Math.min(100, Math.round((avg/60)*60 + (uploadedAnswers.length/Math.max(1,qs.length))*40)),
-    timestamp: new Date().toLocaleDateString(),
-    feedback: `${uploadedAnswers.length} answers, avg ${avg} words each.`,
-  };
+// ── Load candidates inbox ─────────────────────────────────────────────────────
+async function loadCandidates() {
+    const wrap = document.getElementById('candidatesTableWrap');
+    wrap.innerHTML = '<div class="empty-state"><span class="spin"></span> Loading…</div>';
+
+    let tries = 0;
+    while (!window.getCandidatesWithAnswers && tries < 30) {
+        await new Promise(r => setTimeout(r, 200)); tries++;
+    }
+    if (!window.getCandidatesWithAnswers) {
+        wrap.innerHTML = '<div class="empty-state">recruit.js not loaded.</div>'; return;
+    }
+
+    try {
+        const candidates = await window.getCandidatesWithAnswers();
+        candidatesCache  = candidates;
+
+        if (!candidates.length) {
+            wrap.innerHTML = '<div class="empty-state">No candidates yet.</div>'; return;
+        }
+
+        const table = document.createElement('table');
+        table.className = 'cand-table';
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Candidate</th>
+                    <th>Status</th>
+                    <th>Answers</th>
+                    <th>Submitted</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="candTbody"></tbody>`;
+
+        wrap.innerHTML = '';
+        wrap.appendChild(table);
+
+        const tbody = document.getElementById('candTbody');
+        candidates.forEach(c => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-size:0.85rem;">${escHtml(c.email)}</td>
+                <td><span class="status-pill ${c.status}">${c.status}</span></td>
+                <td style="color:var(--gold);">${c.answerCount}</td>
+                <td style="font-size:0.75rem; color:var(--text-muted);">${formatDate(c.submittedAt)}</td>
+                <td>
+                    ${c.status === 'submitted'
+                        ? `<button class="btn btn-info btn-sm" onclick="toggleAnswers(this,'${c.id}')">View →</button>`
+                        : '<span style="font-size:0.65rem;color:var(--text-muted);letter-spacing:1px;">Pending</span>'}
+                </td>`;
+            tbody.appendChild(tr);
+
+            // Expandable answers row
+            const detailTr = document.createElement('tr');
+            detailTr.id = `answers-row-${c.id}`;
+            detailTr.innerHTML = `<td colspan="5" style="padding:0 10px 12px;"><div class="answers-panel" id="answers-panel-${c.id}"></div></td>`;
+            tbody.appendChild(detailTr);
+        });
+    } catch(err) {
+        wrap.innerHTML = `<div class="empty-state">Error: ${escHtml(err.message)}</div>`;
+    }
 }
 
-function displayEvalResults(result, qs) {
-  const cls = result.overallScore>=70?'high':result.overallScore>=50?'medium':'low';
-  document.getElementById('evaluationResults').innerHTML = `
-    <div class="evaluation-result">
-      <h3 style="color:var(--cyan);margin-bottom:1rem;">📊 Evaluation Complete</h3>
-      <div class="score-display ${cls}">${result.overallScore}%</div>
-      <p style="text-align:center;color:var(--muted);margin-bottom:1rem;">Overall Score</p>
-      <div class="evaluation-feedback">
-        <strong>Questions:</strong> ${qs.length}<br/>
-        <strong>Answers received:</strong> ${uploadedAnswers.length}<br/>
-        <strong>Evaluated:</strong> ${result.timestamp}<br/>
-        <p style="margin-top:0.75rem;">${result.feedback || ''}</p>
-      </div>
-    </div>`;
+async function toggleAnswers(btn, candidateId) {
+    const panel = document.getElementById(`answers-panel-${candidateId}`);
+    if (panel.classList.contains('open')) {
+        panel.classList.remove('open');
+        btn.textContent = 'View →';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Loading…';
+
+    try {
+        const data = await window.getCandidateAnswersById(candidateId);
+        panel.innerHTML = '';
+
+        // Transcript download link
+        if (data.transcriptUrl) {
+            const link = document.createElement('a');
+            link.href = data.transcriptUrl; link.target = '_blank';
+            link.className = 'transcript-link';
+            link.textContent = '⬇ Download full transcript';
+            panel.appendChild(link);
+            panel.appendChild(document.createElement('br'));
+            panel.appendChild(document.createElement('br'));
+        }
+
+        // Per-question answers
+        if (!data.answers.length) {
+            panel.innerHTML += '<div class="answer-empty">No answers recorded.</div>';
+        } else {
+            data.answers.forEach((ans, i) => {
+                const item = document.createElement('div');
+                item.className = 'answer-item';
+                item.innerHTML = `
+                    <div class="answer-q">Q${i+1}</div>
+                    <div class="answer-a">${escHtml(ans || '(no answer)')}</div>`;
+                panel.appendChild(item);
+            });
+        }
+
+        panel.classList.add('open');
+        btn.textContent = 'Close ↑';
+    } catch(err) {
+        panel.innerHTML = `<div class="answer-empty" style="color:var(--error);">Error: ${escHtml(err.message)}</div>`;
+        panel.classList.add('open');
+        btn.textContent = 'Close ↑';
+    }
+    btn.disabled = false;
 }
 
-/* ── Save & assign ────────────────────────────────────────────────────────── */
-function updateSaveButton() {
-  const btn = document.getElementById('saveQuestionsBtn');
-  const msg = document.getElementById('assignTarget');
-  const ready = uploadedQuestions.length > 0 && selectedCandidateId;
-  btn.disabled = !ready;
-  if (!uploadedQuestions.length && !selectedCandidateId) {
-    msg.textContent = 'Upload questions & select a candidate to enable.';
-  } else if (!uploadedQuestions.length) {
-    msg.textContent = 'Upload a questions .txt file first.';
-  } else if (!selectedCandidateId) {
-    msg.textContent = 'Select a candidate to assign questions to.';
-  } else {
-    const c = selectedCandidateObj;
-    msg.innerHTML = `Will send <strong>${uploadedQuestions.length} question${uploadedQuestions.length!==1?'s':''}</strong> → <strong>${c ? (c.name||c.email) : selectedCandidateId}</strong>`;
-  }
+// ── Utilities ────────────────────────────────────────────────────────────────
+function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(ts) {
+    if (!ts) return '—';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
 }
 
-async function saveQuestionsToFirebase() {
-  if (!uploadedQuestions.length) { showStatus('firebaseStatus','No questions to save.','error'); return; }
-  const btn = document.getElementById('saveQuestionsBtn');
-  btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Sending…';
-
-  let attempts = 0;
-  while (!window.saveInterviewQuestions && attempts < 30) { await delay(250); attempts++; }
-  if (!window.saveInterviewQuestions) {
-    showStatus('firebaseStatus','⚠️ Firebase module not ready.','error');
-    btn.disabled=false; btn.innerHTML='🚀 Send Questions to Candidate'; return;
-  }
-
-  try {
-    const setId = await window.saveInterviewQuestions(uploadedQuestions, selectedCandidateId||null, uploadedFileUrl);
-    const cname = selectedCandidateObj ? (selectedCandidateObj.name||selectedCandidateObj.email) : '—';
-    showStatus('firebaseStatus',
-      `✅ ${uploadedQuestions.length} questions saved (set: <code>${setId}</code>)`
-      + (selectedCandidateId ? ` — assigned to <strong>${cname}</strong>. They'll see it instantly.` : ''),
-      'success');
-    if (selectedCandidateId) await loadCandidatesFromDatabase();
-  } catch (err) {
-    showStatus('firebaseStatus','Firebase error: '+err.message,'error');
-  } finally {
-    btn.disabled=false; btn.innerHTML='🚀 Send Questions to Candidate';
-    updateSaveButton();
-  }
+// ── Starfield ─────────────────────────────────────────────────────────────────
+function startStarfield() {
+    const canvas = document.getElementById('starCanvas');
+    const ctx    = canvas.getContext('2d');
+    let stars    = [];
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    function initStars() {
+        stars = [];
+        const n = Math.floor((canvas.width * canvas.height) / 5000);
+        for (let i = 0; i < n; i++) stars.push({ x:Math.random()*canvas.width, y:Math.random()*canvas.height, r:Math.random()*0.8+0.1, o:Math.random()*0.6+0.1, s:Math.random()*0.008+0.002, p:Math.random()*Math.PI*2 });
+    }
+    let f = 0;
+    function draw() {
+        ctx.clearRect(0,0,canvas.width,canvas.height); f++;
+        for (const s of stars) {
+            const op = s.o * (0.4 + 0.6 * Math.sin(f * s.s + s.p));
+            ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(197,160,89,${op})`; ctx.fill();
+        }
+        requestAnimationFrame(draw);
+    }
+    window.addEventListener('resize', () => { resize(); initStars(); });
+    resize(); initStars(); draw();
 }
 
-/* ── Tab switch ───────────────────────────────────────────────────────────── */
-function switchTab(name, el) {
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('tab-'+name).classList.add('active');
-}
-
-/* ── Utils ────────────────────────────────────────────────────────────────── */
-function delay(ms) { return new Promise(r => setTimeout(r,ms)); }
-
-function showStatus(elId, html, type) {
-  const el = document.getElementById(elId);
-  if (['success','error','info'].includes(type)) {
-    el.innerHTML = `<div class="status-message ${type}">${html}</div>`;
-  } else {
-    el.innerHTML = `<div style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0;">${html}</div>`;
-  }
-}
-
-function handleLogout() {
-  if (window.logoutRecruiter) window.logoutRecruiter();
-  else { localStorage.removeItem('titanRole'); window.location.href='./recruiterlogin.html'; }
-}
-
-/* ── Boot ─────────────────────────────────────────────────────────────────── */
-window.addEventListener('load', () => {
-  if (window.checkRecruiterAuth) window.checkRecruiterAuth();
-  loadCandidatesFromDatabase();
-  const email = localStorage.getItem('titanEmail');
-  if (email) document.getElementById('recruiterBadge').textContent = email;
-});
-
-window.loadCandidatesFromDatabase = loadCandidatesFromDatabase;
-window.handleLogout = handleLogout;
+// Kick off once DOM is ready
+window.addEventListener('DOMContentLoaded', initPage);
 </script>
 </body>
 </html>
