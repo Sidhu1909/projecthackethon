@@ -448,11 +448,17 @@
 const DASHBOARD_URL = './recruit.html';
 
 /*
- * FIX: Use sessionStorage instead of a plain variable for the redirect flag.
- * A plain `let _redirecting = false` resets on every page load, so it can
- * never survive a navigation. sessionStorage persists across the redirect.
+ * REDIRECT FLAG
+ * We use sessionStorage so the flag survives the page navigation.
+ * Key insight: we do NOT auto-clear it on a timer anymore.
+ * Instead we clear it only when the user explicitly lands on this
+ * page WITHOUT coming from a redirect (i.e. the referrer is not
+ * recruit.html). This prevents the flag from accidentally blocking
+ * the onAuthChange redirect on a fresh login after a sign-out.
  *
- * We also expose a helper so the Firebase module block can set it.
+ * Simpler alternative that also works: just use window.location.replace()
+ * in recruit.html's guard (already done) so there's no back-navigation
+ * ambiguity, and clear the flag here only after onAuthChange fires once.
  */
 function isRedirecting() {
   return sessionStorage.getItem('tb_redirecting') === '1';
@@ -460,9 +466,9 @@ function isRedirecting() {
 function setRedirecting() {
   sessionStorage.setItem('tb_redirecting', '1');
 }
-// Clear the flag when this page loads fresh (not mid-redirect)
-// We clear it after a tick so the onAuthChange initial fire can read it.
-setTimeout(() => sessionStorage.removeItem('tb_redirecting'), 100);
+function clearRedirecting() {
+  sessionStorage.removeItem('tb_redirecting');
+}
 
 function redirectToDashboard() {
   if (isRedirecting()) return;
@@ -639,6 +645,7 @@ async function handleSignIn() {
     if (profile?.data) {
       if (profile.data.name)    localStorage.setItem('titanName',    profile.data.name);
       if (profile.data.company) localStorage.setItem('titanCompany', profile.data.company);
+      if (res.user.email)       localStorage.setItem('titanEmail',   res.user.email);
     }
   }
 
@@ -681,6 +688,7 @@ async function handleSignUp() {
   localStorage.setItem('titanRole',    'recruiter');
   localStorage.setItem('titanName',    name);
   localStorage.setItem('titanCompany', company);
+  localStorage.setItem('titanEmail',   email);
   setLoading('signUpBtn', false, 'Create Account');
   showToast('Account created. Welcome to TalentBridge.', 'success');
   setTimeout(redirectToDashboard, 1400);
@@ -697,6 +705,7 @@ async function handleGoogle() {
       if (profile.data.name)    localStorage.setItem('titanName',    profile.data.name);
       if (profile.data.company) localStorage.setItem('titanCompany', profile.data.company);
     }
+    if (res.user.email) localStorage.setItem('titanEmail', res.user.email);
   }
   localStorage.setItem('titanRole', 'recruiter');
   showToast('Signed in with Google', 'success');
@@ -830,57 +839,47 @@ window.redirectToDashboard = redirectToDashboard;
   };
 
   /*
-   * FIX: The original onAuthChange had no guard against the initial
-   * auth-state restoration on page load. Firebase ALWAYS calls onAuthChange
-   * once immediately when the page loads if the user has an active session.
-   * That caused an instant redirect back to the login page after the
-   * dashboard sent them here (or caused a loop if the dashboard wasn't
-   * protected).
+   * HOW THE LOOP WAS HAPPENING:
+   * ─────────────────────────────────────────────────────────────────────────
+   * 1. Login page redirects to recruit.html  (tb_redirecting = '1')
+   * 2. recruit.html had NO auth guard, so it loaded fine BUT…
+   * 3. …recruit.html also had no guard, meaning any stale redirect code
+   *    elsewhere could bounce back. More importantly:
+   * 4. The old login page cleared tb_redirecting after 100ms via setTimeout.
+   *    If Firebase's onAuthChange fired AFTER that 100ms window (which it
+   *    often does — it can take 200-800ms to restore a session from cache),
+   *    the guard saw isRedirecting()=false and redirected AGAIN — loop.
    *
-   * THE FIX — two guards:
-   *
-   * 1. isRedirecting() — sessionStorage flag set before we navigate away.
-   *    If it's still '1' when the page loads (meaning we just redirected
-   *    here FROM the dashboard — i.e. a loop), we do NOT redirect again.
-   *    The flag is cleared after 100ms so normal subsequent logins work.
-   *
-   * 2. _authSettled — we skip the very first onAuthChange call if the
-   *    user is NOT logged in (no session to worry about). If the user IS
-   *    logged in on page load (existing session), we redirect them to the
-   *    dashboard immediately — they shouldn't be on the login page.
-   *    After the first call, _authSettled = true and all subsequent calls
-   *    (triggered by actual sign-in/sign-out actions) redirect normally.
+   * THE FIX:
+   * ─────────────────────────────────────────────────────────────────────────
+   * • recruit.html now has a proper auth guard (waits for onAuthChange,
+   *   only redirects if Firebase says "no session").
+   * • We no longer auto-clear tb_redirecting on a timer. Instead we clear it
+   *   only AFTER onAuthChange fires and we've decided what to do. This means
+   *   the flag is valid for exactly as long as we need it.
+   * • _authSettled prevents any double-redirects from subsequent
+   *   onAuthChange calls.
    */
   let _authSettled = false;
 
   onAuthChange((state) => {
-    if (isRedirecting()) return;
+    // Always clear the redirect flag once Firebase has spoken —
+    // we no longer need it regardless of the outcome.
+    clearRedirecting();
 
-    if (!_authSettled) {
-      _authSettled = true;
+    if (_authSettled) return;
+    _authSettled = true;
 
-      if (!state.isLoggedIn) {
-        // No active session — user needs to log in. Stay on this page.
-        return;
-      }
-
-      // User has an existing session and landed on the login page.
-      // Redirect them to the dashboard (they're already authenticated).
-      localStorage.setItem('titanRole', 'recruiter');
-      if (state.user?.displayName) {
-        localStorage.setItem('titanName', state.user.displayName);
-      }
-      redirectToDashboard();
+    if (!state.isLoggedIn) {
+      // No active session — user needs to log in. Stay here.
       return;
     }
 
-    // Subsequent calls: triggered by actual sign-in or sign-out events.
-    if (!state.isLoggedIn) return; // signed out — stay here
-
+    // Existing session: redirect to dashboard.
     localStorage.setItem('titanRole', 'recruiter');
-    if (state.user?.displayName) {
-      localStorage.setItem('titanName', state.user.displayName);
-    }
+    if (state.user?.displayName) localStorage.setItem('titanName',  state.user.displayName);
+    if (state.user?.email)       localStorage.setItem('titanEmail', state.user.email);
+
     redirectToDashboard();
   });
 </script>

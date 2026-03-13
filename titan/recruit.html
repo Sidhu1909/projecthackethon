@@ -4,6 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TalentBridge | Recruiter Portal</title>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         AUTH GUARD — must be the very first script so it runs before anything
+         else. Waits for Firebase to confirm the session (onAuthChange fires
+         once on load). Only redirects to login if Firebase says "no session".
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <script type="module">
+        import { onAuthChange } from "./firebase.js";
+
+        let _settled = false;
+
+        onAuthChange((state) => {
+            if (_settled) return;   // ignore all calls after the first
+            _settled = true;
+
+            if (!state.isLoggedIn) {
+                // Firebase confirmed: no valid session → go to login
+                window.location.replace('./index.html');
+                return;
+            }
+
+            // ── Authenticated ────────────────────────────────────────────────
+            // Store useful info for the page to display
+            localStorage.setItem('titanRole', 'recruiter');
+            if (state.user?.email)       localStorage.setItem('titanEmail',   state.user.email);
+            if (state.user?.displayName) localStorage.setItem('titanName',    state.user.displayName);
+
+            // Tell the rest of the page it's safe to initialise
+            window._authReady = true;
+            document.dispatchEvent(new Event('auth:ready'));
+        });
+    </script>
+
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -30,6 +63,29 @@
             min-height: 100vh;
         }
 
+        /* ── Auth loading overlay — shown until Firebase confirms session ── */
+        #authOverlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: var(--dark-bg);
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column; gap: 16px;
+            transition: opacity 0.4s ease;
+        }
+        #authOverlay.hide { opacity: 0; pointer-events: none; }
+        .auth-overlay-logo {
+            font-family: 'Cinzel', serif;
+            font-size: 1.4rem; letter-spacing: 8px;
+            text-transform: uppercase; color: var(--text-white);
+        }
+        .auth-overlay-logo em { color: var(--gold); font-style: normal; }
+        .auth-overlay-spin {
+            width: 20px; height: 20px;
+            border: 2px solid rgba(197,160,89,0.2);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spinner 0.7s linear infinite;
+        }
+
         /* ── Starfield ── */
         .stars { position: fixed; inset: 0; z-index: 0; }
         .stars canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -50,6 +106,17 @@
         .tagline { font-size: 0.6rem; letter-spacing: 5px; color: var(--text-muted); margin-top: 6px; text-transform: uppercase; }
         .recruiter-strip { display: inline-block; margin-top: 10px; padding: 6px 16px; background: var(--glass); border: 1px solid var(--border); border-radius: 4px; font-size: 0.7rem; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; }
         .recruiter-strip span { color: var(--gold); }
+
+        /* Sign-out button */
+        .signout-btn {
+            position: fixed; top: 18px; right: 20px; z-index: 100;
+            background: transparent; border: 1px solid rgba(197,160,89,0.25);
+            color: var(--text-muted); font-family: 'Inter', sans-serif;
+            font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase;
+            padding: 7px 14px; cursor: pointer; border-radius: 2px;
+            transition: all 0.25s ease;
+        }
+        .signout-btn:hover { border-color: var(--gold); color: var(--gold); }
 
         /* ── Section titles ── */
         .section-title {
@@ -205,6 +272,15 @@
 </head>
 <body>
 
+<!-- Auth loading overlay — hidden once Firebase confirms the session -->
+<div id="authOverlay">
+    <div class="auth-overlay-logo"><em>Talent</em>Bridge</div>
+    <div class="auth-overlay-spin"></div>
+</div>
+
+<!-- Sign out button -->
+<button class="signout-btn" onclick="handleSignOut()">Sign Out</button>
+
 <div class="stars"><canvas id="starCanvas"></canvas></div>
 
 <div class="page-wrap">
@@ -294,9 +370,41 @@
 
 <script>
 // ── State ────────────────────────────────────────────────────────────────────
-let selectedFile     = null;
-let candidatesCache  = [];
-let openAnswerRow    = null;
+let selectedFile    = null;
+let candidatesCache = [];
+
+// ── Auth-ready gate ───────────────────────────────────────────────────────────
+// initPage() is called either immediately (if auth resolves before DOMContentLoaded)
+// or on the 'auth:ready' event (normal case).
+function onAuthReady() {
+    const overlay = document.getElementById('authOverlay');
+    overlay.classList.add('hide');
+    setTimeout(() => overlay.remove(), 450);
+
+    const email = localStorage.getItem('titanEmail') || '—';
+    document.getElementById('recruiterEmail').textContent = email;
+
+    startStarfield();
+    populateCandidateDropdown();
+}
+
+if (window._authReady) {
+    // auth guard already resolved (very fast Firebase)
+    document.addEventListener('DOMContentLoaded', onAuthReady);
+} else {
+    document.addEventListener('auth:ready', onAuthReady);
+}
+
+// ── Sign out ──────────────────────────────────────────────────────────────────
+async function handleSignOut() {
+    if (window._firebaseSignOut) {
+        await window._firebaseSignOut();
+    }
+    localStorage.removeItem('titanRole');
+    localStorage.removeItem('titanEmail');
+    localStorage.removeItem('titanName');
+    window.location.replace('./index.html');
+}
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function switchTab(tab) {
@@ -315,18 +423,9 @@ function showToast(msg, type='info') {
     setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// ── Init page ─────────────────────────────────────────────────────────────────
-function initPage() {
-    const email = localStorage.getItem('titanEmail') || '—';
-    document.getElementById('recruiterEmail').textContent = email;
-    startStarfield();
-    populateCandidateDropdown();
-}
-
 // ── Populate dropdown ─────────────────────────────────────────────────────────
 async function populateCandidateDropdown() {
     const sel = document.getElementById('candidateSelect');
-    // Wait for recruit.js globals
     let tries = 0;
     while (!window.getCandidatesWithAnswers && tries < 30) {
         await new Promise(r => setTimeout(r, 200)); tries++;
@@ -338,8 +437,8 @@ async function populateCandidateDropdown() {
         sel.innerHTML = '<option value="">— Select a candidate —</option>';
         candidatesCache.forEach(c => {
             const opt = document.createElement('option');
-            opt.value       = c.id;
-            opt.textContent = `${c.email} (${c.status})`;
+            opt.value         = c.id;
+            opt.textContent   = `${c.email} (${c.status})`;
             opt.dataset.email = c.email;
             sel.appendChild(opt);
         });
@@ -349,8 +448,8 @@ async function populateCandidateDropdown() {
 }
 
 function fillCandidateFromSelect() {
-    const sel  = document.getElementById('candidateSelect');
-    const opt  = sel.options[sel.selectedIndex];
+    const sel = document.getElementById('candidateSelect');
+    const opt = sel.options[sel.selectedIndex];
     if (opt && opt.dataset.email) {
         document.getElementById('candidateEmailInput').value = opt.dataset.email;
     }
@@ -369,7 +468,6 @@ function handleFileSelect(input) {
     label.textContent = `✓ Selected: ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
     label.style.display = 'block';
 
-    // Preview first 120 chars
     const reader = new FileReader();
     reader.onload = e => {
         const preview = e.target.result.replace(/\n/g,' ').trim().slice(0,120);
@@ -380,7 +478,6 @@ function handleFileSelect(input) {
     reader.readAsText(file);
 }
 
-// Drag & drop
 const dz = document.getElementById('dropZone');
 dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
 dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
@@ -392,27 +489,21 @@ dz.addEventListener('drop', e => {
 
 // ── Send briefing + questions ─────────────────────────────────────────────────
 async function sendBriefingAndQuestions() {
-    // Resolve candidate ID
-    const sel         = document.getElementById('candidateSelect');
-    const emailInput  = document.getElementById('candidateEmailInput').value.trim();
+    const sel        = document.getElementById('candidateSelect');
+    const emailInput = document.getElementById('candidateEmailInput').value.trim();
     let   candidateId = sel.value || '';
 
-    // If a candidateId isn't selected from the dropdown, try to match by email
     if (!candidateId && emailInput) {
         const match = candidatesCache.find(c => c.email === emailInput);
         if (match) candidateId = match.id;
     }
-    if (!candidateId && emailInput) {
-        // Last resort: use email as UID (useful for manually-created accounts)
-        candidateId = emailInput;
-    }
+    if (!candidateId && emailInput) candidateId = emailInput;
 
     if (!candidateId) {
         showToast('Please select or enter a candidate.', 'error'); return;
     }
 
-    // Parse questions
-    const raw = document.getElementById('questionsInput').value.trim();
+    const raw       = document.getElementById('questionsInput').value.trim();
     const questions = raw.split('\n').map(q => q.trim()).filter(Boolean);
     if (questions.length === 0) {
         showToast('Please enter at least one question.', 'error'); return;
@@ -424,18 +515,15 @@ async function sendBriefingAndQuestions() {
     statusEl.style.display = 'block';
     statusEl.innerHTML = '<span class="spin"></span> Saving questions…';
 
-    // Wait for recruit.js
     let tries = 0;
     while ((!window.saveInterviewQuestions || !window.sendTextFileToCandidate) && tries < 30) {
         await new Promise(r => setTimeout(r, 200)); tries++;
     }
 
     try {
-        // 1. Save questions → returns setId
         statusEl.innerHTML = '<span class="spin"></span> Saving interview questions…';
         const setId = await window.saveInterviewQuestions(questions, candidateId);
 
-        // 2. Send text file (if selected)
         if (selectedFile) {
             statusEl.innerHTML = '<span class="spin"></span> Uploading briefing file…';
             await window.sendTextFileToCandidate(selectedFile, candidateId, setId);
@@ -445,7 +533,6 @@ async function sendBriefingAndQuestions() {
         statusEl.style.color = 'var(--success)';
         showToast('Briefing & questions sent!', 'success');
 
-        // Reset
         document.getElementById('questionsInput').value = '';
         document.getElementById('candidateEmailInput').value = '';
         document.getElementById('candidateSelect').value = '';
@@ -518,7 +605,6 @@ async function loadCandidates() {
                 </td>`;
             tbody.appendChild(tr);
 
-            // Expandable answers row
             const detailTr = document.createElement('tr');
             detailTr.id = `answers-row-${c.id}`;
             detailTr.innerHTML = `<td colspan="5" style="padding:0 10px 12px;"><div class="answers-panel" id="answers-panel-${c.id}"></div></td>`;
@@ -544,7 +630,6 @@ async function toggleAnswers(btn, candidateId) {
         const data = await window.getCandidateAnswersById(candidateId);
         panel.innerHTML = '';
 
-        // Transcript download link
         if (data.transcriptUrl) {
             const link = document.createElement('a');
             link.href = data.transcriptUrl; link.target = '_blank';
@@ -555,7 +640,6 @@ async function toggleAnswers(btn, candidateId) {
             panel.appendChild(document.createElement('br'));
         }
 
-        // Per-question answers
         if (!data.answers.length) {
             panel.innerHTML += '<div class="answer-empty">No answers recorded.</div>';
         } else {
@@ -579,7 +663,7 @@ async function toggleAnswers(btn, candidateId) {
     btn.disabled = false;
 }
 
-// ── Utilities ────────────────────────────────────────────────────────────────
+// ── Utilities ─────────────────────────────────────────────────────────────────
 function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -613,9 +697,13 @@ function startStarfield() {
     window.addEventListener('resize', () => { resize(); initStars(); });
     resize(); initStars(); draw();
 }
-
-// Kick off once DOM is ready
-window.addEventListener('DOMContentLoaded', initPage);
 </script>
+
+<!-- Expose signOut to the page (recruit.js should export it) -->
+<script type="module">
+    import { signOut } from "./firebase.js";
+    window._firebaseSignOut = signOut;
+</script>
+
 </body>
 </html>
