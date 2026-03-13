@@ -617,19 +617,18 @@ function speak(text, onEnd) {
 /* ════════════════════════════════════════
    SPEECH RECOGNITION
    ─────────────────────────────────────
-   FIX 3 — DUPLICATE RESULTS ROOT CAUSE & SOLUTION:
+   APPROACH: continuous:true + recognition.stop() on silence.
    
-   The original used continuous:true + onend restart. When the browser
-   fires onend and we restart(), the NEW session re-delivers already-seen
-   final results as fresh ones (Chrome bug with continuous:true + restart).
+   Key insight: NEVER call recognition.abort() or restart the session
+   mid-capture. Instead:
+   1. Start ONE continuous session per listen() call.
+   2. Collect interim + final results into a single accumulated string.
+   3. After SILENCE_MS of no new speech, call recognition.stop() — this
+      flushes remaining audio and fires onend cleanly.
+   4. In onend, deliver the result. No restart loop → no duplicates.
    
-   Solution: Use continuous:false (single-shot per session).
-   Restart on onend ONLY if no final result was captured yet (user paused
-   mid-sentence). Once we have at least one final segment, stop restarting.
-   This eliminates duplicate accumulation entirely.
-   
-   We still get interim results for live display and SILENCE_MS timer
-   for snappy acceptance.
+   Dedup: we track the last resultIndex we processed so re-delivered
+   events (Chrome sometimes re-fires e.resultIndex=0) are skipped.
 ════════════════════════════════════════ */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -641,47 +640,57 @@ function listen(onResult, onError) {
 
   abortRecognition();
 
-  let finalText      = '';     // FIX: single string, not an array — no accumulation across restarts
-  let finalConf      = 0;
+  let collectedText  = '';   // all final segments joined
+  let collectedConf  = 0;
   let interimText    = '';
   let done           = false;
   let silenceTimer   = null;
-  let restartTimer   = null;
-  let hasFinalResult = false;  // FIX: once we have a final, don't restart
+  let lastResultIdx  = -1;   // dedup: skip already-processed result indices
+  let stopping       = false;// true once we've called .stop()
 
   function cleanup() {
     clearTimeout(silenceTimer);
-    clearTimeout(restartTimer);
     setMicListening(false);
     setBars('idle');
     setConfidence(null);
   }
 
-  function acceptResult() {
+  function stopListening() {
+    if (stopping || done) return;
+    stopping = true;
+    clearTimeout(silenceTimer);
+    try { recognition.stop(); } catch(e) {}
+    // onend will fire and call deliver()
+  }
+
+  function deliver() {
     if (done) return;
     done = true;
     cleanup();
-    abortRecognition();
+    recognition = null;
 
-    const text = (finalText + (interimText ? ' ' + interimText : '')).trim();
+    // Use final text; fall back to last interim if engine never finalized
+    const text = (collectedText || interimText).trim();
 
     if (!text) {
-      // Nothing captured at all — restart one more time
-      done = false;
-      hasFinalResult = false;
+      // Nothing at all — restart fresh
+      done     = false;
+      stopping = false;
+      lastResultIdx = -1;
+      collectedText = '';
+      interimText   = '';
       startRec();
       return;
     }
 
-    setConfidence(finalConf || null);
-    onResult(text, finalConf);
+    setConfidence(collectedConf || null);
+    onResult(text, collectedConf);
   }
 
   function resetSilenceTimer() {
     clearTimeout(silenceTimer);
-    const hasText = finalText || interimText.trim();
-    if (hasText) {
-      silenceTimer = setTimeout(acceptResult, SILENCE_MS);
+    if (collectedText || interimText.trim()) {
+      silenceTimer = setTimeout(stopListening, SILENCE_MS);
     }
   }
 
@@ -692,7 +701,7 @@ function listen(onResult, onError) {
     recognition.lang            = 'en-US';
     recognition.interimResults  = true;
     recognition.maxAlternatives = MAX_ALTERNATIVES;
-    recognition.continuous      = false;   // FIX: single-shot prevents duplicate accumulation
+    recognition.continuous      = true;   // stay open; we call .stop() ourselves
 
     setPill('listening', 'LISTENING');
     setMicListening(true);
@@ -700,55 +709,48 @@ function listen(onResult, onError) {
     setConfidence(null);
 
     recognition.onresult = (e) => {
-      if (done) return;
-      interimText = '';
+      if (done || stopping) return;
 
       for (let i = e.resultIndex; i < e.results.length; i++) {
+        // Skip if we already processed this index (Chrome duplicate guard)
+        if (i <= lastResultIdx) continue;
+
         const result = e.results[i];
 
         if (result.isFinal) {
-          hasFinalResult = true;
-          // Pick the highest-confidence alternative
+          lastResultIdx = i;
+          // Pick highest-confidence alternative
           let best = result[0];
           for (let j = 1; j < result.length; j++) {
-            if (result[j].confidence > best.confidence) best = result[j];
+            if ((result[j].confidence || 0) > (best.confidence || 0)) best = result[j];
           }
-          // FIX: append to finalText with a space separator (handles multi-sentence)
-          // but only if the new segment isn't already at the end (dedup guard)
-          const newSeg = best.transcript.trim();
-          if (!finalText.endsWith(newSeg)) {
-            finalText = (finalText + ' ' + newSeg).trim();
+          const seg = best.transcript.trim();
+          // Append only if not a duplicate of what we already have
+          if (seg && !collectedText.endsWith(seg)) {
+            collectedText = (collectedText + ' ' + seg).trim();
           }
-          finalConf = best.confidence;
-          setConfidence(best.confidence);
+          collectedConf = best.confidence || 0;
+          interimText   = '';   // clear interim once finalized
+          setConfidence(collectedConf);
         } else {
-          let bestInterim = result[0];
+          // Show live interim (don't update lastResultIdx — it's not final)
+          let best = result[0];
           for (let j = 1; j < result.length; j++) {
-            if (result[j].confidence > bestInterim.confidence) bestInterim = result[j];
+            if ((result[j].confidence || 0) > (best.confidence || 0)) best = result[j];
           }
-          interimText = bestInterim.transcript;
+          interimText = best.transcript;
         }
       }
 
-      const display = (finalText + (interimText ? ' ' + interimText : '')).trim();
+      const display = (collectedText + (interimText ? ' ' + interimText : '')).trim();
       if (display) setTranscript('"' + display + '"');
 
       resetSilenceTimer();
     };
 
     recognition.onend = () => {
-      if (done) return;
-      setMicListening(false);
-
-      // FIX: only restart if we haven't captured a final result yet.
-      // If we have a final result, accept it (don't keep listening for more,
-      // which caused the restart-accumulation duplicate bug).
-      if (hasFinalResult) {
-        acceptResult();
-      } else {
-        // User may have paused before speaking — restart to keep listening
-        restartTimer = setTimeout(startRec, RESTART_DELAY_MS);
-      }
+      // Always deliver when the session ends (whether we called stop() or browser ended it)
+      deliver();
     };
 
     recognition.onerror = (e) => {
@@ -756,22 +758,19 @@ function listen(onResult, onError) {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         done = true;
         cleanup();
+        recognition = null;
         onError('Microphone access denied. Please allow microphone access and try again.');
         return;
       }
-      // no-speech, aborted, network — restart only if no final yet
-      setMicListening(false);
-      if (!hasFinalResult) {
-        restartTimer = setTimeout(startRec, RESTART_DELAY_MS + 100);
-      } else {
-        acceptResult();
-      }
+      // For no-speech / network / aborted: onend will fire next, which calls deliver()
+      // If we have something, it'll be returned. If not, deliver() restarts.
     };
 
     try {
       recognition.start();
     } catch(ex) {
-      restartTimer = setTimeout(startRec, 300);
+      // Already started or other issue — short delay then retry
+      setTimeout(() => { if (!done) startRec(); }, 300);
     }
   }
 
