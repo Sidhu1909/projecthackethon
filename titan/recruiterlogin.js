@@ -333,7 +333,37 @@ export async function updateRecruiterProfile(updates) {
     return { success: false, error: fmtError(e) };
   }
 }
+onAuthChange((state) => {
+  if (isRedirecting()) return;
 
+  if (!_authSettled) {
+    _authSettled = true;
+
+    if (!state.isLoggedIn) {
+      return;
+    }
+
+    localStorage.setItem('titanRole', 'recruiter');
+
+    if (state.user?.displayName) {
+      localStorage.setItem('titanName', state.user.displayName);
+    }
+
+    redirectToDashboard();
+    return;
+  }
+
+  if (!state.isLoggedIn) return;
+
+  localStorage.setItem('titanRole', 'recruiter');
+
+  if (state.user?.displayName) {
+    localStorage.setItem('titanName', state.user.displayName);
+  }
+
+  redirectToDashboard();
+});
+setTimeout(redirectToDashboard, 1400);
 /**
  * Read the currently signed-in recruiter's Firestore profile.
  *

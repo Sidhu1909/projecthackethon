@@ -61,15 +61,23 @@ const storage = getStorage(app);
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function checkRecruiterAuth() {
-  onAuthStateChanged(auth, user => {
-    if (!user) {
-      window.location.href = './recruiterlogin.html';
-      return;
+import { onAuthChange } from "./firebase.js";
+
+let authChecked = false;
+
+onAuthChange((state)=>{
+
+    if(!authChecked){
+        authChecked = true;
+
+        if(!state.isLoggedIn){
+            window.location.href="./recruiterlogin.html";
+        }
+
+        return;
     }
-    if (localStorage.getItem('titanRole') !== 'recruiter') {
-      window.location.href = './welcome.html';
-    }
-  });
+
+});
 }
 
 export async function logoutRecruiter() {
