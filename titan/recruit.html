@@ -4,48 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TalentBridge | Recruiter Portal</title>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════
-         AUTH GUARD — must be the very first script so it runs before anything
-         else. Waits for Firebase to confirm the session (onAuthChange fires
-         once on load). Only redirects to login if Firebase says "no session".
-         ═══════════════════════════════════════════════════════════════════════ -->
-    <script type="module">
-        import { onAuthChange } from "./firebase.js";
-
-        let _settled = false;
-
-        onAuthChange((state) => {
-            if (_settled) return;   // ignore all calls after the first
-            _settled = true;
-
-            if (!state.isLoggedIn) {
-                // Firebase confirmed: no valid session → go to login
-                window.location.replace('./index.html');
-                return;
-            }
-
-            // ── Authenticated ────────────────────────────────────────────────
-            // Store useful info for the page to display
-            localStorage.setItem('titanRole', 'recruiter');
-            if (state.user?.email)       localStorage.setItem('titanEmail',   state.user.email);
-            if (state.user?.displayName) localStorage.setItem('titanName',    state.user.displayName);
-
-            // Tell the rest of the page it's safe to initialise
-            window._authReady = true;
-            document.dispatchEvent(new Event('auth:ready'));
-        });
-    </script>
-
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
         :root {
             --gold: #c5a059;
             --gold-dim: rgba(197,160,89,0.15);
-            --gold-glow: rgba(197,160,89,0.3);
             --dark-bg: #050505;
-            --surface: #0c0c0c;
-            --card: #0f0f0f;
             --text-white: #e0e0e0;
             --text-muted: #666;
             --glass: rgba(255,255,255,0.04);
@@ -55,51 +19,25 @@
             --info: #7090c9;
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--dark-bg); color: var(--text-white); font-family: 'Inter', sans-serif; min-height: 100vh; }
 
-        body {
-            background: var(--dark-bg);
-            color: var(--text-white);
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-        }
-
-        /* ── Auth loading overlay — shown until Firebase confirms session ── */
         #authOverlay {
             position: fixed; inset: 0; z-index: 9999;
             background: var(--dark-bg);
             display: flex; align-items: center; justify-content: center;
-            flex-direction: column; gap: 16px;
-            transition: opacity 0.4s ease;
+            flex-direction: column; gap: 18px;
+            transition: opacity 0.35s ease;
         }
         #authOverlay.hide { opacity: 0; pointer-events: none; }
-        .auth-overlay-logo {
-            font-family: 'Cinzel', serif;
-            font-size: 1.4rem; letter-spacing: 8px;
-            text-transform: uppercase; color: var(--text-white);
-        }
-        .auth-overlay-logo em { color: var(--gold); font-style: normal; }
-        .auth-overlay-spin {
-            width: 20px; height: 20px;
-            border: 2px solid rgba(197,160,89,0.2);
-            border-top-color: var(--gold);
-            border-radius: 50%;
-            animation: spinner 0.7s linear infinite;
-        }
+        #authOverlay .ol { font-family: 'Cinzel', serif; font-size: 1.5rem; letter-spacing: 10px; text-transform: uppercase; }
+        #authOverlay .ol em { color: var(--gold); font-style: normal; }
+        #authOverlay .os { width: 22px; height: 22px; border: 2px solid rgba(197,160,89,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; }
 
-        /* ── Starfield ── */
         .stars { position: fixed; inset: 0; z-index: 0; }
         .stars canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-        body::after {
-            content: '';
-            position: fixed; inset: 0;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-            pointer-events: none; z-index: 998; opacity: 0.6;
-        }
+        body::after { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 998; opacity: 0.6; }
 
-        /* ── Layout ── */
         .page-wrap { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 40px 20px 80px; }
-
-        /* ── Header ── */
         .header { text-align: center; margin-bottom: 40px; }
         .logo { font-family: 'Cinzel', serif; font-size: clamp(1.4rem,3vw,2rem); letter-spacing: 10px; text-transform: uppercase; }
         .logo em { color: var(--gold); font-style: normal; }
@@ -107,67 +45,20 @@
         .recruiter-strip { display: inline-block; margin-top: 10px; padding: 6px 16px; background: var(--glass); border: 1px solid var(--border); border-radius: 4px; font-size: 0.7rem; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; }
         .recruiter-strip span { color: var(--gold); }
 
-        /* Sign-out button */
-        .signout-btn {
-            position: fixed; top: 18px; right: 20px; z-index: 100;
-            background: transparent; border: 1px solid rgba(197,160,89,0.25);
-            color: var(--text-muted); font-family: 'Inter', sans-serif;
-            font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase;
-            padding: 7px 14px; cursor: pointer; border-radius: 2px;
-            transition: all 0.25s ease;
-        }
+        .signout-btn { position: fixed; top: 18px; right: 20px; z-index: 100; background: transparent; border: 1px solid rgba(197,160,89,0.25); color: var(--text-muted); font-family: 'Inter', sans-serif; font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase; padding: 7px 14px; cursor: pointer; border-radius: 2px; transition: all 0.25s ease; }
         .signout-btn:hover { border-color: var(--gold); color: var(--gold); }
 
-        /* ── Section titles ── */
-        .section-title {
-            font-family: 'Cinzel', serif;
-            font-size: 0.75rem;
-            letter-spacing: 6px;
-            text-transform: uppercase;
-            color: var(--gold);
-            margin-bottom: 16px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        /* ── Cards ── */
-        .card {
-            background: var(--glass);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 24px;
-            margin-bottom: 28px;
-        }
+        .section-title { font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 6px; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .card { background: var(--glass); border: 1px solid var(--border); border-radius: 6px; padding: 24px; margin-bottom: 28px; }
         .card.accent { border-left: 3px solid var(--gold); }
 
-        /* ── Form elements ── */
         label { display: block; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
-        input[type="text"], input[type="email"], textarea, select {
-            width: 100%;
-            background: rgba(0,0,0,0.4);
-            border: 1px solid var(--border);
-            color: var(--text-white);
-            font-family: 'Inter', sans-serif;
-            font-size: 0.9rem;
-            padding: 10px 14px;
-            border-radius: 4px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
+        input[type="text"], input[type="email"], textarea, select { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: var(--text-white); font-family: 'Inter', sans-serif; font-size: 0.9rem; padding: 10px 14px; border-radius: 4px; outline: none; transition: border-color 0.3s; }
         input:focus, textarea:focus, select:focus { border-color: var(--gold); }
         textarea { min-height: 90px; resize: vertical; }
         .form-row { margin-bottom: 16px; }
 
-        /* ── File drop zone ── */
-        .drop-zone {
-            border: 1.5px dashed var(--border);
-            border-radius: 6px;
-            padding: 28px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: border-color 0.3s, background 0.3s;
-            position: relative;
-        }
+        .drop-zone { border: 1.5px dashed var(--border); border-radius: 6px; padding: 28px 20px; text-align: center; cursor: pointer; transition: border-color 0.3s, background 0.3s; position: relative; }
         .drop-zone:hover, .drop-zone.drag-over { border-color: var(--gold); background: var(--gold-dim); }
         .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
         .drop-zone-icon { font-size: 2rem; margin-bottom: 8px; }
@@ -176,41 +67,23 @@
         .drop-zone-hint { font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; }
         .file-selected { margin-top: 12px; font-size: 0.75rem; color: var(--success); letter-spacing: 1px; display: none; }
 
-        /* ── Buttons ── */
         .btn { background: transparent; border: 1px solid; font-family: 'Inter', sans-serif; letter-spacing: 3px; font-size: 0.65rem; cursor: pointer; transition: all 0.3s; text-transform: uppercase; padding: 12px 24px; border-radius: 2px; }
-        .btn-gold  { border-color: var(--gold); color: var(--gold); }
-        .btn-info  { border-color: rgba(112,144,201,0.5); color: var(--info); }
-        .btn-error { border-color: rgba(201,112,112,0.5); color: var(--error); }
-        .btn-sm    { padding: 8px 16px; font-size: 0.6rem; }
+        .btn-gold { border-color: var(--gold); color: var(--gold); }
+        .btn-info { border-color: rgba(112,144,201,0.5); color: var(--info); }
+        .btn-sm { padding: 8px 16px; font-size: 0.6rem; }
         .btn:hover:not(:disabled) { background: currentColor; color: var(--dark-bg); }
         .btn:disabled { opacity: 0.3; pointer-events: none; }
 
-        /* ── Candidate table ── */
         .cand-table { width: 100%; border-collapse: collapse; }
-        .cand-table th {
-            font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase;
-            color: var(--text-muted); padding: 8px 10px; text-align: left;
-            border-bottom: 1px solid var(--border);
-        }
+        .cand-table th { font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase; color: var(--text-muted); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
         .cand-table td { padding: 12px 10px; border-bottom: 1px solid rgba(197,160,89,0.06); font-size: 0.82rem; vertical-align: middle; }
         .cand-table tr:hover td { background: var(--gold-dim); }
-        .status-pill {
-            display: inline-block; padding: 3px 10px; border-radius: 20px;
-            font-size: 0.58rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 500;
-        }
+        .status-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.58rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; }
         .status-pill.pending   { background: rgba(102,102,102,0.15); color: var(--text-muted); border: 1px solid rgba(102,102,102,0.3); }
         .status-pill.invited   { background: rgba(112,144,201,0.12); color: var(--info);       border: 1px solid rgba(112,144,201,0.3); }
         .status-pill.submitted { background: rgba(112,201,168,0.12); color: var(--success);    border: 1px solid rgba(112,201,168,0.3); }
 
-        /* ── Answers panel ── */
-        .answers-panel {
-            display: none;
-            margin-top: 8px;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 16px;
-        }
+        .answers-panel { display: none; margin-top: 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 16px; }
         .answers-panel.open { display: block; animation: fadeUp 0.3s ease both; }
         .answer-item { margin-bottom: 14px; }
         .answer-q { font-size: 0.68rem; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; margin-bottom: 4px; }
@@ -219,88 +92,52 @@
         .transcript-link { font-size: 0.68rem; color: var(--info); letter-spacing: 1px; text-decoration: none; }
         .transcript-link:hover { text-decoration: underline; }
 
-        /* ── File preview strip ── */
-        .file-preview-strip {
-            display: none;
-            margin-top: 12px;
-            padding: 10px 14px;
-            background: rgba(112,201,168,0.07);
-            border: 1px solid rgba(112,201,168,0.25);
-            border-radius: 4px;
-            font-size: 0.72rem;
-            color: var(--success);
-            letter-spacing: 1px;
-        }
+        .file-preview-strip { display: none; margin-top: 12px; padding: 10px 14px; background: rgba(112,201,168,0.07); border: 1px solid rgba(112,201,168,0.25); border-radius: 4px; font-size: 0.72rem; color: var(--success); letter-spacing: 1px; }
         .file-preview-strip.show { display: flex; align-items: center; gap: 10px; }
 
-        /* ── Toast ── */
-        .toast {
-            position: fixed; bottom: 28px; left: 50%;
-            transform: translateX(-50%) translateY(80px);
-            background: #0c0c18; border: 1px solid var(--border);
-            padding: 10px 20px; font-size: 0.7rem; letter-spacing: 2px;
-            text-transform: uppercase; z-index: 9999;
-            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
-            white-space: nowrap; pointer-events: none;
-        }
+        .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: #0c0c18; border: 1px solid var(--border); padding: 10px 20px; font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; z-index: 9999; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); white-space: nowrap; pointer-events: none; }
         .toast.show { transform: translateX(-50%) translateY(0); }
         .toast.success { border-color: rgba(112,201,168,0.4); color: var(--success); }
         .toast.error   { border-color: rgba(201,112,112,0.4); color: var(--error); }
         .toast.info    { border-color: rgba(197,160,89,0.3);  color: var(--gold); }
 
-        /* ── Spinner ── */
-        .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(197,160,89,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spinner 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
-        @keyframes spinner { to { transform: rotate(360deg); } }
+        .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(197,160,89,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-
-        /* ── Empty state ── */
         .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 0.8rem; letter-spacing: 2px; }
 
-        /* ── Tabs ── */
-        .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+        .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
         .tab { padding: 10px 24px; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.3s; background: none; border-top: none; border-left: none; border-right: none; font-family: 'Inter', sans-serif; }
         .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
         .tab-panel { display: none; }
         .tab-panel.active { display: block; animation: fadeUp 0.3s ease both; }
 
-        .score-bar { display: inline-block; height: 4px; background: var(--gold); border-radius: 2px; vertical-align: middle; margin-left: 8px; }
-
-        @media (max-width: 600px) {
-            .cand-table th:nth-child(3), .cand-table td:nth-child(3) { display: none; }
-        }
+        @media (max-width:600px) { .cand-table th:nth-child(3), .cand-table td:nth-child(3) { display:none; } }
     </style>
 </head>
 <body>
 
-<!-- Auth loading overlay — hidden once Firebase confirms the session -->
 <div id="authOverlay">
-    <div class="auth-overlay-logo"><em>Talent</em>Bridge</div>
-    <div class="auth-overlay-spin"></div>
+    <div class="ol"><em>Talent</em>Bridge</div>
+    <div class="os"></div>
 </div>
 
-<!-- Sign out button -->
 <button class="signout-btn" onclick="handleSignOut()">Sign Out</button>
-
 <div class="stars"><canvas id="starCanvas"></canvas></div>
 
 <div class="page-wrap">
-    <!-- Header -->
     <header class="header">
         <h1 class="logo"><em>Talent</em>Bridge</h1>
         <p class="tagline">Recruiter Portal</p>
         <div class="recruiter-strip">Signed in as: <span id="recruiterEmail">—</span></div>
     </header>
 
-    <!-- Tabs -->
     <div class="tabs">
         <button class="tab active" onclick="switchTab('send')">Send Briefing & Questions</button>
         <button class="tab" onclick="switchTab('inbox')">Candidate Answers</button>
     </div>
 
-    <!-- ═══ TAB 1 — Send Briefing ═══════════════════════════════════════════ -->
     <div class="tab-panel active" id="tab-send">
-
-        <!-- Step 1 · Target candidate -->
         <div class="card accent">
             <div class="section-title">① Select Candidate</div>
             <div class="form-row">
@@ -315,23 +152,21 @@
             </div>
         </div>
 
-        <!-- Step 2 · Text file (briefing) -->
         <div class="card accent">
             <div class="section-title">② Upload Briefing (.txt)</div>
             <div class="drop-zone" id="dropZone">
                 <input type="file" id="txtFileInput" accept=".txt,text/plain" onchange="handleFileSelect(this)">
                 <div class="drop-zone-icon">📄</div>
                 <div class="drop-zone-label">Drop your <em>.txt</em> file here or click to browse</div>
-                <div class="drop-zone-hint">Plain text only · The file will be read aloud to the candidate before the interview</div>
+                <div class="drop-zone-hint">Plain text only · Read aloud to the candidate before the interview</div>
             </div>
             <div class="file-selected" id="fileSelectedLabel"></div>
             <div class="file-preview-strip" id="filePreviewStrip">
                 <span>📋</span>
-                <span id="filePreviewText" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+                <span id="filePreviewText" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
             </div>
         </div>
 
-        <!-- Step 3 · Questions -->
         <div class="card accent">
             <div class="section-title">③ Interview Questions</div>
             <div class="form-row">
@@ -340,23 +175,18 @@
             </div>
         </div>
 
-        <!-- Send button -->
-        <div style="text-align:center; margin-top:8px;">
+        <div style="text-align:center;margin-top:8px;">
             <button class="btn btn-gold" id="sendBtn" onclick="sendBriefingAndQuestions()">Send to Candidate →</button>
         </div>
-
-        <!-- Status -->
-        <div id="sendStatus" style="margin-top:20px; text-align:center; font-size:0.75rem; letter-spacing:2px; color:var(--text-muted); display:none;"></div>
+        <div id="sendStatus" style="margin-top:20px;text-align:center;font-size:0.75rem;letter-spacing:2px;color:var(--text-muted);display:none;"></div>
     </div>
 
-    <!-- ═══ TAB 2 — Candidate Answers ══════════════════════════════════════ -->
     <div class="tab-panel" id="tab-inbox">
         <div class="card">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-                <div class="section-title" style="margin-bottom:0; border:none; padding:0;">Submitted Interviews</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <div class="section-title" style="margin-bottom:0;border:none;padding:0;">Submitted Interviews</div>
                 <button class="btn btn-info btn-sm" onclick="loadCandidates()">↻ Refresh</button>
             </div>
-
             <div id="candidatesTableWrap">
                 <div class="empty-state"><span class="spin"></span> Loading…</div>
             </div>
@@ -366,344 +196,196 @@
 
 <div class="toast" id="toast" role="alert"></div>
 
-<script type="module" src="./recruit.js"></script>
-
+<!--
+═══════════════════════════════════════════════════════════════════════
+  WHY WE DO NOT USE: <script type="module" src="./recruit.js"></script>
+  
+  recruit.js ends with: checkRecruiterAuth()
+  That function calls onAuthStateChanged() immediately and redirects
+  to recruiterlogin.html if the user appears not logged in — which
+  ALWAYS happens for ~500ms while Firebase restores the session.
+  
+  THE FIX: We intercept by setting window._skipAutoAuth = true BEFORE
+  recruit.js loads. Then we import recruit.js dynamically only AFTER
+  our own onAuthChange confirms the session is valid.
+  
+  This way checkRecruiterAuth() sees a confirmed user and does nothing.
+═══════════════════════════════════════════════════════════════════════
+-->
 <script>
-// ── State ────────────────────────────────────────────────────────────────────
-let selectedFile    = null;
-let candidatesCache = [];
+    // Set this flag BEFORE recruit.js loads so checkRecruiterAuth() is a no-op
+    window._skipAutoAuth = true;
+</script>
 
-// ── Auth-ready gate ───────────────────────────────────────────────────────────
-// initPage() is called either immediately (if auth resolves before DOMContentLoaded)
-// or on the 'auth:ready' event (normal case).
-function onAuthReady() {
-    const overlay = document.getElementById('authOverlay');
+<script type="module">
+import { onAuthChange } from './firebase.js';
+
+const overlay = document.getElementById('authOverlay');
+let _settled = false;
+
+onAuthChange(async (state) => {
+    if (_settled) return;
+    _settled = true;
+
+    if (!state.isLoggedIn) {
+        // Firebase confirmed: genuinely no session
+        window.location.replace('./index.html');
+        return;
+    }
+
+    // ── Confirmed authenticated ───────────────────────────────────────────
+    if (state.user?.email)       localStorage.setItem('titanEmail',   state.user.email);
+    if (state.user?.displayName) localStorage.setItem('titanName',    state.user.displayName);
+    localStorage.setItem('titanRole', 'recruiter');
+
+    // NOW safe to load recruit.js — checkRecruiterAuth() will see a valid
+    // user and its own onAuthStateChanged won't redirect
+    try { await import('./recruit.js'); } catch(e) { console.warn('recruit.js:', e); }
+
+    // Reveal page
     overlay.classList.add('hide');
-    setTimeout(() => overlay.remove(), 450);
+    setTimeout(() => overlay.remove(), 400);
 
-    const email = localStorage.getItem('titanEmail') || '—';
-    document.getElementById('recruiterEmail').textContent = email;
+    document.getElementById('recruiterEmail').textContent =
+        localStorage.getItem('titanEmail') || state.user?.email || '—';
 
     startStarfield();
     populateCandidateDropdown();
-}
+});
+</script>
 
-if (window._authReady) {
-    // auth guard already resolved (very fast Firebase)
-    document.addEventListener('DOMContentLoaded', onAuthReady);
-} else {
-    document.addEventListener('auth:ready', onAuthReady);
-}
+<script>
+let selectedFile    = null;
+let candidatesCache = [];
 
-// ── Sign out ──────────────────────────────────────────────────────────────────
 async function handleSignOut() {
-    if (window._firebaseSignOut) {
-        await window._firebaseSignOut();
-    }
-    localStorage.removeItem('titanRole');
-    localStorage.removeItem('titanEmail');
-    localStorage.removeItem('titanName');
+    try { const { logOut } = await import('./firebase.js'); await logOut(); } catch(e) {}
+    ['titanRole','titanEmail','titanName','titanCompany'].forEach(k => localStorage.removeItem(k));
     window.location.replace('./index.html');
 }
 
-// ── Tab switching ─────────────────────────────────────────────────────────────
 function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['send','inbox'][i] === tab));
+    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['send','inbox'][i] === tab));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('active');
     if (tab === 'inbox') loadCandidates();
 }
 
-// ── Toast ─────────────────────────────────────────────────────────────────────
 function showToast(msg, type='info') {
     const t = document.getElementById('toast');
-    t.className = `toast ${type}`;
-    t.textContent = msg;
-    t.classList.add('show');
+    t.className=`toast ${type}`; t.textContent=msg; t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// ── Populate dropdown ─────────────────────────────────────────────────────────
+function waitFor(fn, ms=8000) {
+    return new Promise((res,rej) => {
+        if (window[fn]) return res();
+        const t=Date.now(), iv=setInterval(()=>{ if(window[fn]){clearInterval(iv);res();} else if(Date.now()-t>ms){clearInterval(iv);rej(new Error(fn+' not available'));} },100);
+    });
+}
+
 async function populateCandidateDropdown() {
     const sel = document.getElementById('candidateSelect');
-    let tries = 0;
-    while (!window.getCandidatesWithAnswers && tries < 30) {
-        await new Promise(r => setTimeout(r, 200)); tries++;
-    }
-    if (!window.getCandidatesWithAnswers) return;
-
     try {
+        await waitFor('getCandidatesWithAnswers');
         candidatesCache = await window.getCandidatesWithAnswers();
         sel.innerHTML = '<option value="">— Select a candidate —</option>';
         candidatesCache.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value         = c.id;
-            opt.textContent   = `${c.email} (${c.status})`;
-            opt.dataset.email = c.email;
-            sel.appendChild(opt);
+            const o=document.createElement('option');
+            o.value=c.id; o.textContent=`${c.email} (${c.status})`; o.dataset.email=c.email;
+            sel.appendChild(o);
         });
-    } catch(e) {
-        sel.innerHTML = '<option value="">— Error loading candidates —</option>';
-    }
+    } catch(e) { sel.innerHTML='<option value="">— Error loading —</option>'; }
 }
 
 function fillCandidateFromSelect() {
-    const sel = document.getElementById('candidateSelect');
-    const opt = sel.options[sel.selectedIndex];
-    if (opt && opt.dataset.email) {
-        document.getElementById('candidateEmailInput').value = opt.dataset.email;
-    }
+    const sel=document.getElementById('candidateSelect'), opt=sel.options[sel.selectedIndex];
+    if (opt?.dataset.email) document.getElementById('candidateEmailInput').value=opt.dataset.email;
 }
 
-// ── File handling ─────────────────────────────────────────────────────────────
 function handleFileSelect(input) {
-    const file = input.files[0];
-    if (!file) return;
-    if (!file.name.endsWith('.txt') && file.type !== 'text/plain') {
-        showToast('Please select a .txt file only.', 'error'); return;
-    }
-    selectedFile = file;
-
-    const label = document.getElementById('fileSelectedLabel');
-    label.textContent = `✓ Selected: ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
-    label.style.display = 'block';
-
-    const reader = new FileReader();
-    reader.onload = e => {
-        const preview = e.target.result.replace(/\n/g,' ').trim().slice(0,120);
-        const strip   = document.getElementById('filePreviewStrip');
-        document.getElementById('filePreviewText').textContent = preview + (preview.length >= 120 ? '…' : '');
-        strip.classList.add('show');
-    };
-    reader.readAsText(file);
+    const file=input.files[0]; if(!file) return;
+    if (!file.name.endsWith('.txt') && file.type!=='text/plain') { showToast('Please select a .txt file only.','error'); return; }
+    selectedFile=file;
+    const lbl=document.getElementById('fileSelectedLabel');
+    lbl.textContent=`✓ ${file.name} (${(file.size/1024).toFixed(1)} KB)`; lbl.style.display='block';
+    const r=new FileReader();
+    r.onload=e=>{ const p=e.target.result.replace(/\n/g,' ').trim().slice(0,120); document.getElementById('filePreviewText').textContent=p+(p.length>=120?'…':''); document.getElementById('filePreviewStrip').classList.add('show'); };
+    r.readAsText(file);
 }
 
-const dz = document.getElementById('dropZone');
-dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-dz.addEventListener('drop', e => {
-    e.preventDefault(); dz.classList.remove('drag-over');
-    const f = e.dataTransfer.files[0];
-    if (f) { document.getElementById('txtFileInput').files = e.dataTransfer.files; handleFileSelect({ files: [f] }); }
-});
+const dz=document.getElementById('dropZone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f){document.getElementById('txtFileInput').files=e.dataTransfer.files;handleFileSelect({files:[f]});}});
 
-// ── Send briefing + questions ─────────────────────────────────────────────────
 async function sendBriefingAndQuestions() {
-    const sel        = document.getElementById('candidateSelect');
-    const emailInput = document.getElementById('candidateEmailInput').value.trim();
-    let   candidateId = sel.value || '';
+    const sel=document.getElementById('candidateSelect'), emailInput=document.getElementById('candidateEmailInput').value.trim();
+    let cid=sel.value||'';
+    if (!cid&&emailInput) { const m=candidatesCache.find(c=>c.email===emailInput); cid=m?m.id:emailInput; }
+    if (!cid) { showToast('Please select or enter a candidate.','error'); return; }
+    const questions=document.getElementById('questionsInput').value.trim().split('\n').map(q=>q.trim()).filter(Boolean);
+    if (!questions.length) { showToast('Please enter at least one question.','error'); return; }
 
-    if (!candidateId && emailInput) {
-        const match = candidatesCache.find(c => c.email === emailInput);
-        if (match) candidateId = match.id;
-    }
-    if (!candidateId && emailInput) candidateId = emailInput;
-
-    if (!candidateId) {
-        showToast('Please select or enter a candidate.', 'error'); return;
-    }
-
-    const raw       = document.getElementById('questionsInput').value.trim();
-    const questions = raw.split('\n').map(q => q.trim()).filter(Boolean);
-    if (questions.length === 0) {
-        showToast('Please enter at least one question.', 'error'); return;
-    }
-
-    const sendBtn  = document.getElementById('sendBtn');
-    const statusEl = document.getElementById('sendStatus');
-    sendBtn.disabled = true;
-    statusEl.style.display = 'block';
-    statusEl.innerHTML = '<span class="spin"></span> Saving questions…';
-
-    let tries = 0;
-    while ((!window.saveInterviewQuestions || !window.sendTextFileToCandidate) && tries < 30) {
-        await new Promise(r => setTimeout(r, 200)); tries++;
-    }
-
+    const btn=document.getElementById('sendBtn'), st=document.getElementById('sendStatus');
+    btn.disabled=true; st.style.display='block'; st.innerHTML='<span class="spin"></span> Saving…';
     try {
-        statusEl.innerHTML = '<span class="spin"></span> Saving interview questions…';
-        const setId = await window.saveInterviewQuestions(questions, candidateId);
-
-        if (selectedFile) {
-            statusEl.innerHTML = '<span class="spin"></span> Uploading briefing file…';
-            await window.sendTextFileToCandidate(selectedFile, candidateId, setId);
-        }
-
-        statusEl.innerHTML = '✓ Sent successfully!';
-        statusEl.style.color = 'var(--success)';
-        showToast('Briefing & questions sent!', 'success');
-
-        document.getElementById('questionsInput').value = '';
-        document.getElementById('candidateEmailInput').value = '';
-        document.getElementById('candidateSelect').value = '';
-        document.getElementById('fileSelectedLabel').style.display = 'none';
-        document.getElementById('filePreviewStrip').classList.remove('show');
-        document.getElementById('txtFileInput').value = '';
-        selectedFile = null;
-
-        setTimeout(() => { statusEl.style.display = 'none'; statusEl.style.color = ''; }, 4000);
-    } catch(err) {
-        console.error(err);
-        statusEl.innerHTML = '✕ Error: ' + err.message;
-        statusEl.style.color = 'var(--error)';
-        showToast('Send failed — ' + err.message, 'error');
-    } finally {
-        sendBtn.disabled = false;
-    }
+        await waitFor('saveInterviewQuestions');
+        const setId=await window.saveInterviewQuestions(questions,cid);
+        if (selectedFile) { st.innerHTML='<span class="spin"></span> Uploading briefing…'; await waitFor('sendTextFileToCandidate'); await window.sendTextFileToCandidate(selectedFile,cid,setId); }
+        st.innerHTML='✓ Sent!'; st.style.color='var(--success)'; showToast('Sent successfully!','success');
+        document.getElementById('questionsInput').value=''; document.getElementById('candidateEmailInput').value=''; sel.value='';
+        document.getElementById('fileSelectedLabel').style.display='none'; document.getElementById('filePreviewStrip').classList.remove('show'); document.getElementById('txtFileInput').value=''; selectedFile=null;
+        setTimeout(()=>{st.style.display='none';st.style.color='';},4000);
+    } catch(err) { st.innerHTML='✕ '+err.message; st.style.color='var(--error)'; showToast('Failed — '+err.message,'error'); }
+    finally { btn.disabled=false; }
 }
 
-// ── Load candidates inbox ─────────────────────────────────────────────────────
 async function loadCandidates() {
-    const wrap = document.getElementById('candidatesTableWrap');
-    wrap.innerHTML = '<div class="empty-state"><span class="spin"></span> Loading…</div>';
-
-    let tries = 0;
-    while (!window.getCandidatesWithAnswers && tries < 30) {
-        await new Promise(r => setTimeout(r, 200)); tries++;
-    }
-    if (!window.getCandidatesWithAnswers) {
-        wrap.innerHTML = '<div class="empty-state">recruit.js not loaded.</div>'; return;
-    }
-
+    const wrap=document.getElementById('candidatesTableWrap');
+    wrap.innerHTML='<div class="empty-state"><span class="spin"></span> Loading…</div>';
     try {
-        const candidates = await window.getCandidatesWithAnswers();
-        candidatesCache  = candidates;
-
-        if (!candidates.length) {
-            wrap.innerHTML = '<div class="empty-state">No candidates yet.</div>'; return;
-        }
-
-        const table = document.createElement('table');
-        table.className = 'cand-table';
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Candidate</th>
-                    <th>Status</th>
-                    <th>Answers</th>
-                    <th>Submitted</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="candTbody"></tbody>`;
-
-        wrap.innerHTML = '';
-        wrap.appendChild(table);
-
-        const tbody = document.getElementById('candTbody');
-        candidates.forEach(c => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td style="font-size:0.85rem;">${escHtml(c.email)}</td>
-                <td><span class="status-pill ${c.status}">${c.status}</span></td>
-                <td style="color:var(--gold);">${c.answerCount}</td>
-                <td style="font-size:0.75rem; color:var(--text-muted);">${formatDate(c.submittedAt)}</td>
-                <td>
-                    ${c.status === 'submitted'
-                        ? `<button class="btn btn-info btn-sm" onclick="toggleAnswers(this,'${c.id}')">View →</button>`
-                        : '<span style="font-size:0.65rem;color:var(--text-muted);letter-spacing:1px;">Pending</span>'}
-                </td>`;
+        await waitFor('getCandidatesWithAnswers');
+        const list=await window.getCandidatesWithAnswers(); candidatesCache=list;
+        if (!list.length) { wrap.innerHTML='<div class="empty-state">No candidates yet.</div>'; return; }
+        const tbl=document.createElement('table'); tbl.className='cand-table';
+        tbl.innerHTML='<thead><tr><th>Candidate</th><th>Status</th><th>Answers</th><th>Submitted</th><th>Action</th></tr></thead><tbody id="candTbody"></tbody>';
+        wrap.innerHTML=''; wrap.appendChild(tbl);
+        const tbody=document.getElementById('candTbody');
+        list.forEach(c=>{
+            const tr=document.createElement('tr');
+            tr.innerHTML=`<td>${escHtml(c.email)}</td><td><span class="status-pill ${c.status}">${c.status}</span></td><td style="color:var(--gold)">${c.answerCount}</td><td style="font-size:.75rem;color:var(--text-muted)">${fmtDate(c.submittedAt)}</td><td>${c.status==='submitted'?`<button class="btn btn-info btn-sm" onclick="toggleAnswers(this,'${c.id}')">View →</button>`:'<span style="font-size:.65rem;color:var(--text-muted)">Pending</span>'}</td>`;
             tbody.appendChild(tr);
-
-            const detailTr = document.createElement('tr');
-            detailTr.id = `answers-row-${c.id}`;
-            detailTr.innerHTML = `<td colspan="5" style="padding:0 10px 12px;"><div class="answers-panel" id="answers-panel-${c.id}"></div></td>`;
-            tbody.appendChild(detailTr);
+            const dr=document.createElement('tr'); dr.innerHTML=`<td colspan="5" style="padding:0 10px 12px"><div class="answers-panel" id="answers-panel-${c.id}"></div></td>`; tbody.appendChild(dr);
         });
-    } catch(err) {
-        wrap.innerHTML = `<div class="empty-state">Error: ${escHtml(err.message)}</div>`;
-    }
+    } catch(e) { wrap.innerHTML=`<div class="empty-state">Error: ${escHtml(e.message)}</div>`; }
 }
 
-async function toggleAnswers(btn, candidateId) {
-    const panel = document.getElementById(`answers-panel-${candidateId}`);
-    if (panel.classList.contains('open')) {
-        panel.classList.remove('open');
-        btn.textContent = 'View →';
-        return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Loading…';
-
+async function toggleAnswers(btn,cid) {
+    const panel=document.getElementById(`answers-panel-${cid}`);
+    if (panel.classList.contains('open')) { panel.classList.remove('open'); btn.textContent='View →'; return; }
+    btn.disabled=true; btn.textContent='Loading…';
     try {
-        const data = await window.getCandidateAnswersById(candidateId);
-        panel.innerHTML = '';
-
-        if (data.transcriptUrl) {
-            const link = document.createElement('a');
-            link.href = data.transcriptUrl; link.target = '_blank';
-            link.className = 'transcript-link';
-            link.textContent = '⬇ Download full transcript';
-            panel.appendChild(link);
-            panel.appendChild(document.createElement('br'));
-            panel.appendChild(document.createElement('br'));
-        }
-
-        if (!data.answers.length) {
-            panel.innerHTML += '<div class="answer-empty">No answers recorded.</div>';
-        } else {
-            data.answers.forEach((ans, i) => {
-                const item = document.createElement('div');
-                item.className = 'answer-item';
-                item.innerHTML = `
-                    <div class="answer-q">Q${i+1}</div>
-                    <div class="answer-a">${escHtml(ans || '(no answer)')}</div>`;
-                panel.appendChild(item);
-            });
-        }
-
-        panel.classList.add('open');
-        btn.textContent = 'Close ↑';
-    } catch(err) {
-        panel.innerHTML = `<div class="answer-empty" style="color:var(--error);">Error: ${escHtml(err.message)}</div>`;
-        panel.classList.add('open');
-        btn.textContent = 'Close ↑';
-    }
-    btn.disabled = false;
+        const data=await window.getCandidateAnswersById(cid); panel.innerHTML='';
+        if (data.transcriptUrl) { const a=document.createElement('a'); a.href=data.transcriptUrl; a.target='_blank'; a.className='transcript-link'; a.textContent='⬇ Download transcript'; panel.appendChild(a); panel.appendChild(document.createElement('br')); panel.appendChild(document.createElement('br')); }
+        if (!data.answers.length) { panel.innerHTML+='<div class="answer-empty">No answers recorded.</div>'; }
+        else { data.answers.forEach((ans,i)=>{ const d=document.createElement('div'); d.className='answer-item'; d.innerHTML=`<div class="answer-q">Q${i+1}</div><div class="answer-a">${escHtml(ans||'(no answer)')}</div>`; panel.appendChild(d); }); }
+        panel.classList.add('open'); btn.textContent='Close ↑';
+    } catch(e) { panel.innerHTML=`<div class="answer-empty" style="color:var(--error)">Error: ${escHtml(e.message)}</div>`; panel.classList.add('open'); btn.textContent='Close ↑'; }
+    btn.disabled=false;
 }
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
-function escHtml(str) {
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function formatDate(ts) {
-    if (!ts) return '—';
-    const d = ts.toDate ? ts.toDate() : new Date(ts);
-    return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
-}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDate(ts){if(!ts)return'—';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
 
-// ── Starfield ─────────────────────────────────────────────────────────────────
 function startStarfield() {
-    const canvas = document.getElementById('starCanvas');
-    const ctx    = canvas.getContext('2d');
-    let stars    = [];
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    function initStars() {
-        stars = [];
-        const n = Math.floor((canvas.width * canvas.height) / 5000);
-        for (let i = 0; i < n; i++) stars.push({ x:Math.random()*canvas.width, y:Math.random()*canvas.height, r:Math.random()*0.8+0.1, o:Math.random()*0.6+0.1, s:Math.random()*0.008+0.002, p:Math.random()*Math.PI*2 });
-    }
-    let f = 0;
-    function draw() {
-        ctx.clearRect(0,0,canvas.width,canvas.height); f++;
-        for (const s of stars) {
-            const op = s.o * (0.4 + 0.6 * Math.sin(f * s.s + s.p));
-            ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(197,160,89,${op})`; ctx.fill();
-        }
-        requestAnimationFrame(draw);
-    }
-    window.addEventListener('resize', () => { resize(); initStars(); });
-    resize(); initStars(); draw();
+    const canvas=document.getElementById('starCanvas'), ctx=canvas.getContext('2d'); let stars=[];
+    function resize(){canvas.width=innerWidth;canvas.height=innerHeight;}
+    function init(){stars=[];const n=Math.floor(innerWidth*innerHeight/5000);for(let i=0;i<n;i++)stars.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*0.8+0.1,o:Math.random()*0.6+0.1,s:Math.random()*0.008+0.002,p:Math.random()*Math.PI*2});}
+    let f=0;
+    function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);f++;for(const s of stars){const op=s.o*(0.4+0.6*Math.sin(f*s.s+s.p));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(197,160,89,${op})`;ctx.fill();}requestAnimationFrame(draw);}
+    window.addEventListener('resize',()=>{resize();init();}); resize();init();draw();
 }
 </script>
-
-<!-- Expose signOut to the page (recruit.js should export it) -->
-<script type="module">
-    import { logOut } from "./firebase.js";
-    window._firebaseSignOut = logOut;
-</script>
-
 </body>
 </html>

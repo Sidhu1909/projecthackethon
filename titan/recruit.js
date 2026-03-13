@@ -544,6 +544,6 @@ window.sendTextFileToCandidate          = sendTextFileToCandidate;
 window.getTextFileForCandidate          = getTextFileForCandidate;
 
 // Auto-run auth guard when loaded on recruiter pages
-checkRecruiterAuth();
+if (!window._skipAutoAuth) checkRecruiterAuth();
 
 console.log('[recruit.js] ✓ loaded — Firebase 11.6.0, all globals registered');
